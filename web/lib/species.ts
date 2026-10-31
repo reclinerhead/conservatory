@@ -4,6 +4,7 @@
 // Wikipedia. The shaping is pure, in lib/species-page.ts.
 
 import type { DatabaseSync } from "node:sqlite";
+import { careState, type CareRow, type CareState } from "./care";
 import { tileName, type Tile } from "./collection";
 import { referenceUrls, thumbPathFor } from "./photos";
 import { relativesOf, type Relatives } from "./relatives";
@@ -33,7 +34,30 @@ export type SpeciesView = {
   photos: OwnerPhoto[];
   naming: Naming;
   relatives: Relatives;
+  care: CareState;
+  careModel: boolean; // whether this box has a care model configured; Rewrite is offered only then
 };
+
+/**
+ * Whether Fern has a care model on this box. Both units read the same
+ * environment file, so the web app can tell from the key's presence; it never
+ * uses the key. Bracket access so Next reads it at runtime, not at build.
+ */
+export function careModelConfigured(): boolean {
+  return (process.env["AI_GATEWAY_API_KEY"] ?? "").trim() !== "";
+}
+
+/** The species' care sheet row, or null. A database Fern has not migrated to v3 yet has no table, which reads as no sheet. */
+function readCareRow(db: DatabaseSync, id: number): CareRow | null {
+  const table = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'care_sheets'").get();
+  if (!table) return null;
+  const r = db
+    .prepare("SELECT zone, model, cells, notes, written_at, tried_at, error FROM care_sheets WHERE species_id = ?")
+    .get(id) as
+    | { zone: string | null; model: string | null; cells: string | null; notes: string | null; written_at: string | null; tried_at: string; error: string | null }
+    | undefined;
+  return r ? { zone: r.zone, model: r.model, cells: r.cells, notes: r.notes, writtenAt: r.written_at, triedAt: r.tried_at, error: r.error } : null;
+}
 
 type Row = {
   id: number;
@@ -129,6 +153,8 @@ export function readSpecies(db: DatabaseSync, id: number): SpeciesView | null {
     photos,
     naming,
     relatives: relativesOf(r, speciesList(db)),
+    care: careState({ row: readCareRow(db, id), configured: careModelConfigured(), gbifKey: r.gbif_key, enrichedAt: r.enriched_at }),
+    careModel: careModelConfigured(),
   };
 }
 

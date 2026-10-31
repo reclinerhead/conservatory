@@ -6,7 +6,8 @@ network. The thumbnail is written for every processed job, rejected ones
 included, because the confirm screen shows the photo either way.
 
 When the queue is idle the loop hands the tick to the enrichment pass
-(`enrich.run_once`, #20), so one unit and one journal cover both.
+(`enrich.run_once`, #20) and, when that has nothing to do, to the care pass
+(`care.run_once`, #23), so one unit and one journal cover all three.
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import enrich, plantnet, queue
+from . import care, enrich, llm, plantnet, queue
 
 log = logging.getLogger("fern")
 
@@ -73,7 +74,14 @@ def run_once(
     return outcome
 
 
-def run_forever(conn: sqlite3.Connection, data_dir: Path, api_key: str, should_run: Callable[[], bool]) -> None:
+def run_forever(
+    conn: sqlite3.Connection,
+    data_dir: Path,
+    api_key: str,
+    should_run: Callable[[], bool],
+    care_cfg: llm.Config | None = None,
+    zone: str | None = None,
+) -> None:
     paused_until: datetime | None = None
     while should_run():
         now = datetime.now(timezone.utc)
@@ -84,8 +92,10 @@ def run_forever(conn: sqlite3.Connection, data_dir: Path, api_key: str, should_r
         outcome = run_once(conn, data_dir, api_key, now)
         if outcome is None:
             # The queue is idle: the enrichment pass gets the tick (#20), one
-            # species at a time, so an upload never waits behind Wikipedia.
-            time.sleep(1 if enrich.run_once(conn, data_dir, now) else 2)
+            # species at a time, so an upload never waits behind Wikipedia;
+            # when it has nothing either, the care pass writes one sheet (#23).
+            busy = enrich.run_once(conn, data_dir, now) or care.run_once(conn, care_cfg, zone, now)
+            time.sleep(1 if busy else 2)
         elif outcome.status == "quota":
             paused_until = outcome.resume_at
             log.warning("quota spent; resuming at %s", paused_until)

@@ -42,6 +42,26 @@ MIGRATIONS: list[tuple[int, str]] = [
         ALTER TABLE species ADD COLUMN enrich_error TEXT;       -- why the last pass fell short, else NULL
         """,
     ),
+    # v3 (#23): the care sheet, one per species, written once by a language
+    # model from the taxonomy and the household's zone (fern/care.py). It goes
+    # with its species: the web app deletes a species row when its last
+    # specimen goes, and foreign keys are on in both writers.
+    (
+        3,
+        """
+        CREATE TABLE care_sheets (
+          species_id     INTEGER PRIMARY KEY REFERENCES species(id) ON DELETE CASCADE,
+          zone           TEXT,               -- the USDA zone it was written for, e.g. 6a; NULL when none was set
+          model          TEXT,               -- the gateway model slug that wrote it
+          prompt_version INTEGER NOT NULL,   -- fern/prompts/care_sheet.md's version
+          cells          TEXT,               -- JSON: the six cells; NULL until a write has succeeded
+          notes          TEXT,               -- JSON: what the prompt carried (subject, level, ranks, zone, summary)
+          written_at     TEXT,               -- when the cells were written
+          tried_at       TEXT NOT NULL,      -- the last attempt, success or failure
+          error          TEXT                -- why the last attempt failed, else NULL
+        );
+        """,
+    ),
 ]
 
 LATEST_VERSION = MIGRATIONS[-1][0] if MIGRATIONS else BASELINE_VERSION

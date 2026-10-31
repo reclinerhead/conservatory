@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CareFigures, CareRewrite } from "@/components/care";
 import { SpecimenCard } from "@/components/collection";
 import { Term } from "@/components/term";
 import { LeafMark } from "@/components/topbar";
+import { CARE_CELLS, careScopeLine, careWrittenLine } from "@/lib/care";
 import { dayLabel, groupTiles, speciesLabel, TILE_TINTS } from "@/lib/collection";
 import type { GlossaryKey } from "@/lib/glossary";
 import { withReadDb } from "@/lib/jobs";
@@ -25,11 +27,11 @@ import {
 
 // /species/[id]: one species, design/mockups/species.html in its Phase 2
 // subset. Breadcrumb, title block, the gallery (owner photos first, the
-// reference image after), About this species, In your collection, Relatives
-// you already have, and the taxonomy card. Everything is what Fern wrote;
-// before it has looked a species up, each block keeps its space and says so.
-// The care sheet (#23), lineage, events and pot tags arrive with their
-// issues; their space is not faked.
+// reference image after), About this species, the care sheet, In your
+// collection, Relatives you already have, and the taxonomy card. Everything
+// is what Fern wrote; before it has looked a species up, each block keeps
+// its space and says so. Lineage, events and pot tags arrive with their
+// phases; their space is not faked.
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -199,6 +201,8 @@ export default async function SpeciesPage({ params }: { params: Promise<{ id: st
             </div>
           </section>
 
+          <CareBlock s={s} />
+
           {/* In your collection: every specimen of this species, grouped like the collection. */}
           <section aria-labelledby="coll-h" className="card flex flex-col gap-4 p-5 sm:px-8 sm:py-7">
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -232,6 +236,76 @@ export default async function SpeciesPage({ params }: { params: Promise<{ id: st
         </aside>
       </div>
     </main>
+  );
+}
+
+/**
+ * The care sheet: the mockup's six cells, each with its term's mark, the
+ * headline, two or three sentences, and the figures behind a tap. Written by
+ * Fern (fern/care.py) and only read here. The six cells are always drawn, so
+ * the block keeps its shape before the sheet exists; the foot says why it is
+ * not there yet, or who wrote it and when, beside Rewrite.
+ */
+function CareBlock({ s }: { s: SpeciesView }) {
+  const c = s.care;
+  const sheet = c.kind === "sheet" ? c : null;
+  const foot =
+    c.kind === "sheet"
+      ? `${c.level === "genus" ? "Genus-level advice: this plant is named only to its genus or is a hybrid, and care works at that level. " : ""}${careWrittenLine(c)}.${
+          c.lastTryFailed ? " The last rewrite failed, so this is the sheet before it; Fern tries again a day later." : ""
+        }`
+      : c.kind === "writing"
+        ? "Fern writes it from GBIF's taxonomy and Wikipedia's summary the next time the identification queue is quiet, usually within a minute."
+        : c.kind === "failed"
+          ? `Fern's last try, on ${dayLabel(c.triedAt) ?? "an earlier day"}, failed (${c.error.slice(0, 140)}). It tries again a day later.`
+          : c.kind === "unplaced"
+            ? c.enriched
+              ? "GBIF could not place this name, so there is nothing to write a care sheet from."
+              : "Fern writes the care sheet once it has placed this species with GBIF."
+            : "No care model is configured on this box, so Fern has not written one. It needs AI_GATEWAY_API_KEY in the environment file.";
+  return (
+    <section aria-labelledby="care-h" className="card flex flex-col gap-4 p-5 sm:px-8 sm:py-7">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h2 id="care-h" className="text-section leading-tight">
+          Care sheet
+        </h2>
+        <span className="text-meta text-ink-2">{sheet ? careScopeLine(sheet) : "Written once for each species"}</span>
+      </div>
+      <ul className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+        {CARE_CELLS.map((d) => {
+          const cell = sheet?.cells[d.key];
+          const example = d.key === "hardiness" && sheet?.zone ? `Your household is in zone ${sheet.zone}; this sheet says ${cell?.headline}.` : undefined;
+          return (
+            <li key={d.key} className="flex min-h-[16rem] flex-col gap-1 rounded-tile bg-ground px-4 py-3.5">
+              <p className="text-[12px] font-bold uppercase tracking-[.04em] text-ink-2">
+                <Term k={d.term} example={example}>
+                  {d.label}
+                </Term>
+              </p>
+              {cell ? (
+                <>
+                  <p className="font-semibold leading-snug">{cell.headline}</p>
+                  <p className="text-meta text-ink-2">{cell.text}</p>
+                  {cell.figures.length > 0 ? <CareFigures figures={cell.figures} /> : null}
+                </>
+              ) : (
+                <>
+                  <span aria-hidden className="mt-1 block h-4 w-2/3 rounded-pill bg-sage" />
+                  <span aria-hidden className="mt-2 block h-3 w-full rounded-pill bg-sage" />
+                  <span aria-hidden className="block h-3 w-full rounded-pill bg-sage" />
+                  <span aria-hidden className="block h-3 w-4/5 rounded-pill bg-sage" />
+                  <span aria-hidden className="mt-auto block h-3 w-2/5 rounded-pill bg-sage" />
+                </>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <div className="flex min-h-[2.75rem] flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-sage pt-3.5">
+        <p className="max-w-[64ch] text-meta text-ink-2">{foot}</p>
+        <CareRewrite speciesId={s.id} writing={c.kind === "writing"} canRewrite={s.careModel && (c.kind === "sheet" || c.kind === "failed")} />
+      </div>
+    </section>
   );
 }
 

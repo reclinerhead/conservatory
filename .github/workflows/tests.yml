@@ -38,4 +38,4 @@ jobs:
       # pytest.ini/testpaths fallback, so a test_*.py that isn't named here
       # silently never runs. Add new files by hand.
       - run: pip install pytest requests pillow
-      - run: pytest test_fern_db.py test_fern_plantnet.py test_fern_queue.py test_fern_enrich.py -q
+      - run: pytest test_fern_db.py test_fern_plantnet.py test_fern_queue.py test_fern_enrich.py test_fern_care.py -q
