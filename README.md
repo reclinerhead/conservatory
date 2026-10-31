@@ -6,6 +6,8 @@ The Conservatory is where a plant collection gets catalogued, named, and looked 
 
 It is being built for three gardeners in one family. One raises around 150 succulents and cacti under a grow light all year. Two keep large outdoor flower beds and have done so for decades. All three tried, at some point, to keep an index of what they own on paper, and all three gave up. The Conservatory is the version that does not get overwhelming.
 
+It also teaches. All three have grown plants for years without ever being told what a genus is or why a nursery tag says 'Black Prince' instead of a species. Every horticultural term the app shows carries a small info mark that explains it in plain language, with an example from the person's own collection when there is one. Nobody should have to leave the app to understand the app.
+
 > **Status:** design stage. Nothing runs yet. This README is the design brief and will become the project guide as the code lands.
 
 ## Lineage
@@ -23,6 +25,7 @@ The Conservatory is the fourth app in a family of home-scale projects, and it bo
 - **Know the species.** Each species has its own page: the Wikipedia summary and reference image, its taxonomy, a care sheet (light, water, soil, hardiness, fertilizing cadence, dormancy), every specimen of that species in the household, and its relatives in the collection, meaning other plants in the same genus or family.
 - **Tag the pots.** Every specimen gets a QR code that opens its page. Print them on label sheets, stick them on the pots, and scan one with the phone camera to find out what a plant is and when it was last watered. This is the pen-and-pencil index, done the cheap way.
 - **Remind the gardener.** Care reminders derived from the species care sheet, the season, and the household's hardiness zone: fertilize the cacti now that they are growing again, stop watering the Echeverias for the winter, bring the tender things in before the first frost. Reminders start as a strip on the dashboard. Push comes later, if at all.
+- **Explain itself.** Genus, species, cultivar, hybrid, family, confidence score, hardiness zone, dormancy: each one is a word with an info mark beside it, and the explanation uses the reader's own plants as the example.
 - **Hold a flower show.** Each household publishes a digest, and a hub at the house gathers them into a family view with ribbons: most species, most families, bloom of the week, longest-lived plant. Two sisters with competing flower beds are the reason this feature exists.
 
 ## How identification works
