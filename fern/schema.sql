@@ -60,6 +60,13 @@ CREATE TABLE IF NOT EXISTS candidates (
 -- A taxon the household has confirmed at least once. scientific_name is the
 -- classifier's species, or a genus alone, or whatever the person typed when
 -- the classifier had nothing; cultivar is the name on the nursery tag.
+--
+-- Migration v2 (fern/db.py, #20) adds the enrichment columns the worker fills
+-- once per species: the GBIF taxonomy (gbif_key, rank, kingdom .. genus,
+-- canonical_name, authorship, common_name), the Wikipedia summary and
+-- reference image (summary, summary_url, image_path, image_credit,
+-- image_source_url) and the pass's own stamps (enriched_at, enrich_error).
+-- They are folded into this baseline only once v2 has shipped everywhere.
 CREATE TABLE IF NOT EXISTS species (
   id              INTEGER PRIMARY KEY,
   scientific_name TEXT    NOT NULL,

@@ -51,7 +51,7 @@ prints the checkout and build id, each unit's state, the answer on `:3010` and a
 
 ## Backups
 
-The database is a WAL file with a writer that holds it open; `cp` gives you a stale copy with no error. `Servers/backup.sh` uses the sqlite backup API, which reads through the WAL, and writes `~/backups/conservatory-<date>.db` with a quick_check and the row counts printed. The photos are plain files: copy `conservatory-data/photos/` beside it. Off the box, monthly, and before any migration step.
+The database is a WAL file with a writer that holds it open; `cp` gives you a stale copy with no error. `Servers/backup.sh` uses the sqlite backup API, which reads through the WAL, and writes `~/backups/conservatory-<date>.db` with a quick_check and the row counts printed. The photos and the species reference images are plain files: copy `conservatory-data/photos/` and `conservatory-data/reference/` beside it (the latter is cheap to lose, since `python -m fern --enrich <id>` fetches a species' image again). Off the box, monthly, and before any migration step.
 
 ## Rolling back
 

@@ -7,9 +7,10 @@
 #     bash ~/conservatory/Servers/backup.sh            # -> ~/backups/conservatory-<date>.db
 #     bash ~/conservatory/Servers/backup.sh /some/dir  # elsewhere
 #
-# The photos are plain files under the data directory and need no ceremony:
-# rsync or tar photos/ beside the .db. Copy both off the box; monthly is
-# plenty while the collection is small, and before any migration step.
+# The photos (and the species reference images Fern fetches) are plain files
+# under the data directory and need no ceremony: rsync or tar photos/ and
+# reference/ beside the .db. Copy them off the box; monthly is plenty while
+# the collection is small, and before any migration step.
 
 set -euo pipefail
 
