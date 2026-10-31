@@ -21,7 +21,7 @@ type Item = {
 };
 
 const ORGAN_LABEL: Record<Organ, string> = {
-  auto: "Let it guess",
+  auto: "Let Fern guess",
   leaf: "Leaf",
   flower: "Flower",
   fruit: "Fruit",
@@ -124,22 +124,24 @@ export function Uploader() {
 
   const readyCount = items.filter((it) => it.state === "ready" || it.state === "error").length;
   const doneCount = items.filter((it) => it.state === "done").length;
+  const allDone = items.length > 0 && doneCount === items.length;
 
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <button
-          type="button"
-          onClick={() => cameraRef.current?.click()}
-          className="h-14 rounded border border-terracotta bg-terracotta font-body text-base font-medium text-white hover:bg-terracotta-deep transition-colors"
-        >
+        <button type="button" onClick={() => cameraRef.current?.click()} className="btn btn-primary min-h-14">
+          <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
+            <circle cx="12" cy="13" r="3.5" />
+          </svg>
           Take a photo
         </button>
-        <button
-          type="button"
-          onClick={() => rollRef.current?.click()}
-          className="h-14 rounded border border-line-strong bg-pane font-body text-base font-medium text-ink hover:bg-pane-2 transition-colors"
-        >
+        <button type="button" onClick={() => rollRef.current?.click()} className="btn btn-soft min-h-14">
+          <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="5" width="18" height="14" rx="2" />
+            <path d="M3 15l5-5 4 4 3-3 6 6" />
+            <circle cx="16" cy="9" r="1.5" />
+          </svg>
           Choose from the camera roll
         </button>
         <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { add(e.target.files); e.target.value = ""; }} />
@@ -148,14 +150,14 @@ export function Uploader() {
 
       <ul className="flex flex-col gap-3" aria-live="polite">
         {items.map((it) => (
-          <li key={it.key} className="flex gap-4 rounded border border-line bg-pane p-3">
+          <li key={it.key} className="card flex gap-4 p-4">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={it.preview} alt="" className="h-20 w-20 shrink-0 rounded object-cover bg-pane-2" />
+            <img src={it.preview} alt="" className="h-20 w-20 shrink-0 rounded-thumb bg-sage object-cover" />
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-3">
-                <p className="truncate font-body text-sm text-ink-dim">{it.file.name}</p>
+                <p className="truncate text-meta text-ink-2">{it.file.name}</p>
                 {it.state === "ready" || it.state === "error" ? (
-                  <button type="button" onClick={() => remove(it.key)} className="shrink-0 font-body text-sm text-ink-faint hover:text-ink underline-offset-4 hover:underline">
+                  <button type="button" onClick={() => remove(it.key)} className="shrink-0 text-meta font-semibold text-ink-2 hover:text-ink">
                     Remove
                   </button>
                 ) : null}
@@ -169,15 +171,13 @@ export function Uploader() {
                     aria-checked={it.organ === o}
                     disabled={it.state !== "ready" && it.state !== "error"}
                     onClick={() => update(it.key, { organ: o })}
-                    className={`h-9 rounded-full border px-3 font-body text-sm transition-colors disabled:opacity-60 ${
-                      it.organ === o ? "border-moss bg-moss text-white" : "border-line-strong bg-pane text-ink-dim hover:bg-pane-2"
-                    }`}
+                    className={`chip chip-compact ${it.organ === o ? "chip-on" : ""}`}
                   >
                     {ORGAN_LABEL[o]}
                   </button>
                 ))}
               </div>
-              <p className="mt-2 min-h-6 font-body text-base tabular-nums">
+              <p className="mt-2 min-h-6 text-body tabular-nums">
                 <Status item={it} />
               </p>
             </div>
@@ -186,24 +186,19 @@ export function Uploader() {
       </ul>
 
       <div className="flex min-h-14 flex-wrap items-center justify-between gap-3">
-        <p className="font-body text-base text-ink-dim">
+        <p className="text-body text-ink-2">
           {items.length === 0
             ? "Nothing chosen yet."
-            : doneCount === items.length
+            : allDone
               ? "All identified. Put the names on them whenever you like."
               : `${items.length} ${items.length === 1 ? "photo" : "photos"} chosen.`}
         </p>
-        {doneCount === items.length && items.length > 0 ? (
-          <Link href="/" className="inline-flex h-12 items-center rounded bg-moss px-6 font-body text-base font-medium text-white hover:bg-moss-deep">
+        {allDone ? (
+          <Link href="/" className="btn btn-primary text-white hover:text-white hover:no-underline">
             Back to the Conservatory
           </Link>
         ) : (
-          <button
-            type="button"
-            disabled={busy || readyCount === 0}
-            onClick={uploadAll}
-            className="inline-flex h-12 items-center rounded bg-terracotta px-6 font-body text-base font-medium text-white hover:bg-terracotta-deep disabled:opacity-50 disabled:hover:bg-terracotta transition-colors"
-          >
+          <button type="button" disabled={busy || readyCount === 0} onClick={uploadAll} className="btn btn-primary">
             {busy ? "Sending…" : readyCount === 1 ? "Send 1 photo" : `Send ${readyCount} photos`}
           </button>
         )}
@@ -215,26 +210,26 @@ export function Uploader() {
 function Status({ item }: { item: Item }) {
   switch (item.state) {
     case "ready":
-      return <span className="text-ink-faint">Ready to send</span>;
+      return <span className="text-ink-3">Ready to send</span>;
     case "uploading":
-      return <span className="text-ink-dim">Sending{item.attempt > 1 ? ` (try ${item.attempt})` : ""}…</span>;
+      return <span className="text-ink-2">Sending{item.attempt > 1 ? ` (try ${item.attempt})` : ""}…</span>;
     case "queued":
-      return <span className="text-ink-dim">{item.job?.status === "identifying" ? "Identifying…" : "In the queue…"}</span>;
+      return <span className="text-ink-2">{item.job?.status === "identifying" ? "Fern is looking…" : "In the queue…"}</span>;
     case "error":
-      return <span className="text-terracotta-deep">Could not send: {item.error}</span>;
+      return <span className="text-warn-ink">Could not send: {item.error}</span>;
     case "done": {
       const job = item.job;
       const top = job?.candidates.find((c) => c.kind === "species");
       if (job?.status === "identified" && top)
         return (
           <span className="text-ink">
-            <em className="not-italic font-medium">{top.scientificName}</em>
-            {top.commonNames[0] ? <span className="text-ink-dim"> · {top.commonNames[0]}</span> : null}
-            <span className="text-ink-faint"> · {Math.round(top.score * 100)}%</span>
+            <em className="sp">{top.scientificName}</em>
+            {top.commonNames[0] ? <span className="text-ink-2"> · {top.commonNames[0]}</span> : null}
+            <span className="text-ink-3"> · {Math.round(top.score * 100)}%</span>
           </span>
         );
-      if (job?.status === "rejected") return <span className="text-ink-dim">No match. You can name it yourself.</span>;
-      return <span className="text-terracotta-deep">Identification failed{job?.error ? `: ${job.error}` : ""}</span>;
+      if (job?.status === "rejected") return <span className="text-ink-2">No match. You can name it yourself.</span>;
+      return <span className="text-warn-ink">Identification failed{job?.error ? `: ${job.error}` : ""}</span>;
     }
   }
 }
