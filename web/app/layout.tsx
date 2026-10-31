@@ -1,21 +1,27 @@
 import type { Metadata, Viewport } from "next";
-import { Alegreya_Sans, Bodoni_Moda } from "next/font/google";
+import { Fraunces, Nunito_Sans } from "next/font/google";
+import { TopBar } from "@/components/topbar";
 import "./globals.css";
 
-// Glasshouse type pairing: Bodoni Moda, the high-contrast didone of a
-// nineteenth-century botanical plate caption, for display; Alegreya Sans, a
-// warm humanist sans with a tall x-height, for everything a person reads at
-// arm's length on a phone. Self-hosted at build time by next/font.
-const bodoni = Bodoni_Moda({
-  variable: "--font-bodoni",
+// The faces design/DESIGN.md §3 names: Fraunces for headings, binomials and
+// big numbers; Nunito Sans for everything else. Self-hosted at build time by
+// next/font; the variables feed the font tokens in design/tokens.css, so the
+// boxes make no font requests.
+//
+// Fraunces carries its true italic (binomials are always italic) and NOT the
+// optical-size axis DESIGN.md asks for: Next 16.2's Turbopack refuses a
+// next/font/google call that lists both `axes` and two `style`s ("queries
+// have exactly one entry"), and the italic is the one a reader sees.
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
   subsets: ["latin"],
-  axes: ["opsz"],
+  style: ["normal", "italic"],
 });
 
-const alegreya = Alegreya_Sans({
-  variable: "--font-alegreya",
+const nunito = Nunito_Sans({
+  variable: "--font-nunito",
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
+  weight: ["400", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -24,13 +30,16 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#f3efe4",
+  themeColor: "#F3F6EF",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${bodoni.variable} ${alegreya.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-glass text-ink font-body">{children}</body>
+    <html lang="en" className={`${fraunces.variable} ${nunito.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col bg-ground text-ink font-sans leading-normal">
+        <TopBar />
+        {children}
+      </body>
     </html>
   );
 }

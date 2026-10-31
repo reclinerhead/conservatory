@@ -46,6 +46,27 @@ export type CollectionCounts = {
 
 export const EMPTY_COUNTS: CollectionCounts = { specimens: 0, species: 0, places: 0, waiting: 0 };
 
+/** Thumbnails of up to three photos waiting for a name, newest first, for the pending strip. */
+export function waitingThumbs(limit = 3): string[] {
+  const db = openReadOnly();
+  if (!db) return [];
+  try {
+    const rows = db
+      .prepare(
+        `SELECT p.path FROM jobs j
+           JOIN photos p ON p.job_id = j.id
+          WHERE j.status IN ('identified', 'rejected')
+            AND NOT EXISTS (SELECT 1 FROM confirmations c WHERE c.job_id = j.id)
+          ORDER BY j.finished_at DESC, p.id
+          LIMIT ?`,
+      )
+      .all(limit) as Array<{ path: string }>;
+    return rows.map((r) => r.path);
+  } finally {
+    db.close();
+  }
+}
+
 export function collectionCounts(): CollectionCounts {
   const db = openReadOnly();
   if (!db) return EMPTY_COUNTS;

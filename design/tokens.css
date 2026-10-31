@@ -1,0 +1,85 @@
+/* The Conservatory — design tokens for Tailwind CSS 4.
+ * Import once from app/globals.css:
+ *   @import "tailwindcss";
+ *   @import "../design/tokens.css";   (adjust the path)
+ * Then use the utilities Tailwind generates: bg-ground, text-ink-2, border-line,
+ * bg-moss, rounded-card, font-display, etc. Rationale and usage: DESIGN.md.
+ */
+
+/* Fonts are NOT fetched from Google here. The app self-hosts Fraunces and
+ * Nunito Sans through next/font (web/app/layout.tsx), which sets the
+ * --font-fraunces and --font-nunito variables the two font tokens below read;
+ * the boxes make no font requests. The static mockups carry their own <link>. */
+
+@theme {
+  /* Surfaces, light to dark */
+  --color-ground: #F3F6EF;      /* page background: pale sage */
+  --color-surface: #FFFFFF;     /* cards */
+  --color-sage: #E8EFE2;        /* soft fills: panels, chip hover, stat tiles, pending strip */
+  --color-sage-2: #DCE7D4;      /* active nav pill, pressed soft button */
+  --color-line: #D3DECB;        /* card borders, dividers */
+  --color-line-2: #C9D7BF;      /* control borders (inputs, chips, selects) */
+  --color-line-strong: #9DB896; /* hover borders, lineage connectors, info-mark ring */
+
+  /* Ink */
+  --color-ink: #1E2A1C;         /* body text, headings */
+  --color-ink-2: #4F6149;       /* secondary text, labels, nav; 6:1 on ground */
+  --color-ink-3: #6B7B66;       /* placeholders, author strings; 4.6:1 on white */
+
+  /* Action */
+  --color-moss: #3F6E45;        /* the one action color: primary buttons, links, active chip */
+  --color-moss-deep: #2C5232;   /* hover */
+
+  /* Status tints (background / text) — always paired, never text alone */
+  --color-bloom: #F6E3EC;       /* bloom events, flowering badges */
+  --color-bloom-ink: #8A3862;
+  --color-bloom-accent: #A84E78;/* bloom dots and icons on white */
+  --color-warn: #F7EBD2;        /* frost, bring-indoors, time-sensitive */
+  --color-warn-ink: #6E4A08;
+  --color-warn-line: #E4C98A;   /* border of a highlighted reminder card */
+  --color-warn-bg: #FFFBF1;     /* fill of a highlighted reminder card */
+  --color-water: #DDEBF1;       /* watering */
+  --color-water-ink: #1F4F63;
+
+  /* Placeholder tile tints (plants without a photo yet) */
+  --color-tile-1: #D7E5CF;
+  --color-tile-2: #CFE0C7;
+  --color-tile-3: #DCE7D4;
+  --color-tile-4: #D5E3DC;
+  --color-tile-5: #E6E9C9;
+
+  /* Type */
+  --font-display: var(--font-fraunces), "Fraunces", Georgia, serif;        /* headings, binomials, big numbers */
+  --font-sans: var(--font-nunito), "Nunito Sans", system-ui, sans-serif;   /* everything else */
+
+  --text-page-title: 52px;      /* species common name */
+  --text-h1: 40px;              /* dashboard greeting */
+  --text-h2: 30px;              /* "Life list" */
+  --text-section: 26px;         /* card section titles on species page */
+  --text-binomial: 26px;        /* italic Latin name under a title */
+  --text-h3: 19px;              /* side-panel titles */
+  --text-lead: 17px;            /* about-paragraph, card names */
+  --text-body: 15px;
+  --text-meta: 13px;            /* muted lines */
+  --text-tag: 12px;
+
+  /* Shape */
+  --radius-card: 18px;
+  --radius-tile: 14px;          /* care-sheet cells, stat tiles */
+  --radius-thumb: 12px;
+  --radius-pill: 999px;
+
+  /* Spacing rhythm */
+  --spacing-page-x: 32px;
+  --spacing-section: 28px;      /* gap between page sections and columns */
+  --spacing-card: 20px;         /* side-panel padding */
+  --spacing-card-lg: 28px 32px; /* main-column card padding */
+  --spacing-grid: 14px;         /* gap inside card grids (16px on the life list) */
+
+  /* Elevation (hover only; resting cards are flat) */
+  --shadow-hover: 0 6px 18px rgb(46 78 50 / 0.10);
+
+  /* Layout */
+  --container-page: 1360px;
+  --container-sidebar: 360px;
+}

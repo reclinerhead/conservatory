@@ -42,23 +42,22 @@ Both of the README's flows go through the same page and the same route. `compone
 
 Tests: `lib/photos.test.ts` (paths, the media guard, MIME mapping), `lib/exif.test.ts` (the APP1 walk against hand-built JPEGs, both byte orders, the IFD0 fallback), `lib/retry.test.ts`.
 
-## The visual language: "Glasshouse, Morning"
+## The visual language
 
-The Aviary is a ranger station at night; the Conservatory is its daylight sibling, and the two must read as a pair without sharing a palette. Everything lives in `app/globals.css` as Tailwind theme tokens.
+Defined in [`design/DESIGN.md`](../../design/DESIGN.md), made with Claude Design before any screen was built: pale sage ground, white cards, one moss action colour with pink, amber and blue reserved for bloom, time-sensitive and water, pills for everything pressable, Fraunces for display and Nunito Sans for reading. Read it before touching UI; the two static mockups in `design/mockups/` are the reference for the dashboard and species pages. How the app wires it:
 
-- **Surfaces** are limewash and paper: `glass` (the page), `pane` (the lightest panel), `pane-2` (a pressed panel, the strip). Rules are `line` and `line-strong`.
-- **Ink** is the black-green of painted iron: `ink`, `ink-dim`, `ink-faint`. All three are measured against `pane`: 14.9:1, 7.3:1, 4.6:1, so `ink-faint` is AA for small text and nothing smaller than 14 px uses it.
-- **Two accents, each with one job.** `moss` is anything that is a plant or a link. `terracotta` is the one action on a screen (the pot you pick up): the Add button, the first-plant link, the focus ring. Neither is decoration.
-- **Type.** `font-display` is Bodoni Moda, the high-contrast didone of a botanical plate caption, for titles only. `font-body` is Alegreya Sans, warm and tall-x-height, for everything read at arm's length. Both self-hosted through `next/font`. No system fonts, no mono.
-- **The mullion grid** (`.mullions`) is the one memorable mark: two faint rules every pane width over the masthead, with a wash of morning light from the upper left. The pane width and the rule's strength both step up with the viewport (56, 72, 96 px; the rule is mixed toward the pane on a phone) so it reads as a glass roof, not graph paper.
-- **Motion** is one page-load reveal (`.reveal`, staggered by `--reveal-i`), off under `prefers-reduced-motion`. Nothing else moves on its own.
+- **Tokens.** `design/tokens.css` is the Tailwind 4 `@theme`, imported from `app/globals.css`. Nothing else in `web/` defines a colour, a face, a radius or a size: a screen says `bg-sage`, `text-ink-2`, `rounded-card`, `text-h2`, `max-w-page`.
+- **Fonts** are self-hosted through `next/font` in `app/layout.tsx` (Fraunces with its italic for binomials, Nunito Sans at 400, 600, 700); the variables they set feed the two font tokens, so the boxes make no font requests. The Google Fonts `@import` that DESIGN.md's tokens originally carried was removed for this reason.
+- **Component recipes** (DESIGN.md §4) are written once in `globals.css` under `@layer components`: `btn` with `btn-primary`, `btn-soft`, `btn-ghost`, `btn-compact`; `chip` with `chip-on`, `chip-compact`; `card` with `card-link` for the hover lift; `tag` with `tag-bloom`, `tag-warn`, `tag-water`; `nav-pill`; `thumb`; `sp` for an italic Latin name.
+- **The top bar** (`components/topbar.tsx`) is in the root layout: leaf mark and wordmark, the five nav pills (only Collection is a link until its page exists; the rest are drawn in place, muted, so the bar keeps its shape), the primary "Add a plant". The search box arrives with #8.
+- **The dashboard** (`app/page.tsx`) follows DESIGN.md §5 in its Phase 1 subset: the pending strip (a sage card with three overlapping thumbs, real ones when photos are waiting, the headline and one primary button), the life list with its counts line and 3-across specimen cards (1 below 640 px, 2 below 1024), and the side column's "at a glance" stat tiles. Greeting, Today's care, filters, Blooming now and the Flower Show wait for the phases that have data for them; their space is not faked.
 
-### Rules every screen follows
+### Rules every screen keeps
 
-- **No layout shift.** Empty states reserve the populated space. The strip is `min-h-14` in every state and lays out its link even when hidden; the collection's empty tile and ghost tiles use the same `.tile` box (4:5) a populated tile will. Counts render on the server.
-- **Honest zeros.** The ledger says "0 plants" rather than hiding.
-- **Phone first, laptop wide.** 16 px gutters at phone width, the grid goes from two columns to six, the masthead stacks the button under the title on a phone and sets it beside on a laptop.
-- **Tap targets** are at least 48 px tall.
+- **No layout shift.** Empty states reserve the populated space. The pending strip keeps its height in every state and lays out its button even when hidden; the life list's empty state is drawn in the specimen card's own shape. Counts render on the server.
+- **Honest zeros.** The counts say "0 specimens" rather than hiding.
+- **Phone first, laptop wide.** Rows wrap, the side column is a flex sibling that drops below on a phone, card grids step down by width, chip rows wrap and never scroll sideways.
+- **Tap targets** are at least 44 px tall, the buttons and chips 44 by recipe.
 - **The app teaches** (#10). Every horticultural term carries an info mark; the glossary component lands with the confirm screen.
 
-Tests: `lib/ledger.test.ts` covers the pluralization and the strip label. The React Compiler is on (`reactCompiler: true`), as in the Aviary.
+Tests: `lib/ledger.test.ts` covers the counts line and the strip's two lines. The React Compiler is on (`reactCompiler: true`), as in the Aviary.

@@ -1,94 +1,193 @@
 @import "tailwindcss";
+@import "../../design/tokens.css";
 
 /* =============================================================================
-   The Conservatory -- "Glasshouse, Morning"
-   The Aviary is a ranger station at night; this is its daylight sibling. The
-   surfaces are limewash and paper, the ink is the black-green of painted iron,
-   and there are exactly two accents: moss for anything that is a plant or a
-   link, terracotta for the one action on a screen (the pot you pick up). The
-   masthead carries the one memorable mark, a faint mullion grid, the panes of
-   a glass roof. Everything else is restraint: type, spacing, honest zeros.
-
-   Contrast is measured, not eyeballed, against --color-pane (the lightest
-   surface): ink 14.9:1, ink-dim 7.3:1, ink-faint 4.6:1 (AA for small text),
-   moss 5.9:1, terracotta 4.6:1 on pane and 6.3:1 for white text on it.
+   The Conservatory's look is defined in design/DESIGN.md and its values in
+   design/tokens.css (imported above as the Tailwind theme). Nothing in this
+   file picks a colour or a face; it only writes down the component recipes
+   DESIGN.md §4 describes, so a screen says `btn btn-primary` or `card` and
+   gets exactly the mockup's shape. App-only rules at the bottom.
    ========================================================================== */
 
-@theme {
-  --color-glass: #f3efe4;
-  --color-pane: #faf8f1;
-  --color-pane-2: #ece7d8;
-  --color-line: #d6cfbd;
-  --color-line-strong: #b4ab93;
+@layer components {
+  /* Buttons: pill, 44 px, 700 weight, icon + label with 8 px gap. */
+  .btn {
+    font-weight: 700;
+    border-radius: var(--radius-pill);
+    border: 1px solid transparent;
+    padding: 10px 18px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: background-color 120ms ease, border-color 120ms ease;
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .btn-primary {
+    background: var(--color-moss);
+    color: #fff;
+  }
+  .btn-primary:not(:disabled):hover {
+    background: var(--color-moss-deep);
+  }
+  .btn-soft {
+    background: var(--color-sage);
+    color: var(--color-ink);
+    border-color: var(--color-line);
+  }
+  .btn-soft:not(:disabled):hover {
+    background: var(--color-sage-2);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--color-moss);
+    border-color: var(--color-line-2);
+  }
+  .btn-ghost:not(:disabled):hover {
+    background: var(--color-sage);
+  }
+  .btn-compact {
+    min-height: 40px;
+    padding: 6px 14px;
+  }
 
-  --color-ink: #1d2823;
-  --color-ink-dim: #4a5950;
-  --color-ink-faint: #66766c;
+  /* Chips: pill, 44 px, white with a control border; selected = moss. */
+  .chip {
+    font-size: 14px;
+    font-weight: 600;
+    background: var(--color-surface);
+    color: var(--color-ink);
+    border: 1px solid var(--color-line-2);
+    border-radius: var(--radius-pill);
+    padding: 0 14px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: background-color 120ms ease;
+  }
+  .chip:not(:disabled):hover {
+    background: var(--color-sage);
+  }
+  .chip-on,
+  .chip-on:not(:disabled):hover {
+    background: var(--color-moss);
+    color: #fff;
+    border-color: var(--color-moss);
+  }
+  .chip:disabled {
+    cursor: default;
+    opacity: 0.7;
+  }
+  .chip-compact {
+    min-height: 40px;
+  }
 
-  --color-moss: #3f6b45;
-  --color-moss-deep: #2d4f33;
-  --color-terracotta: #b4532b;
-  --color-terracotta-deep: #8f3f1f;
+  /* Cards: white, hairline, 18 px radius. Flat at rest; a linked card lifts on hover. */
+  .card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+  }
+  .card-link {
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+  }
+  .card-link:hover {
+    border-color: var(--color-line-strong);
+    box-shadow: var(--shadow-hover);
+  }
 
-  --font-display: var(--font-bodoni), "Bodoni MT", Didot, Georgia, serif;
-  --font-body: var(--font-alegreya), "Gill Sans", Candara, sans-serif;
-}
+  /* Status tags: 12 px / 700, pill. Tint variants only for their meanings. */
+  .tag {
+    font-size: var(--text-tag);
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    background: var(--color-sage);
+    color: var(--color-moss-deep);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    line-height: 1.2;
+  }
+  .tag-bloom {
+    background: var(--color-bloom);
+    color: var(--color-bloom-ink);
+  }
+  .tag-warn {
+    background: var(--color-warn);
+    color: var(--color-warn-ink);
+  }
+  .tag-water {
+    background: var(--color-water);
+    color: var(--color-water-ink);
+  }
 
-/* The mullion grid: a glass roof seen from inside. Two faint rules every pane
-   width, a warm wash of morning light from the upper left, laid over --pane.
-   The pane width steps up with the viewport so the grid reads as architecture
-   at every size rather than as graph paper on a phone. */
-.mullions {
-  --pane-w: 56px;
-  --mullion: color-mix(in oklab, var(--color-line) 55%, var(--color-pane));
-  background-color: var(--color-pane);
-  background-image:
-    radial-gradient(120% 90% at 0% 0%, rgb(255 251 238 / 0.9), transparent 60%),
-    repeating-linear-gradient(90deg, var(--mullion) 0 1px, transparent 1px var(--pane-w)),
-    repeating-linear-gradient(0deg, var(--mullion) 0 1px, transparent 1px var(--pane-w));
-}
-@media (min-width: 640px) {
-  .mullions {
-    --pane-w: 72px;
-    --mullion: color-mix(in oklab, var(--color-line) 70%, var(--color-pane));
+  /* Nav pills in the top bar. */
+  .nav-pill {
+    color: var(--color-ink-2);
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: var(--radius-pill);
+    display: inline-block;
+  }
+  a.nav-pill:hover {
+    color: var(--color-ink);
+    background: var(--color-sage);
+    text-decoration: none;
+  }
+  .nav-pill-on {
+    color: var(--color-ink);
+    background: var(--color-sage-2);
+  }
+
+  /* A 48 px thumb with a 12 px radius (side-panel rows, the pending strip). */
+  .thumb {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-thumb);
+    flex: none;
+    object-fit: cover;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Latin names are always italic. */
+  .sp {
+    font-style: italic;
+    color: var(--color-ink-2);
   }
 }
-@media (min-width: 1280px) {
-  .mullions {
-    --pane-w: 96px;
-    --mullion: var(--color-line);
-  }
-}
 
-/* One page-load reveal, staggered by --reveal-i. No scattered motion. */
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
+/* App-only base rules. In the base layer on purpose: an unlayered rule would
+   outrank the component recipes above (a link styled `btn-primary` would keep
+   the link colour and vanish into its own fill). */
+@layer base {
+  html {
+    font-size: var(--text-body);
   }
-  to {
-    opacity: 1;
-    transform: none;
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: -0.01em;
   }
-}
-.reveal {
-  animation: rise 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
-  animation-delay: calc(var(--reveal-i, 0) * 70ms);
-}
-@media (prefers-reduced-motion: reduce) {
-  .reveal {
-    animation: none;
+  a {
+    color: var(--color-moss);
   }
-}
-
-/* A specimen tile's frame. Populated and empty tiles share this box exactly,
-   so filling the collection never moves anything. */
-.tile {
-  aspect-ratio: 4 / 5;
-  border-radius: 4px;
-}
-
-:focus-visible {
-  outline: 2px solid var(--color-terracotta);
-  outline-offset: 2px;
+  a:hover {
+    color: var(--color-moss-deep);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-moss);
+    outline-offset: 2px;
+  }
 }

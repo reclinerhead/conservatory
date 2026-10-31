@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { count, ledgerEntries, waitingLabel } from "./ledger";
+import { count, ledgerEntries, waitingDetail, waitingLabel } from "./ledger";
 
 describe("count", () => {
   it("pluralizes by default and accepts an irregular plural", () => {
@@ -10,24 +10,28 @@ describe("count", () => {
 });
 
 describe("ledgerEntries", () => {
-  it("reads plants, species, places in that order with honest zeros", () => {
+  it("reads specimens, species, locations in that order with honest zeros", () => {
     expect(ledgerEntries({ specimens: 0, species: 0, places: 0, waiting: 0 })).toEqual([
-      "0 plants",
+      "0 specimens",
       "0 species",
-      "0 places",
+      "0 locations",
     ]);
-    expect(ledgerEntries({ specimens: 150, species: 1, places: 3, waiting: 9 })).toEqual([
-      "150 plants",
+    expect(ledgerEntries({ specimens: 150, species: 1, places: 1, waiting: 9 })).toEqual([
+      "150 specimens",
       "1 species",
-      "3 places",
+      "1 location",
     ]);
   });
 });
 
-describe("waitingLabel", () => {
-  it("names the empty state and counts the rest", () => {
+describe("waitingLabel and waitingDetail", () => {
+  it("name the empty state and count the rest", () => {
     expect(waitingLabel(0)).toBe("Nothing waiting for a name");
     expect(waitingLabel(1)).toBe("1 plant waiting for a name");
     expect(waitingLabel(7)).toBe("7 plants waiting for a name");
+    expect(waitingDetail(0)).toMatch(/Add a photo/);
+    expect(waitingDetail(1)).toBe("Fern has a suggestion ready.");
+    expect(waitingDetail(3)).toBe("Fern has suggestions ready for all three.");
+    expect(waitingDetail(7)).toBe("Fern has suggestions ready for all 7.");
   });
 });
