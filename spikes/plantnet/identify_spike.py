@@ -8,6 +8,11 @@ Usage
 
 Photo layout
 ------------
+The quick way: a flat folder of photos, no names. Each is identified and the
+top three candidates are printed for you to judge by eye. Nothing is scored.
+
+The scored way, when you know what a plant is:
+
     photos/
       Echeveria/                 <- what you believe the plant is (genus only is fine)
         shelf-a-1.jpg
@@ -189,10 +194,15 @@ def identify(api_key: str, photos: list[Path], no_reject: bool, lang: str) -> tu
     return resp.status_code, body
 
 
+UNLABELED = Expected(label="(unlabeled)", genus="", species=None)
+
+
 def collect_queries(root: Path, grouped: bool) -> list[tuple[Expected, str, list[Path]]]:
+    """Named subfolders are scored; a flat folder of photos is just identified, for the eye."""
     queries = []
-    for folder in sorted(p for p in root.iterdir() if p.is_dir()):
-        expected = parse_expected(folder.name)
+    folders = sorted(p for p in root.iterdir() if p.is_dir())
+    sources = [(parse_expected(f.name), f) for f in folders] or [(UNLABELED, root)]
+    for expected, folder in sources:
         groups: dict[str, list[Path]] = {}
         for f in sorted(folder.iterdir()):
             if f.suffix.lower() in IMAGE_EXTS:
@@ -273,9 +283,12 @@ def main() -> int:
                 "species_top3": sc.species_top3,
             }
         )
-        mark = "G" if sc.genus_top3 else "-"
-        mark += "S" if sc.species_top3 else ("." if sc.species_top3 is None else "-")
-        print(f"[{source:5}] {mark} {expected.label:30} -> {rows[-1]['top1'] or state}")
+        if expected.genus:
+            mark = "G" if sc.genus_top3 else "-"
+            mark += "S" if sc.species_top3 else ("." if sc.species_top3 is None else "-")
+            print(f"[{source:5}] {mark} {expected.label:30} -> {rows[-1]['top1'] or state}")
+        else:
+            print(f"[{source:5}] {photos[0].name:30} -> {rows[-1]['top3'] or state}")
 
     if not rows:
         return 1
@@ -294,9 +307,10 @@ def main() -> int:
         lines.append(f"- **quota remaining today:** {remaining}")
     lines += ["", "| expected | status | top-1 | top-3 | genus | species |", "| --- | --- | --- | --- | --- | --- |"]
     for r in rows:
-        g = "✓" if r["genus_top3"] else "✗"
+        g = "" if not r["expected_genus"] else ("✓" if r["genus_top3"] else "✗")
         s = "" if r["species_top1"] is None else ("✓" if r["species_top3"] else "✗")
-        lines.append(f"| {r['expected']} | {r['status']} | {r['top1']} | {r['top3']} | {g} | {s} |")
+        name = r["expected"] if r["expected_genus"] else r["photos"]
+        lines.append(f"| {name} | {r['status']} | {r['top1']} | {r['top3']} | {g} | {s} |")
     (args.out / "results.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     print()

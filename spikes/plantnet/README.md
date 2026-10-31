@@ -18,7 +18,9 @@ $env:PLANTNET_API_KEY = "paste it here"
 
 ## Photos
 
-Put photos under `photos/` (ignored by git), one folder per name you believe the plant has:
+**The quick way, and the one to start with:** drop ten unlabeled phone photos into a flat folder such as `photos-succulents/` (ignored by git). Each is identified and the top three candidates are printed for you to judge by eye. No naming, no scoring. If the right genus is in the top three for most of them, the spike has done its job.
+
+**The scored way**, for any plant whose name you know, is one folder per name:
 
 ```
 photos/
