@@ -6,6 +6,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { tileName, type Tile } from "./collection";
 import { referenceUrls, thumbPathFor } from "./photos";
+import { relativesOf, type Relatives } from "./relatives";
 import { compareSpecies, type Naming, type OwnerPhoto, type SpeciesListRow } from "./species-page";
 import { collectionTiles } from "./specimens";
 
@@ -31,6 +32,7 @@ export type SpeciesView = {
   tiles: Tile[];
   photos: OwnerPhoto[];
   naming: Naming;
+  relatives: Relatives;
 };
 
 type Row = {
@@ -126,6 +128,7 @@ export function readSpecies(db: DatabaseSync, id: number): SpeciesView | null {
     tiles,
     photos,
     naming,
+    relatives: relativesOf(r, speciesList(db)),
   };
 }
 

@@ -5,13 +5,15 @@ import { Term } from "@/components/term";
 import { LeafMark } from "@/components/topbar";
 import { dayLabel, metaLine, STATUS_LABEL, tileName } from "@/lib/collection";
 import { withReadDb } from "@/lib/jobs";
+import { relativeCount, relativesLine, relativesOf } from "@/lib/relatives";
+import { speciesList } from "@/lib/species";
 import { displayName } from "@/lib/species-page";
 import { knownLocations, readSpecimen } from "@/lib/specimens";
 
 // /plants/[id]: one specimen. Breadcrumb, title block, its photos as a
-// timeline, the editable facts, and its species in the side column with a
-// link to the species page. Minimal on purpose: care, relatives, events and
-// tags arrive with the phases that bring them.
+// timeline, the editable facts, and its species in the side column with how
+// many relatives it has and a link to the species page. Minimal on purpose:
+// care, events and tags arrive with the phases that bring them.
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -26,11 +28,12 @@ export default async function PlantPage({ params }: { params: Promise<{ id: stri
   if (!Number.isInteger(plantId) || plantId <= 0) notFound();
   const data = withReadDb((db) => {
     const plant = readSpecimen(db, plantId);
-    return plant ? { plant, locations: knownLocations(db) } : null;
+    return plant ? { plant, locations: knownLocations(db), relatives: relativesOf(plant.species, speciesList(db)) } : null;
   }, null);
   if (!data) notFound();
-  const { plant, locations } = data;
+  const { plant, locations, relatives } = data;
   const sp = plant.species;
+  const relCount = relativeCount(relatives);
   const name = tileName({ nickname: plant.nickname, scientificName: sp.scientificName, cultivar: sp.cultivar });
   const [hero, ...rest] = plant.photos;
   const record = plant.named
@@ -161,7 +164,10 @@ export default async function PlantPage({ params }: { params: Promise<{ id: stri
                 <dd>{sp.family ?? <span className="text-ink-3">not known yet</span>}</dd>
               </div>
             </dl>
-            <Link href={`/species/${sp.id}`} className="btn btn-soft btn-compact mt-4 hover:no-underline">
+            <p className="mt-4 text-meta text-ink-2">
+              {relCount > 0 ? <Link href={`/species/${sp.id}#relatives`}>{relativesLine(relatives)}</Link> : relativesLine(relatives)}
+            </p>
+            <Link href={`/species/${sp.id}`} className="btn btn-soft btn-compact mt-3 hover:no-underline">
               Open the species page
             </Link>
           </section>
