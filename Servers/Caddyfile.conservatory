@@ -1,0 +1,23 @@
+# The Conservatory's door on orchid (issue #9): https://conservatory.lan,
+# one site block for orchid's Caddy. The Aviary's config
+# (project-squirrel/Servers/Caddyfile-orchid, hand-synced to
+# /etc/caddy/Caddyfile) is not touched; it takes this file in with one line
+# at its END, after the lan_tls snippet is defined:
+#
+#     import /home/todd/conservatory/Servers/Caddyfile.conservatory
+#
+# then `sudo systemctl reload caddy`. Same manual-sync posture as every other
+# Caddy change in the house: a reverse-proxy config that deploys itself on
+# merge could take every web surface down at once, so a merge that changes
+# this file is followed by a reload by hand.
+#
+# lan_tls is the house snippet: the private root's certificate, HSTS, and
+# compression at the choke point (route JSON and page HTML; images pass
+# through untouched). The name needs a Pi-hole Local DNS record,
+# conservatory.lan -> 192.168.1.148, on pearl's Pi-hole and on orchid's
+# standby copy. 3010 is the web unit's port; 3000 is the Aviary's.
+
+conservatory, conservatory.lan {
+	import lan_tls
+	reverse_proxy 127.0.0.1:3010
+}

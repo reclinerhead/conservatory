@@ -1,0 +1,24 @@
+# Fern on orchid (issue #9): the identification worker, `python -m fern` from
+# the repo's own venv (.venv/, built by Servers/install-orchid.sh with uv on
+# Python 3.13). One line per job in the journal with the quota remaining.
+#
+# The database path, the data directory and the Pl@ntNet key come from the
+# environment file outside the repo (root-owned, 0600; systemd reads it
+# before dropping to todd). Fern refuses to start without the key.
+
+[Unit]
+Description=The Conservatory -- Fern, the identification worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=todd
+WorkingDirectory=/home/todd/conservatory
+EnvironmentFile=/etc/conservatory/conservatory.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/todd/conservatory/.venv/bin/python -m fern
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

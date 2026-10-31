@@ -6,8 +6,9 @@ The living description of how the Conservatory is built and why. The root [READM
 | --- | --- | --- |
 | [`fern.md`](fern.md) | Fern, the Python worker: the database and its schema, the identification queue, the Pl@ntNet client, the enrichment pass | Touching anything under `fern/`, the schema, or a job's life cycle |
 | [`web.md`](web.md) | The Next.js app: routes, how it reads and writes the database, the visual language, the glossary | Touching anything under `web/` |
+| [`ops.md`](ops.md) | What runs on orchid, how it deploys, how to check it, back it up and roll it back | Touching anything under `Servers/`, or the box |
 
-Spokes to come as the phases land: `ops.md` (what runs where on the boxes, from #9) and `flower-show.md` (the hub, Phase 4).
+Spoke to come: `flower-show.md` (the hub, Phase 4).
 
 ## The shape, in one paragraph
 
