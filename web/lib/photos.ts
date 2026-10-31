@@ -35,18 +35,34 @@ export function thumbPathFor(rel: string): string {
 
 const SEGMENT = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const SERVABLE = new Set(["jpg", "jpeg", "png", "heic"]);
+const REFERENCE_FILE = /^[0-9]+(\.thumb)?\.jpg$/;
 
 /**
- * The guard for GET /media/[...path]: exactly the shape relPathFor writes,
- * nothing a filesystem could interpret. Returns the relative path or null.
+ * The guard for GET /media/[...path]: exactly the shapes Fern and the upload
+ * route write, nothing a filesystem could interpret. photos/yyyy/mm/<file>
+ * for an owner's photo or its thumbnail, reference/<species id>.jpg or
+ * .thumb.jpg for a species' reference image. Returns the relative path or null.
  */
 export function mediaRelPath(parts: string[]): string | null {
+  if (parts.length === 2 && parts[0] === "reference") return REFERENCE_FILE.test(parts[1]) ? parts.join("/") : null;
   if (parts.length !== 4 || parts[0] !== "photos") return null;
   if (!parts.every((p) => SEGMENT.test(p) && !p.includes(".."))) return null;
   const file = parts[3];
   const ext = file.slice(file.lastIndexOf(".") + 1).toLowerCase();
   if (!SERVABLE.has(ext)) return null;
   return parts.join("/");
+}
+
+/**
+ * The URLs of a species' reference image and its thumbnail, or null when Fern
+ * has none. `python -m fern --enrich` rewrites the same file, and the media
+ * route caches for a year, so the enrichment stamp rides along as ?v= and a
+ * re-fetched image is a new URL.
+ */
+export function referenceUrls(imagePath: string | null, version: string | null): { url: string; thumbUrl: string } | null {
+  if (!imagePath) return null;
+  const v = version ? `?v=${encodeURIComponent(version)}` : "";
+  return { url: `/media/${imagePath}${v}`, thumbUrl: `/media/${thumbPathFor(imagePath)}${v}` };
 }
 
 export function contentTypeFor(rel: string): string {

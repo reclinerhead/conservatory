@@ -1,7 +1,10 @@
-// GET /media/photos/<yyyy>/<mm>/<file>: a photo or its thumbnail from
-// CONSERVATORY_DATA. The path guard (mediaRelPath) accepts exactly the shape
-// the upload route writes and nothing a filesystem could interpret. Names are
-// UUIDs and a file is written once, so the browser may cache for a year.
+// GET /media/photos/<yyyy>/<mm>/<file>: a photo or its thumbnail, and
+// GET /media/reference/<species id>.jpg (or .thumb.jpg): a species' reference
+// image, both from CONSERVATORY_DATA. The path guard (mediaRelPath) accepts
+// exactly the shapes the upload route and Fern write and nothing a filesystem
+// could interpret. Photo names are UUIDs written once; a reference image can
+// be re-fetched in place, so its URL carries ?v=<enriched_at> (referenceUrls)
+// and the browser may cache both for a year.
 
 import { promises as fs } from "node:fs";
 import path from "node:path";

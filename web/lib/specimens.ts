@@ -20,15 +20,14 @@ type TileRow = {
 const HERO = `(SELECT p.path FROM photos p WHERE p.specimen_id = sp.id
                  ORDER BY COALESCE(p.taken_at, p.uploaded_at) DESC, p.id DESC LIMIT 1)`;
 
-/** Every specimen as a grid tile, in no particular order: the client groups and sorts. */
-export function collectionTiles(db: DatabaseSync): Tile[] {
-  const rows = db
-    .prepare(
-      `SELECT sp.id, sp.nickname, sp.location, sp.acquired_on, sp.status, sp.created_at,
-              s.scientific_name, s.cultivar, ${HERO} AS hero
-         FROM specimens sp JOIN species s ON s.id = sp.species_id`,
-    )
-    .all() as TileRow[];
+/** Every specimen as a grid tile (or every specimen of one species), in no particular order: the caller groups and sorts. */
+export function collectionTiles(db: DatabaseSync, speciesId?: number): Tile[] {
+  const sql = `SELECT sp.id, sp.nickname, sp.location, sp.acquired_on, sp.status, sp.created_at,
+                      s.scientific_name, s.cultivar, ${HERO} AS hero
+                 FROM specimens sp JOIN species s ON s.id = sp.species_id`;
+  const rows = (
+    speciesId === undefined ? db.prepare(sql).all() : db.prepare(`${sql} WHERE sp.species_id = ?`).all(speciesId)
+  ) as TileRow[];
   return rows.map((r) => ({
     id: r.id,
     nickname: r.nickname,
@@ -49,7 +48,7 @@ export type SpecimenView = {
   acquiredOn: string | null;
   status: SpecimenStatus;
   createdAt: string;
-  species: { id: number; scientificName: string; genus: string | null; family: string | null; cultivar: string | null };
+  species: { id: number; scientificName: string; genus: string | null; family: string | null; cultivar: string | null; commonName: string | null };
   photos: Array<{ id: number; url: string; thumbUrl: string; takenAt: string | null; uploadedAt: string }>;
   named: { how: "pill" | "typed" | "same"; at: string } | null;
 };
@@ -58,7 +57,7 @@ export function readSpecimen(db: DatabaseSync, id: number): SpecimenView | null 
   const row = db
     .prepare(
       `SELECT sp.id, sp.nickname, sp.location, sp.acquired_on, sp.status, sp.created_at,
-              s.id AS species_id, s.scientific_name, s.genus, s.family, s.cultivar
+              s.id AS species_id, s.scientific_name, s.genus, s.family, s.cultivar, s.common_name
          FROM specimens sp JOIN species s ON s.id = sp.species_id
         WHERE sp.id = ?`,
     )
@@ -75,6 +74,7 @@ export function readSpecimen(db: DatabaseSync, id: number): SpecimenView | null 
         genus: string | null;
         family: string | null;
         cultivar: string | null;
+        common_name: string | null;
       }
     | undefined;
   if (!row) return null;
@@ -95,7 +95,14 @@ export function readSpecimen(db: DatabaseSync, id: number): SpecimenView | null 
     acquiredOn: row.acquired_on,
     status: row.status,
     createdAt: row.created_at,
-    species: { id: row.species_id, scientificName: row.scientific_name, genus: row.genus, family: row.family, cultivar: row.cultivar },
+    species: {
+      id: row.species_id,
+      scientificName: row.scientific_name,
+      genus: row.genus,
+      family: row.family,
+      cultivar: row.cultivar,
+      commonName: row.common_name,
+    },
     photos: photos.map((p) => ({
       id: p.id,
       url: `/media/${p.path}`,

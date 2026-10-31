@@ -5,12 +5,13 @@ import { Term } from "@/components/term";
 import { LeafMark } from "@/components/topbar";
 import { dayLabel, metaLine, STATUS_LABEL, tileName } from "@/lib/collection";
 import { withReadDb } from "@/lib/jobs";
+import { displayName } from "@/lib/species-page";
 import { knownLocations, readSpecimen } from "@/lib/specimens";
 
 // /plants/[id]: one specimen. Breadcrumb, title block, its photos as a
-// timeline, the editable facts, and its species in the side column (the
-// species page itself is Phase 2). Minimal on purpose: care, relatives,
-// events and tags arrive with the phases that bring them.
+// timeline, the editable facts, and its species in the side column with a
+// link to the species page. Minimal on purpose: care, relatives, events and
+// tags arrive with the phases that bring them.
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -133,6 +134,12 @@ export default async function PlantPage({ params }: { params: Promise<{ id: stri
                   {sp.cultivar ? <span className="not-italic"> &lsquo;{sp.cultivar}&rsquo;</span> : null}
                 </dd>
               </div>
+              <div className="flex flex-col">
+                <dt className="text-meta text-ink-2">
+                  <Term k="common-name">Common name</Term>
+                </dt>
+                <dd>{displayName(sp.commonName) ?? <span className="text-ink-3">not known yet</span>}</dd>
+              </div>
               {sp.cultivar ? (
                 <div className="flex flex-col">
                   <dt className="text-meta text-ink-2">
@@ -154,12 +161,9 @@ export default async function PlantPage({ params }: { params: Promise<{ id: stri
                 <dd>{sp.family ?? <span className="text-ink-3">not known yet</span>}</dd>
               </div>
             </dl>
-            <p className="mt-4 text-meta text-ink-2">
-              <span className="font-semibold text-ink-3" title="Coming in Phase 2">
-                Species page
-              </span>{" "}
-              with care sheet and relatives arrives in Phase 2.
-            </p>
+            <Link href={`/species/${sp.id}`} className="btn btn-soft btn-compact mt-4 hover:no-underline">
+              Open the species page
+            </Link>
           </section>
           <section className="card p-5" aria-labelledby="record-h">
             <h3 id="record-h" className="mb-3 text-h3">
