@@ -9,7 +9,7 @@ Fern is the Conservatory's worker: a Python 3.13 package in `fern/`, run as `pyt
 .venv\Scripts\python -m fern
 ```
 
-Environment: `CONSERVATORY_DB` (default `data/conservatory.db`), `CONSERVATORY_DATA` (default `data/`), and from #6 on, `PLANTNET_API_KEY`. The scaffold's loop opens the database, applies the schema, and logs the queue depth every time it changes; identification arrives with #6.
+Environment: `CONSERVATORY_DB` (default `data/conservatory.db`), `CONSERVATORY_DATA` (default `data/`), and `PLANTNET_API_KEY`, without which Fern refuses to start. On start it opens the database, applies the schema, logs the queue depth, and drains the queue until stopped (SIGTERM or Ctrl-C).
 
 ## The database
 
@@ -30,6 +30,29 @@ Environment: `CONSERVATORY_DB` (default `data/conservatory.db`), `CONSERVATORY_D
 
 Tests: `test_fern_db.py` at the repo root covers the baseline apply, idempotence, migration ordering, and the status constraint.
 
-## The queue and the Pl@ntNet client
+## The queue (`fern/queue.py`)
 
-Arrive with #6. The contract they will follow is in epic #4: one job at a time, oldest first; `nb-results=5`, `detailed=true`, rejection on; 404 marks `rejected`, 429 sleeps until `Retry-After`, network errors and 5xx back off exponentially for five attempts.
+One job at a time, oldest first. `claim_next` picks the oldest job that is `queued`, or `failed` with its `next_attempt_at` passed and attempts left, and marks it `identifying` in the same transaction. `record_outcome` applies what Pl@ntNet said:
+
+| Outcome | Job becomes | Notes |
+| --- | --- | --- |
+| `identified` | `identified`, candidates written, `quota_remaining` set | the species rows plus genus and family rollups |
+| `rejected` | `rejected` | Pl@ntNet answered 404 (not a plant, or nothing found), or 200 with no species; the confirm screen shows the name field only |
+| `quota` | back to `queued`, no attempt counted | the worker pauses until `Retry-After` (an RFC 7231 date) or the next UTC midnight |
+| `retry` | `failed` with `next_attempt_at` | network errors and 5xx: 30 s, 60 s, 120 s, 240 s, 480 s, then it stays `failed` with its error after five attempts |
+| `failed` | `failed` for good | 400, 401 (a bad key), 403, 413, 415 |
+
+Timestamps are ISO 8601 UTC text in the shape the schema's defaults write, so string comparison orders them. The thumbnail (`<stem>.thumb.jpg`, 320 px) is written for every processed job, rejected ones included, because the confirm screen shows the photo either way.
+
+## The Pl@ntNet client (`fern/plantnet.py`)
+
+`identify` POSTs the job's photos (at most five, re-encoded to 1280 px JPEG by `prepare_image`, which also handles HEIC through pillow-heif) to `/v2/identify/all` with `organs` in the same order, `nb-results=5`, `detailed=true`, rejection on. The key goes in the `api-key` query parameter and comes only from the environment. Everything that decides what a response means is pure:
+
+- `parse_candidates` takes the `results` list in rank order (name, genus, family, score, GBIF id, up to three common names) and adds **genus and family rollups**: from `otherResults` when the API sends them, otherwise computed here by summing species scores per genus and per family. With `detailed=true` the API does send them (confirmed live 2026-10-31: five genus rows and five family rows per job, with their own scores, including genera that appear in no species row, e.g. Sedum 0.79 and Pachyphytum 0.06 beside Sedum pachyphyllum 0.67), so the computed sum is only the fallback. The rollups exist because of Phase 0 (#1): a shelf succulent often comes back as three species of one genus at 0.03 each, and the genus row is what the confirm screen should lead with.
+- `classify` maps the HTTP status to an `Outcome` as in the table above.
+
+Tests: `test_fern_plantnet.py` (parser and classifier, with fixtures shaped on the Phase 0 responses) and `test_fern_queue.py` (backoff, claim order, each outcome's effect on the row, and `worker.run_once` with a fake identify function).
+
+## The worker (`fern/worker.py`)
+
+`run_once` claims a job, prepares its photos, calls identify, records the outcome, writes thumbnails, and logs one line: `job 7: identified Ficus elastica 0.80 (quota left 487)`. `run_forever` repeats it: two seconds of sleep when idle, one between jobs, and a pause until the reset time after a quota outcome. The clock and the identify function are parameters so the tests run without the network.

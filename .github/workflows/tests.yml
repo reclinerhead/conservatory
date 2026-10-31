@@ -37,5 +37,5 @@ jobs:
       # THIS LIST IS THE WHOLE CONTRACT (the Aviary's rule): there is no
       # pytest.ini/testpaths fallback, so a test_*.py that isn't named here
       # silently never runs. Add new files by hand.
-      - run: pip install pytest
-      - run: pytest test_fern_db.py -q
+      - run: pip install pytest requests pillow
+      - run: pytest test_fern_db.py test_fern_plantnet.py test_fern_queue.py -q
