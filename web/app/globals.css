@@ -164,6 +164,24 @@
     font-style: italic;
     color: var(--color-ink-2);
   }
+
+  /* Text fields: the chip's pill, white, control border, 44 px. */
+  .field {
+    min-height: 44px;
+    min-width: 0;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--color-line-2);
+    background: var(--color-surface);
+    padding: 0 16px;
+    font-size: var(--text-body);
+    color: var(--color-ink);
+  }
+  .field::placeholder {
+    color: var(--color-ink-3);
+  }
+  .field:focus {
+    border-color: var(--color-line-strong);
+  }
 }
 
 /* App-only base rules. In the base layer on purpose: an unlayered rule would

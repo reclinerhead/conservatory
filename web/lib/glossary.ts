@@ -46,6 +46,15 @@ export const GLOSSARY = {
     term: "organ",
     text: "The part of the plant a photo shows: leaf, flower, fruit or bark. Telling the classifier which part it is looking at helps it, and a flower photo added to a leaf photo often turns a guess into an answer.",
   },
+  family: {
+    term: "family",
+    text: "The group above genus: several genera that share an ancestor and usually a look. Echeveria, Sedum and Crassula are all Crassulaceae, the stonecrop family, which is why they want the same gritty soil and the same neglect. Family names end in -aceae.",
+    more: "https://en.wikipedia.org/wiki/Family_(biology)",
+  },
+  specimen: {
+    term: "specimen",
+    text: "One actual plant in one pot or one spot in a bed, as opposed to the species it belongs to. Three jade plants on a shelf are three specimens of one species, and each gets its own page, photos and history.",
+  },
 } as const satisfies Record<string, GlossaryEntry>;
 
 export type GlossaryKey = keyof typeof GLOSSARY;

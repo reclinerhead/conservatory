@@ -1,23 +1,27 @@
 import Link from "next/link";
+import { Collection } from "@/components/collection";
 import { LeafMark } from "@/components/topbar";
+import { TILE_TINTS } from "@/lib/collection";
 import { collectionCounts, waitingThumbs } from "@/lib/db";
+import { withReadDb } from "@/lib/jobs";
 import { thumbPathFor } from "@/lib/photos";
 import { ledgerEntries, waitingDetail, waitingLabel } from "@/lib/ledger";
+import { collectionTiles } from "@/lib/specimens";
 
 // The dashboard from design/DESIGN.md §5, Phase 1 subset: the pending strip,
-// the life list, and the side column's "at a glance" card. The greeting,
-// Today's care, filters, Blooming now and the Flower Show arrive with the
-// phases that have data for them; their space is not faked.
+// the life list with its location filters and grouped specimen cards, and
+// the side column's "at a glance" card. The greeting, Today's care, the
+// other filters, Blooming now and the Flower Show arrive with the phases
+// that have data for them; their space is not faked.
 // The counts come from the database on every request, never from the build.
 export const dynamic = "force-dynamic";
-
-const TILE_TINTS = ["bg-tile-1", "bg-tile-2", "bg-tile-3", "bg-tile-4", "bg-tile-5"];
 
 export default function Home() {
   const counts = collectionCounts();
   const ledger = ledgerEntries(counts);
   const waiting = counts.waiting;
   const thumbs = waitingThumbs(3);
+  const tiles = withReadDb(collectionTiles, []);
 
   return (
     <main className="mx-auto flex w-full max-w-page flex-1 flex-col gap-7 px-4 pb-14 pt-6 sm:px-8 sm:pt-8">
@@ -64,30 +68,30 @@ export default function Home() {
             </div>
           </div>
 
-          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {counts.specimens === 0 ? (
-              <>
-                <li className="card card-link flex flex-col overflow-hidden">
-                  <div className={`flex h-[168px] items-center justify-center ${TILE_TINTS[0]}`}>
-                    <LeafMark size={72} className="text-[#6B8F66]" />
-                  </div>
-                  <div className="flex flex-col gap-1.5 px-4 pb-4 pt-3.5">
-                    <p className="text-lead font-bold">No plants yet</p>
-                    <p className="text-meta text-ink-2">The first photo you add becomes the first card here.</p>
-                    <Link href="/add" className="btn btn-soft mt-2 self-start hover:no-underline">
-                      Add the first one
-                    </Link>
-                  </div>
+          {tiles.length === 0 ? (
+            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <li className="card card-link flex flex-col overflow-hidden">
+                <div className={`flex h-[168px] items-center justify-center ${TILE_TINTS[0]}`}>
+                  <LeafMark size={72} className="text-[#6B8F66]" />
+                </div>
+                <div className="flex flex-col gap-1.5 px-4 pb-4 pt-3.5">
+                  <p className="text-lead font-bold">No plants yet</p>
+                  <p className="text-meta text-ink-2">The first photo you add becomes the first card here.</p>
+                  <Link href="/add" className="btn btn-soft mt-2 self-start hover:no-underline">
+                    Add the first one
+                  </Link>
+                </div>
+              </li>
+              {[1, 2].map((i) => (
+                <li key={i} aria-hidden className="card flex flex-col overflow-hidden opacity-60">
+                  <div className={`h-[168px] ${TILE_TINTS[i]}`} />
+                  <div className="h-[104px]" />
                 </li>
-                {[1, 2].map((i) => (
-                  <li key={i} aria-hidden className="card flex flex-col overflow-hidden opacity-60">
-                    <div className={`h-[168px] ${TILE_TINTS[i]}`} />
-                    <div className="h-[104px]" />
-                  </li>
-                ))}
-              </>
-            ) : null}
-          </ul>
+              ))}
+            </ul>
+          ) : (
+            <Collection tiles={tiles} />
+          )}
         </section>
 
         {/* Side column */}
