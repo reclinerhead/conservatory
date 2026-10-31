@@ -25,7 +25,13 @@ pnpm dev
 | `POST /api/photos` | One photo in, one queued job out | #6 |
 | `GET /api/jobs/[id]` | A job's state, its photos, and its candidates once Fern has answered | #6 |
 | `GET /media/photos/[yyyy]/[mm]/[file]` | A photo or its thumbnail from the data directory | #6 |
-| `/name` | The confirm flow, one plant per screen | #7 |
+| `/name` | Sends the person to the oldest plant waiting for a name, or says there is none | #7 |
+| `/name/[id]` | The confirm screen, one plant per screen; see below | #7 |
+| `POST /api/jobs/[id]/confirm` | Put a name on the plant: a pill (`kind`, `rank`), a `typedName`, or `sameAsSpecimenId`, plus an optional `cultivar` | #7 |
+| `DELETE /api/jobs/[id]/confirm` | "Change": reverse a naming | #7 |
+| `POST /api/jobs/[id]/dismiss` | "Not a plant": delete the job, its photos and their files | #7 |
+| `POST /api/jobs/[id]/photos` | Another photo of the same plant; sends the job back to Fern | #7 |
+| `GET /api/species?q=` | Species already in the collection, most-owned first, for the name field | #7 |
 | `/plants/[id]` | A specimen | #8 |
 
 ## Adding a plant
@@ -41,6 +47,22 @@ Both of the README's flows go through the same page and the same route. `compone
 `POST /api/photos` writes the file to `photos/yyyy/mm/<uuid>.<ext>` under the data directory (dated by upload in UTC, extension from the MIME type, anything unknown stored as jpg for Fern to re-encode), then inserts the `jobs` row and the `photos` row in one `BEGIN IMMEDIATE` transaction. Limits: 25 MB, image types only. `GET /media/...` serves originals and thumbnails with a year-long immutable cache (names are UUIDs and a file is written once) behind `mediaRelPath`, a guard that accepts exactly the shape the upload route writes. A thumbnail Fern has not written yet is a quiet 404.
 
 Tests: `lib/photos.test.ts` (paths, the media guard, MIME mapping), `lib/exif.test.ts` (the APP1 walk against hand-built JPEGs, both byte orders, the IFD0 fallback), `lib/retry.test.ts`.
+
+## Naming a plant
+
+`components/namer.tsx` is the confirm screen, one plant per screen, and it serves both flows: a person walking a strip of waiting photos, and one standing in front of the plant whose job has not settled yet (the screen polls `/api/jobs/[id]` every 1.5 s with the pill area reserved until Fern answers). What is on it, and why:
+
+- **The pills** come from `lib/pills.ts` (`planPills`, pure, tested on the three shapes from the Phase 0 run). Three rules: the top three species lead when the best score is confident; when the top three agree on a genus and the best species score is under 0.30, a **genus pill** leads ("Echeveria · species unsure", scored from the API's genus row or, failing that, the sum of the species scores); when the best score is under 0.10 and the genera disagree, the screen is in its **low-confidence state** and the name field comes first. Scores stay on every pill, never shown as 0%.
+- **One tap names it.** A pill, the "Name it" button, a roster chip, or "Same plant as the last one" all call `POST /api/jobs/[id]/confirm` and the save is immediate: there is no batch save. The route finds or creates the species (looked up by hand, case-insensitively, because `UNIQUE(scientific_name, cultivar)` does not catch two NULL cultivars), creates the specimen, links the job's photos and writes the `confirmations` row in one transaction. The optional **nursery-tag field** becomes the species' `cultivar`.
+- **The name field** autocompletes over `GET /api/species`, the roster match: species the household already owns, most-owned first, so the second pot of anything is one tap. A typed name the collection does not know becomes a species row with the typed text as `scientific_name` and no GBIF id; the enrichment pass (Phase 2) resolves it.
+- **Change** (`DELETE .../confirm`) reverses a naming cleanly: the confirmation goes, the photos unlink, the specimen is deleted if nothing else is attached to it and the species if no specimen is left, and the job is back in the strip. The pills were never discarded, so they reappear as they were.
+- **Skip for now** is a link to the next waiting job; the skipped one stays in the strip. **Not a plant** is two taps on purpose (mis-taps are common) and then deletes the job, its photos and their files. **Add another photo of this plant** stores a second photo on the same job and sends it back to the queue; the old pills stay until the new ones arrive.
+- **Next** goes to the next waiting job, computed server-side (`nextWaitingJob` in `lib/jobs.ts`, tested): the next later job, wrapping to the first, or the Conservatory when nothing else waits.
+- **The first glossary marks** (#10) are here: confidence, scientific name, genus (with the plant's own genus as the example), species, cultivar.
+
+## The glossary
+
+`lib/glossary.ts` holds every term the app explains, keyed by slug, two or three plain sentences each with a "more" link. `components/term.tsx` is the info mark from DESIGN.md §4: an 18 px ring after the term, an "i" in moss, and on tap a sage note that explains it. The note floats under the mark rather than expanding in place, so opening one never moves anything: the no-layout-shift rule outranks the mockup's inline block. An optional `example` lets a screen add a sentence about the person's own plants. `lib/glossary.test.ts` scans every `.tsx` for `<Term k="...">` and fails on a key the glossary lacks, and keeps every entry to a short paragraph.
 
 ## The visual language
 

@@ -6,14 +6,11 @@
 // as photos/yyyy/mm/<uuid>.<ext>, then a jobs row and a photos row are
 // inserted in one transaction. Fern picks the job up from there.
 
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
-import { dataDir, openReadWrite } from "@/lib/db";
-import { extForMime, isOrgan, relPathFor } from "@/lib/photos";
+import { openReadWrite } from "@/lib/db";
+import { isOrgan } from "@/lib/photos";
+import { checkUpload, storeUpload, takenAtFrom } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
-
-const MAX_BYTES = 25 * 1024 * 1024;
 
 export async function POST(req: Request) {
   let form: FormData;
@@ -22,21 +19,13 @@ export async function POST(req: Request) {
   } catch {
     return Response.json({ error: "expected multipart form data" }, { status: 400 });
   }
-  const file = form.get("file");
-  if (!(file instanceof Blob) || file.size === 0) return Response.json({ error: "no file" }, { status: 400 });
-  if (file.size > MAX_BYTES) return Response.json({ error: "file too large" }, { status: 413 });
-  if (!file.type.startsWith("image/") && file.type !== "application/octet-stream")
-    return Response.json({ error: "not an image" }, { status: 415 });
+  const check = checkUpload(form);
+  if (!check.ok) return Response.json({ error: check.error }, { status: check.status });
   const organRaw = form.get("organ") ?? "auto";
   const organ = isOrgan(organRaw) ? organRaw : "auto";
-  const takenAtRaw = form.get("takenAt");
-  const takenAt = typeof takenAtRaw === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(takenAtRaw) ? takenAtRaw : null;
+  const takenAt = takenAtFrom(form);
 
-  const now = new Date();
-  const rel = relPathFor(crypto.randomUUID(), extForMime(file.type), now);
-  const abs = path.join(dataDir(), rel);
-  await mkdir(path.dirname(abs), { recursive: true });
-  await writeFile(abs, new Uint8Array(await file.arrayBuffer()));
+  const rel = await storeUpload(check.file);
 
   let db;
   try {
