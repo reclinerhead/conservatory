@@ -5,12 +5,12 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
 // The top bar from design/DESIGN.md §5: leaf mark and wordmark, nav pills,
-// the search box, the primary "Add a plant". Only Collection has a page yet;
-// the other four are drawn in their places so the bar keeps its shape as
-// phases land, and are plainly not links.
+// the search box, the primary "Add a plant". Collection and Species have
+// pages; the other three are drawn in their places so the bar keeps its
+// shape as phases land, and are plainly not links.
 const NAV: Array<{ label: string; href: string | null; also?: string }> = [
   { label: "Collection", href: "/", also: "/plants/" },
-  { label: "Species", href: null },
+  { label: "Species", href: "/species", also: "/species/" },
   { label: "Locations", href: null },
   { label: "Reminders", href: null },
   { label: "Flower Show", href: null },
@@ -87,11 +87,12 @@ export function TopBar() {
 }
 
 /**
- * "Search nickname or species". On the collection it filters the grid as you
- * type, through the URL (?q=) with the native history API, so no request
- * leaves the phone. Anywhere else, Enter goes to the collection with the
- * search applied.
+ * "Search nickname or species". On the collection and on the species list it
+ * filters as you type, through the URL (?q=) with the native history API, so
+ * no request leaves the phone. On a species page Enter goes to the species
+ * list with the search applied; anywhere else, to the collection.
  */
+const LIVE_SEARCH = new Set(["/", "/species"]);
 function SearchBox({ live }: { live: boolean }) {
   return live ? <LiveSearchBox /> : <SearchForm value="" />;
 }
@@ -109,13 +110,14 @@ function LiveSearchBox() {
     setSeen(urlQ);
     setValue(urlQ);
   }
-  const onCollection = pathname === "/";
+  const live = LIVE_SEARCH.has(pathname);
+  const target = pathname.startsWith("/species") ? "/species" : "/";
   return (
     <SearchForm
       value={value}
       onChange={(v) => {
         setValue(v);
-        if (onCollection) {
+        if (live) {
           const url = new URL(window.location.href);
           if (v.trim()) url.searchParams.set("q", v);
           else url.searchParams.delete("q");
@@ -123,7 +125,7 @@ function LiveSearchBox() {
         }
       }}
       onSubmit={() => {
-        if (!onCollection) router.push(value.trim() ? `/?q=${encodeURIComponent(value.trim())}` : "/");
+        if (!live) router.push(value.trim() ? `${target}?q=${encodeURIComponent(value.trim())}` : target);
       }}
     />
   );

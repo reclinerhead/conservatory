@@ -92,18 +92,26 @@ export function Collection({ tiles }: { tiles: Tile[] }) {
   );
 }
 
-/** The specimen card from DESIGN.md §4: photo or tinted tile 168 px tall, nickname, italic species, meta line, tags. One link. */
-function SpecimenCard({ tile, tint }: { tile: Tile; tint: string }) {
+/**
+ * The specimen card from DESIGN.md §4: photo or tinted tile 168 px tall,
+ * nickname, italic species, meta line, tags. One link. `compact` is the
+ * species page's variant: 140 px and a 16 px radius, as the mockup's `rel`.
+ */
+export function SpecimenCard({ tile, tint, compact = false }: { tile: Tile; tint: string; compact?: boolean }) {
   const name = tileName(tile);
   const species = speciesLabel(tile.scientificName, tile.cultivar);
+  const h = compact ? "h-[140px]" : "h-[168px]";
   return (
-    <Link href={`/plants/${tile.id}`} className="card card-link flex h-full flex-col overflow-hidden text-ink hover:text-ink hover:no-underline">
+    <Link
+      href={`/plants/${tile.id}`}
+      className={`card card-link flex h-full flex-col overflow-hidden text-ink hover:text-ink hover:no-underline ${compact ? "rounded-[16px]" : ""}`}
+    >
       {tile.thumbUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={tile.thumbUrl} alt="" loading="lazy" width={320} height={320} className="h-[168px] w-full object-cover" />
+        <img src={tile.thumbUrl} alt="" loading="lazy" width={320} height={320} className={`${h} w-full object-cover`} />
       ) : (
-        <div className={`flex h-[168px] items-center justify-center ${tint}`}>
-          <LeafMark size={72} className="text-[#6B8F66]" />
+        <div className={`flex ${h} items-center justify-center ${tint}`}>
+          <LeafMark size={compact ? 60 : 72} className="text-[#6B8F66]" />
         </div>
       )}
       <div className="flex flex-col gap-1 px-4 pb-4 pt-3.5">

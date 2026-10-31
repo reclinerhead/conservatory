@@ -51,6 +51,36 @@ export const GLOSSARY = {
     text: "The group above genus: several genera that share an ancestor and usually a look. Echeveria, Sedum and Crassula are all Crassulaceae, the stonecrop family, which is why they want the same gritty soil and the same neglect. Family names end in -aceae.",
     more: "https://en.wikipedia.org/wiki/Family_(biology)",
   },
+  taxonomy: {
+    term: "taxonomy",
+    text: "The system that sorts every living thing into nested groups, from kingdom at the top down to species. A plant's place in it is what ties it to its relatives in your collection, and it comes here from GBIF, the global register of species.",
+    more: "https://en.wikipedia.org/wiki/Taxonomy_(biology)",
+  },
+  kingdom: {
+    term: "kingdom",
+    text: "The broadest rank a name sits in. Every plant in your collection is in the kingdom Plantae, alongside mosses, ferns and trees; animals and fungi have kingdoms of their own.",
+    more: "https://en.wikipedia.org/wiki/Kingdom_(biology)",
+  },
+  phylum: {
+    term: "phylum",
+    text: "The rank below kingdom, grouping plants by their basic body plan. Nearly every garden and house plant is in Tracheophyta, the vascular plants, which move water through veins; mosses are not.",
+    more: "https://en.wikipedia.org/wiki/Phylum",
+  },
+  class: {
+    term: "class",
+    text: "The rank below phylum. Most flowering plants fall in one of two classes: Magnoliopsida, the dicots, like a Ficus or a Sedum, and Liliopsida, the monocots, like irises, lilies and grasses.",
+    more: "https://en.wikipedia.org/wiki/Class_(biology)",
+  },
+  order: {
+    term: "order",
+    text: "The rank between class and family, grouping families that share an ancestor. Saxifragales holds the stonecrop family; Rosales holds the roses and, a little surprisingly, the figs.",
+    more: "https://en.wikipedia.org/wiki/Order_(biology)",
+  },
+  authorship: {
+    term: "author",
+    text: "The botanist who first published a scientific name, abbreviated and written upright after it. “Roxb.” is William Roxburgh, who described the rubber plant; “L.” is Linnaeus, the most common author of all.",
+    more: "https://en.wikipedia.org/wiki/Author_citation_(botany)",
+  },
   specimen: {
     term: "specimen",
     text: "One actual plant in one pot or one spot in a bed, as opposed to the species it belongs to. Three jade plants on a shelf are three specimens of one species, and each gets its own page, photos and history.",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contentTypeFor, extForMime, isOrgan, mediaRelPath, relPathFor, thumbPathFor } from "./photos";
+import { contentTypeFor, extForMime, isOrgan, mediaRelPath, referenceUrls, relPathFor, thumbPathFor } from "./photos";
 
 describe("relPathFor", () => {
   it("files by upload year and month in UTC", () => {
@@ -42,6 +42,30 @@ describe("mediaRelPath", () => {
     expect(mediaRelPath(["photos", "2026", "10", ".abc.jpg"])).toBeNull();
     expect(mediaRelPath(["photos", "2026", "10", "abc.exe"])).toBeNull();
     expect(mediaRelPath(["photos", "2026", "10", "a b.jpg"])).toBeNull();
+  });
+  it("accepts a species' reference image and its thumbnail, exactly as Fern names them", () => {
+    expect(mediaRelPath(["reference", "1.jpg"])).toBe("reference/1.jpg");
+    expect(mediaRelPath(["reference", "12.thumb.jpg"])).toBe("reference/12.thumb.jpg");
+  });
+  it("refuses anything else under reference/", () => {
+    expect(mediaRelPath(["reference", "a.jpg"])).toBeNull();
+    expect(mediaRelPath(["reference", "1.png"])).toBeNull();
+    expect(mediaRelPath(["reference", "..", "1.jpg"])).toBeNull();
+    expect(mediaRelPath(["reference", "1.jpg.exe"])).toBeNull();
+    expect(mediaRelPath(["reference", ".1.jpg"])).toBeNull();
+    expect(mediaRelPath(["reference"])).toBeNull();
+    expect(mediaRelPath(["reference", "2026", "10", "1.jpg"])).toBeNull();
+  });
+});
+
+describe("referenceUrls", () => {
+  it("carries the enrichment stamp so a re-fetched image is a new URL", () => {
+    expect(referenceUrls("reference/1.jpg", "2026-10-31T19:39:24.355Z")).toEqual({
+      url: "/media/reference/1.jpg?v=2026-10-31T19%3A39%3A24.355Z",
+      thumbUrl: "/media/reference/1.thumb.jpg?v=2026-10-31T19%3A39%3A24.355Z",
+    });
+    expect(referenceUrls("reference/1.jpg", null)).toEqual({ url: "/media/reference/1.jpg", thumbUrl: "/media/reference/1.thumb.jpg" });
+    expect(referenceUrls(null, "x")).toBeNull();
   });
 });
 
