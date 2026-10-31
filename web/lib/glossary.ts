@@ -81,6 +81,35 @@ export const GLOSSARY = {
     text: "The botanist who first published a scientific name, abbreviated and written upright after it. “Roxb.” is William Roxburgh, who described the rubber plant; “L.” is Linnaeus, the most common author of all.",
     more: "https://en.wikipedia.org/wiki/Author_citation_(botany)",
   },
+  light: {
+    term: "light",
+    text: "How much sun a plant wants, from full sun (six hours or more of direct light) to shade. Indoors, bright indirect light means near a window but out of the hot midday rays. Too little and a plant stretches toward the window, pale and leggy; too much and its leaves scorch or blush.",
+    more: "https://en.wikipedia.org/wiki/Houseplant",
+  },
+  watering: {
+    term: "watering",
+    text: "How often and how deeply to water. Most plants want a thorough soak and then a dry spell, and more die of too much water than too little, because roots sitting wet cannot breathe and rot. Plants drink less in winter and in their rest.",
+  },
+  soil: {
+    term: "soil",
+    text: "What the roots grow in. Drainage matters most: a succulent wants a gritty mix that dries within days, a fern one that stays damp. A pot without a hole in the bottom drowns almost anything.",
+    more: "https://en.wikipedia.org/wiki/Potting_soil",
+  },
+  hardiness: {
+    term: "hardiness zone",
+    text: "How cold a winter a plant survives outdoors, on the USDA scale from 1 (the coldest) to 13, each split into a and b. A plant hardy to your zone or a colder one can stay out all year; one rated warmer has to come in before the first frost.",
+    more: "https://en.wikipedia.org/wiki/Hardiness_zone",
+  },
+  fertilizing: {
+    term: "fertilizing",
+    text: "Feeding a plant the nutrients a pot runs out of, usually a diluted liquid feed while it is growing. Too much burns the roots and too little shows as pale, slow growth. Stop when the plant rests.",
+    more: "https://en.wikipedia.org/wiki/Fertilizer",
+  },
+  dormancy: {
+    term: "dormancy",
+    text: "A plant's rest: a season when it stops growing, to wait out cold, dark or drought. A resting plant can look dead, dropping leaves or dying back to the ground, and wants less water and no feed until it wakes. Some plants never really rest.",
+    more: "https://en.wikipedia.org/wiki/Dormancy",
+  },
   specimen: {
     term: "specimen",
     text: "One actual plant in one pot or one spot in a bed, as opposed to the species it belongs to. Three jade plants on a shelf are three specimens of one species, and each gets its own page, photos and history.",

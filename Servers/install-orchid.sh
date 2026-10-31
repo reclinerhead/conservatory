@@ -77,6 +77,7 @@ else
 fi
 chmod 0600 "$ENVF"
 grep -q '^PLANTNET_API_KEY=.\+' "$ENVF" || warn "PLANTNET_API_KEY is empty in $ENVF: Fern will refuse to start until it is set"
+grep -q '^AI_GATEWAY_API_KEY=.\+' "$ENVF" || ok "AI_GATEWAY_API_KEY is not set: Fern runs without care sheets until it is"
 for v in CONSERVATORY_DB CONSERVATORY_DATA; do
     grep -q "^$v=" "$ENVF" || die "$ENVF lacks $v"
 done

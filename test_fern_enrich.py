@@ -148,19 +148,19 @@ def _v1_database(tmp_path, monkeypatch):
 
 def test_v2_migrates_a_phase_1_database_with_its_rows_intact(tmp_path, monkeypatch):
     conn = _v1_database(tmp_path, monkeypatch)
-    assert db.apply_schema(conn) == 2
+    assert db.apply_schema(conn) == db.LATEST_VERSION
     cols = {r["name"] for r in conn.execute("PRAGMA table_info(species)")}
     assert {"gbif_key", "rank", "kingdom", "phylum", "class", "order_", "canonical_name", "authorship", "common_name",
             "summary", "summary_url", "image_path", "image_credit", "image_source_url", "enriched_at", "enrich_error"} <= cols
     rows = conn.execute("SELECT scientific_name, genus, cultivar, enriched_at FROM species ORDER BY id").fetchall()
     assert [tuple(r) for r in rows] == [("Ficus elastica", "Ficus", None, None), ("Echeveria", None, "Black Prince", None)]
     assert conn.execute("SELECT nickname FROM specimens WHERE species_id = 1").fetchone()[0] == "Rubber"
-    assert db.apply_schema(conn) == 2  # idempotent: the ALTERs do not run twice
+    assert db.apply_schema(conn) == db.LATEST_VERSION  # idempotent: the ALTERs do not run twice
 
 
-def test_a_fresh_database_comes_up_at_v2(tmp_path):
+def test_a_fresh_database_comes_up_at_the_latest_version(tmp_path):
     conn = db.connect(tmp_path / "c.db")
-    assert db.current_version(conn) == 2 == db.LATEST_VERSION
+    assert db.current_version(conn) == db.LATEST_VERSION >= 2
 
 
 # --- the worklist ------------------------------------------------------------
