@@ -4,6 +4,9 @@
 and the identify function as arguments so the tests can drive it without the
 network. The thumbnail is written for every processed job, rejected ones
 included, because the confirm screen shows the photo either way.
+
+When the queue is idle the loop hands the tick to the enrichment pass
+(`enrich.run_once`, #20), so one unit and one journal cover both.
 """
 
 from __future__ import annotations
@@ -15,7 +18,7 @@ from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import plantnet, queue
+from . import enrich, plantnet, queue
 
 log = logging.getLogger("fern")
 
@@ -80,7 +83,9 @@ def run_forever(conn: sqlite3.Connection, data_dir: Path, api_key: str, should_r
         paused_until = None
         outcome = run_once(conn, data_dir, api_key, now)
         if outcome is None:
-            time.sleep(2)
+            # The queue is idle: the enrichment pass gets the tick (#20), one
+            # species at a time, so an upload never waits behind Wikipedia.
+            time.sleep(1 if enrich.run_once(conn, data_dir, now) else 2)
         elif outcome.status == "quota":
             paused_until = outcome.resume_at
             log.warning("quota spent; resuming at %s", paused_until)

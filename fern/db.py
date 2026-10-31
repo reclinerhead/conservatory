@@ -18,8 +18,33 @@ BASELINE_VERSION = 1
 
 # Append only. Never edit a step that has shipped.
 MIGRATIONS: list[tuple[int, str]] = [
-    # (2, "ALTER TABLE specimens ADD COLUMN parent_specimen_id INTEGER REFERENCES specimens(id)"),
+    # v2 (#20): what the enrichment pass writes on a species row. All nullable,
+    # so Phase 1 rows and the confirm route's INSERT are untouched. genus and
+    # family already exist in the baseline; the pass overwrites them from GBIF.
+    (
+        2,
+        """
+        ALTER TABLE species ADD COLUMN gbif_key INTEGER;        -- GBIF backbone usageKey
+        ALTER TABLE species ADD COLUMN rank TEXT;               -- species | genus | subspecies | variety | form
+        ALTER TABLE species ADD COLUMN kingdom TEXT;
+        ALTER TABLE species ADD COLUMN phylum TEXT;
+        ALTER TABLE species ADD COLUMN class TEXT;
+        ALTER TABLE species ADD COLUMN order_ TEXT;             -- ORDER is a keyword
+        ALTER TABLE species ADD COLUMN canonical_name TEXT;     -- GBIF's spelling, no author
+        ALTER TABLE species ADD COLUMN authorship TEXT;         -- e.g. Roxb.
+        ALTER TABLE species ADD COLUMN common_name TEXT;        -- GBIF's first English vernacular
+        ALTER TABLE species ADD COLUMN summary TEXT;            -- Wikipedia lead, plain text
+        ALTER TABLE species ADD COLUMN summary_url TEXT;        -- the article
+        ALTER TABLE species ADD COLUMN image_path TEXT;         -- reference/<id>.jpg, relative to CONSERVATORY_DATA
+        ALTER TABLE species ADD COLUMN image_credit TEXT;       -- "<page title> · Wikipedia"
+        ALTER TABLE species ADD COLUMN image_source_url TEXT;   -- the Commons file page
+        ALTER TABLE species ADD COLUMN enriched_at TEXT;        -- last pass, success or failure
+        ALTER TABLE species ADD COLUMN enrich_error TEXT;       -- why the last pass fell short, else NULL
+        """,
+    ),
 ]
+
+LATEST_VERSION = MIGRATIONS[-1][0] if MIGRATIONS else BASELINE_VERSION
 
 
 def connect(path: str | Path) -> sqlite3.Connection:

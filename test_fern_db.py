@@ -5,9 +5,9 @@ import sqlite3
 from fern import db
 
 
-def test_connect_creates_schema_at_baseline(tmp_path):
+def test_connect_creates_schema_at_latest_version(tmp_path):
     conn = db.connect(tmp_path / "nested" / "c.db")
-    assert db.current_version(conn) == db.BASELINE_VERSION
+    assert db.current_version(conn) == db.LATEST_VERSION >= db.BASELINE_VERSION
     tables = {r["name"] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert {"photos", "jobs", "candidates", "species", "specimens", "confirmations"} <= tables
     assert conn.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
@@ -18,10 +18,10 @@ def test_apply_schema_is_idempotent(tmp_path):
     conn = db.connect(tmp_path / "c.db")
     conn.execute("INSERT INTO jobs DEFAULT VALUES")
     conn.commit()
-    assert db.apply_schema(conn) == db.BASELINE_VERSION
-    assert db.apply_schema(conn) == db.BASELINE_VERSION
+    assert db.apply_schema(conn) == db.LATEST_VERSION
+    assert db.apply_schema(conn) == db.LATEST_VERSION
     assert db.queued_jobs(conn) == 1
-    assert conn.execute("SELECT COUNT(*) FROM schema_version").fetchone()[0] == 1
+    assert conn.execute("SELECT COUNT(*) FROM schema_version").fetchone()[0] == len(db.MIGRATIONS) + 1
 
 
 def test_migration_steps_run_once_in_order(tmp_path, monkeypatch):
