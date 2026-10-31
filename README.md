@@ -20,7 +20,7 @@ The Conservatory is the fourth app in a family of home-scale projects, and it bo
 
 ## What it will do
 
-- **Add a plant from a photo.** Upload one photo or ten. Each becomes an identification job, and a worker on the household's station sends it to a plant classifier. The result is a short list of candidates with confidence, which the owner confirms, corrects, or replaces with the name on the nursery tag.
+- **Add a plant from a photo.** Upload one photo or ten. Each becomes an identification job, and Fern, the worker on the household's station, sends it to a plant classifier. The result is a short list of candidates with confidence, which the owner confirms, corrects, or replaces with the name on the nursery tag.
 - **Keep the collection.** Every confirmed plant is a *specimen* with a nickname, a location (a shelf, a room, a bed), the date it arrived, a photo timeline, and a log of events: watered, fertilized, repotted, bloomed, propagated, gifted, died. Propagation links a cutting to its parent, so a collection grown from cuttings gets a family tree for free.
 - **Know the species.** Each species has its own page: the Wikipedia summary and reference image, its taxonomy, a care sheet (light, water, soil, hardiness, fertilizing cadence, dormancy), every specimen of that species in the household, and its relatives in the collection, meaning other plants in the same genus or family.
 - **Tag the pots.** Every specimen gets a QR code that opens its page. Print them on label sheets, stick them on the pots, and scan one with the phone camera to find out what a plant is and when it was last watered. This is the pen-and-pencil index, done the cheap way.
@@ -89,7 +89,7 @@ On the same small boxes that run the Aviary, one per household, alongside it. Th
 ## Open questions
 
 - Whether the Conservatory becomes the second mission on the family's shared mission platform or stays a sibling of the Aviary with copied patterns. Not needed before Phase 0.
-- How the identification worker is named. The Aviary's listener is Earl and its weatherman is Willard. The Conservatory's identifier is provisionally **Fern**, and the community hub is provisionally **the Flower Show**.
+- The community hub is provisionally **the Flower Show**. The identification worker is settled: **Fern**, in the tradition of the Aviary's Earl and Willard.
 - Whether reminders ever leave the dashboard for push or email.
 
 ## Credits
