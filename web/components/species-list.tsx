@@ -5,17 +5,60 @@ import { useSearchParams } from "next/navigation";
 import { Term } from "@/components/term";
 import { LeafMark } from "@/components/topbar";
 import { showingLine, speciesLabel, TILE_TINTS } from "@/lib/collection";
-import { displayName, matchesSpecies, specimenCount, speciesTitle, type SpeciesListRow } from "@/lib/species-page";
+import {
+  displayName,
+  familyChips,
+  inFamily,
+  matchesSpecies,
+  selectedFamily,
+  specimenCount,
+  speciesTitle,
+  type SpeciesListRow,
+} from "@/lib/species-page";
+
+/** Write the list's filters into the URL with the native history API, as the collection does, so back returns to the same view. */
+function setListParams(next: { q?: string; family?: string }) {
+  const url = new URL(window.location.href);
+  for (const [k, v] of Object.entries(next)) {
+    if (v === undefined) continue;
+    if (v === "" || (k === "family" && v === "all")) url.searchParams.delete(k);
+    else url.searchParams.set(k, v);
+  }
+  window.history.replaceState(null, "", url.pathname + url.search);
+}
 
 // The species list: one row per species, most owned first. Every row is on
-// the page already, so the top bar's search filters here, on the phone,
-// through the URL (?q=), the same way it filters the collection.
+// the page already, so the top bar's search and the family chips filter
+// here, on the phone, through the URL (?q= and ?family=), the same way the
+// collection filters by location.
 export function SpeciesList({ rows }: { rows: SpeciesListRow[] }) {
-  const q = useSearchParams().get("q") ?? "";
-  const shown = rows.filter((r) => matchesSpecies(r, q));
+  const params = useSearchParams();
+  const q = params.get("q") ?? "";
+  const chips = familyChips(rows);
+  const family = selectedFamily(chips, params.get("family"));
+  const shown = rows.filter((r) => inFamily(r, family) && matchesSpecies(r, q));
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Filter row: chips wrap, never scroll sideways; counts are from the whole list. */}
+      <div role="group" aria-label="Filter by family" className="flex flex-wrap items-center gap-2">
+        <span className="mr-1 text-meta font-semibold text-ink-2">
+          <Term k="family">Family</Term>
+        </span>
+        {chips.map((c) => (
+          <button
+            key={c.key}
+            type="button"
+            aria-pressed={family === c.key}
+            onClick={() => setListParams({ family: c.key })}
+            className={`chip chip-compact ${family === c.key ? "chip-on" : ""}`}
+          >
+            {c.label}
+            <span className="font-normal opacity-80 tabular-nums">{c.n}</span>
+          </button>
+        ))}
+      </div>
+
       <div className="card overflow-hidden">
         {/* Column heads from sm up; on a phone the family sits under the name. */}
         <div aria-hidden className="hidden items-center gap-4 border-b border-line bg-ground px-5 py-2.5 text-meta font-semibold text-ink-2 sm:flex">
@@ -29,17 +72,9 @@ export function SpeciesList({ rows }: { rows: SpeciesListRow[] }) {
 
         {shown.length === 0 ? (
           <div className="flex min-h-[160px] flex-col items-start justify-center gap-1.5 px-5 py-6">
-            <p className="text-lead font-bold">{`Nothing called “${q.trim()}”`}</p>
+            <p className="text-lead font-bold">{family === "all" ? `Nothing called “${q.trim()}”` : `Nothing called “${q.trim()}” in ${family}`}</p>
             <p className="text-meta text-ink-2">Try part of the common name, the Latin name, the genus or the family.</p>
-            <button
-              type="button"
-              onClick={() => {
-                const url = new URL(window.location.href);
-                url.searchParams.delete("q");
-                window.history.replaceState(null, "", url.pathname + url.search);
-              }}
-              className="btn btn-soft btn-compact mt-2"
-            >
+            <button type="button" onClick={() => setListParams({ q: "", family: "all" })} className="btn btn-soft btn-compact mt-2">
               Show every species
             </button>
           </div>

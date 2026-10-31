@@ -3,9 +3,10 @@ import { notFound } from "next/navigation";
 import { SpecimenCard } from "@/components/collection";
 import { Term } from "@/components/term";
 import { LeafMark } from "@/components/topbar";
-import { dayLabel, groupTiles, TILE_TINTS } from "@/lib/collection";
+import { dayLabel, groupTiles, speciesLabel, TILE_TINTS } from "@/lib/collection";
 import type { GlossaryKey } from "@/lib/glossary";
 import { withReadDb } from "@/lib/jobs";
+import { familyExample, genusExample, relativeCount } from "@/lib/relatives";
 import { readSpecies, type SpeciesView } from "@/lib/species";
 import {
   aboutState,
@@ -16,17 +17,19 @@ import {
   namingLine,
   speciesCrumbs,
   speciesGallery,
+  specimenCount,
   speciesTitle,
   type GalleryItem,
+  type SpeciesListRow,
 } from "@/lib/species-page";
 
 // /species/[id]: one species, design/mockups/species.html in its Phase 2
 // subset. Breadcrumb, title block, the gallery (owner photos first, the
-// reference image after), About this species, In your collection, and the
-// taxonomy card. Everything is what Fern wrote; before it has looked a
-// species up, each block keeps its space and says so. The care sheet (#23),
-// relatives (#22), lineage, events and pot tags arrive with their issues;
-// their space is not faked.
+// reference image after), About this species, In your collection, Relatives
+// you already have, and the taxonomy card. Everything is what Fern wrote;
+// before it has looked a species up, each block keeps its space and says so.
+// The care sheet (#23), lineage, events and pot tags arrive with their
+// issues; their space is not faked.
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -220,6 +223,8 @@ export default async function SpeciesPage({ params }: { params: Promise<{ id: st
               </div>
             ))}
           </section>
+
+          <RelativesBlock s={s} />
         </div>
 
         <aside className="flex w-full flex-[1_1_300px] flex-col gap-5 lg:max-w-sidebar">
@@ -227,6 +232,144 @@ export default async function SpeciesPage({ params }: { params: Promise<{ id: st
         </aside>
       </div>
     </main>
+  );
+}
+
+/**
+ * Relatives you already have: the household's other species in this genus,
+ * then in this family under another genus (lib/relatives.ts). The block is
+ * always drawn, so a lonely species and a crowded one keep the page's shape:
+ * with none, or before Fern has placed the species, a reserved panel says so.
+ * The genus and family marks take their examples from the plants on screen.
+ */
+function RelativesBlock({ s }: { s: SpeciesView }) {
+  const r = s.relatives;
+  const genusEx = genusExample(s, r);
+  const familyEx = familyExample(r);
+  const lonely = r.placed && relativeCount(r) === 0;
+  return (
+    <section id="relatives" aria-labelledby="rel-h" className="card flex flex-col gap-4 p-5 sm:px-8 sm:py-7">
+      <h2 id="rel-h" className="text-section leading-tight">
+        Relatives you already have
+      </h2>
+
+      {!r.placed || lonely ? (
+        <div className="flex min-h-[200px] flex-col justify-center gap-1.5 rounded-tile border border-dashed border-line-2 bg-ground px-5 py-4">
+          <p className="text-lead font-bold">
+            {r.placed ? "Nothing else in this genus or family yet" : s.enrichedAt ? "GBIF could not place this name" : "Fern has not placed this one yet"}
+          </p>
+          <p className="max-w-[62ch] text-meta text-ink-2">
+            {r.placed ? (
+              <>
+                <em>{s.canonicalName ?? s.scientificName}</em> is your only{" "}
+                <Term k="genus" example={genusEx}>
+                  <em>{r.genus}</em>
+                </Term>
+                , and nothing else you own is in{" "}
+                <Term k="family" example={familyEx}>
+                  {r.family}
+                </Term>
+                . Name another and it shows up here.
+              </>
+            ) : s.enrichedAt ? (
+              "Relatives are matched on genus and family, and without them there is nothing to match this one against."
+            ) : (
+              "Relatives are matched on genus and family. Fern looks those up the next time the identification queue is quiet."
+            )}
+          </p>
+        </div>
+      ) : (
+        <>
+          <RelativeGroup
+            heading={
+              <>
+                Same{" "}
+                <Term k="genus" example={genusEx}>
+                  genus
+                </Term>{" "}
+                · <em>{r.genus}</em>
+              </>
+            }
+            rows={r.sameGenus}
+            none={
+              <>
+                No other <em>{r.genus}</em> yet
+              </>
+            }
+          />
+          <RelativeGroup
+            heading={
+              <>
+                Same{" "}
+                <Term k="family" example={familyEx}>
+                  family
+                </Term>{" "}
+                · {r.family}
+              </>
+            }
+            rows={r.sameFamily}
+            none={<>Nothing else in {r.family} yet</>}
+          />
+        </>
+      )}
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-sage pt-3.5">
+        <span className="text-meta text-ink-2">Matched on genus and family, among the plants you own.</span>
+        {r.placed ? (
+          <Link href={`/species?family=${encodeURIComponent(r.family)}`} className="text-[14px] font-semibold">
+            Every species in {r.family}
+          </Link>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+/** One group of relatives: a heading, then four across (two on a phone), or a dashed cell when the group is empty. */
+function RelativeGroup({ heading, rows, none }: { heading: React.ReactNode; rows: SpeciesListRow[]; none: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2.5">
+      <h3 className="font-sans text-[15px] font-bold text-ink-2">{heading}</h3>
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {rows.length === 0 ? (
+          <li className="col-span-2 flex min-h-[120px] flex-col justify-center gap-1 rounded-[16px] border border-dashed border-line-2 px-4 py-3 sm:col-span-1">
+            <p className="font-bold text-ink-2">{none}</p>
+            <p className="text-meta text-ink-2">The next one you name lands here.</p>
+          </li>
+        ) : (
+          rows.map((row, i) => (
+            <li key={row.id}>
+              <RelativeCard row={row} tint={TILE_TINTS[(i + 2) % TILE_TINTS.length]} />
+            </li>
+          ))
+        )}
+      </ul>
+    </div>
+  );
+}
+
+/** The mockup's `rel` card: a 120 px photo (owner's, else the reference, else a tinted tile), the name, the binomial under a common name, the count. One link. */
+function RelativeCard({ row, tint }: { row: SpeciesListRow; tint: string }) {
+  const common = displayName(row.commonName);
+  return (
+    <Link
+      href={`/species/${row.id}`}
+      className="card card-link flex h-full flex-col overflow-hidden rounded-[16px] text-ink hover:text-ink hover:no-underline"
+    >
+      {row.thumbUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={row.thumbUrl} alt="" loading="lazy" width={320} height={120} className="h-[120px] w-full object-cover" />
+      ) : (
+        <div className={`flex h-[120px] items-center justify-center ${tint}`}>
+          <LeafMark size={52} className="text-[#6B8F66]" />
+        </div>
+      )}
+      <div className="flex flex-col gap-0.5 px-3 pb-3 pt-2.5">
+        <p className={`font-bold leading-snug ${common ? "" : "font-display font-normal italic"}`}>{speciesTitle(row)}</p>
+        {common ? <p className="sp break-words text-[13px]">{speciesLabel(row.scientificName, row.cultivar)}</p> : null}
+        <p className="text-meta text-ink-2 tabular-nums">{specimenCount(row.specimens)}</p>
+      </div>
+    </Link>
   );
 }
 

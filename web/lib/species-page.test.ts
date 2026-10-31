@@ -3,12 +3,15 @@ import {
   aboutState,
   compareSpecies,
   displayName,
+  familyChips,
   galleryLine,
+  inFamily,
   inCollectionLine,
   latinRuns,
   matchesSpecies,
   namingLine,
   speciesCrumbs,
+  selectedFamily,
   speciesGallery,
   speciesLedger,
   speciesTitle,
@@ -181,5 +184,32 @@ describe("the species list", () => {
     const r = row(1, 1, { commonName: "India Rubber Fig", scientificName: "Ficus elastica", cultivar: "Ruby", genus: "Ficus", family: "Moraceae", canonicalName: "Ficus elastica" });
     for (const q of ["", "  ", "rubber", "ELASTICA", "'ruby'", "ficus", "moraceae"]) expect(matchesSpecies(r, q), q).toBe(true);
     expect(matchesSpecies(r, "sedum")).toBe(false);
+  });
+});
+
+describe("the family filter", () => {
+  const rows = [{ family: "Crassulaceae" }, { family: "Moraceae" }, { family: "Crassulaceae " }, { family: null }, { family: "Asparagaceae" }];
+
+  it("leads with All, counts every family from the whole list, A to Z, and leaves unplaced species under All", () => {
+    expect(familyChips(rows)).toEqual([
+      { key: "all", label: "All", n: 5 },
+      { key: "Asparagaceae", label: "Asparagaceae", n: 1 },
+      { key: "Crassulaceae", label: "Crassulaceae", n: 2 },
+      { key: "Moraceae", label: "Moraceae", n: 1 },
+    ]);
+    expect(familyChips([])).toEqual([{ key: "all", label: "All", n: 0 }]);
+  });
+
+  it("selects a family from the URL without regard to case, and falls back to All for one not on the list", () => {
+    const chips = familyChips(rows);
+    expect(selectedFamily(chips, "crassulaceae")).toBe("Crassulaceae");
+    expect(selectedFamily(chips, "Rosaceae")).toBe("all");
+    expect(selectedFamily(chips, null)).toBe("all");
+    expect(selectedFamily(chips, "all")).toBe("all");
+  });
+
+  it("keeps every row under All and only that family's rows otherwise", () => {
+    expect(rows.filter((r) => inFamily(r, "all"))).toHaveLength(5);
+    expect(rows.filter((r) => inFamily(r, "Crassulaceae"))).toHaveLength(2);
   });
 });

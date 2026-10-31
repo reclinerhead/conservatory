@@ -206,6 +206,36 @@ export function matchesSpecies(r: SpeciesListRow, q: string): boolean {
   );
 }
 
+export type FamilyChip = { key: string; label: string; n: number };
+
+/**
+ * The species list's family filter: "All", then one chip per family A to Z,
+ * each counted from the whole list so the row keeps its shape while a person
+ * types. A species not placed in a family yet counts under All only.
+ */
+export function familyChips(rows: Pick<SpeciesListRow, "family">[]): FamilyChip[] {
+  const counts = new Map<string, number>();
+  for (const r of rows) {
+    const f = (r.family ?? "").trim();
+    if (f) counts.set(f, (counts.get(f) ?? 0) + 1);
+  }
+  const families = [...counts]
+    .sort(([a], [b]) => a.localeCompare(b, "en", { sensitivity: "base" }))
+    .map(([f, n]) => ({ key: f, label: f, n }));
+  return [{ key: "all", label: "All", n: rows.length }, ...families];
+}
+
+/** The chip a `?family=` value selects, matched without regard to case; "all" when it names no family on the list. */
+export function selectedFamily(chips: FamilyChip[], param: string | null): string {
+  const want = (param ?? "").trim().toLowerCase();
+  return chips.find((c) => c.key !== "all" && c.key.toLowerCase() === want)?.key ?? "all";
+}
+
+/** Whether a row is in the selected family. */
+export function inFamily(r: Pick<SpeciesListRow, "family">, family: string): boolean {
+  return family === "all" || (r.family ?? "").trim() === family;
+}
+
 /** "2 species · 2 families" over the list. */
 export function speciesLedger(rows: Pick<SpeciesListRow, "family">[]): string {
   const families = new Set(rows.map((r) => r.family).filter(Boolean)).size;
