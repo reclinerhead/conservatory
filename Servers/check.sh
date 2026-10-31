@@ -15,7 +15,10 @@ for u in conservatory-web fern conservatory-autodeploy; do
     line "$u" "$(systemctl is-active "$u" 2>/dev/null) / $(systemctl is-enabled "$u" 2>/dev/null)"
 done
 line ":3010 (next)" "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3010/)"
-line "https://conservatory.lan" "$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 https://conservatory.lan/ 2>/dev/null || echo unreachable)"
+# -k on purpose: this line asks whether the door answers, and the box's own
+# curl does not carry the house root certificate, so a trusted check from
+# here would read 000 forever. A phone with the root installed is the trust check.
+line "https://conservatory.lan" "$(curl -sk -o /dev/null -w '%{http_code}' --max-time 5 https://conservatory.lan/ 2>/dev/null || echo unreachable)"
 echo
 echo "watcher, last 3 lines:"
 journalctl -u conservatory-autodeploy -n 3 --no-pager -o cat 2>/dev/null | sed 's/^/    /'
