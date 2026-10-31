@@ -1,0 +1,33 @@
+# The Conservatory's web app on orchid (issue #9): the production Next build,
+# served by `next start` on :3010 (3000 is the Aviary's, 3100 Ingenia's).
+# Caddy fronts it as https://conservatory.lan (Servers/Caddyfile.conservatory).
+#
+# Installed by Servers/install-orchid.sh to /etc/systemd/system/, which also
+# writes the node-path.conf drop-in: node lives under nvm and systemd does not
+# load nvm, so PATH is pinned to the versioned bin there (an nvm upgrade that
+# changes the directory is exactly the edit that breaks this; re-run the
+# install script after one).
+#
+# The three CONSERVATORY_* values and the Pl@ntNet key come from the
+# environment file outside the repo (root-owned, 0600; systemd reads it
+# before dropping to todd). The web app only needs the first two; the key is
+# Fern's, and harmless here.
+
+[Unit]
+Description=The Conservatory -- web app (next start on :3010)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=todd
+WorkingDirectory=/home/todd/conservatory/web
+EnvironmentFile=/etc/conservatory/conservatory.env
+ExecStart=/home/todd/conservatory/web/node_modules/.bin/next start --port 3010
+Restart=on-failure
+RestartSec=5
+# Next's graceful shutdown waits on browser keep-alive connections, up to
+# systemd's 90 s default; the app is stateless, so stops take 5 s at most.
+TimeoutStopSec=5
+
+[Install]
+WantedBy=multi-user.target
