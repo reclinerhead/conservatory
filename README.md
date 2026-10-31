@@ -8,7 +8,7 @@ It is being built for three gardeners in one family. One raises around 150 succu
 
 It also teaches. All three have grown plants for years without ever being told what a genus is or why a nursery tag says 'Black Prince' instead of a species. Every horticultural term the app shows carries a small info mark that explains it in plain language, with an example from the person's own collection when there is one. Nobody should have to leave the app to understand the app.
 
-> **Status:** design stage. Nothing runs yet. This README is the design brief and will become the project guide as the code lands.
+> **Status:** Phase 1 in progress. This README is the design brief; the state of what is built lives in the [technical guide](docs/guide/README.md).
 
 ## Lineage
 

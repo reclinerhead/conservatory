@@ -1,0 +1,8 @@
+# Fern's Python dependencies (Python 3.13). The scaffold needs only the stdlib;
+# these arrive with the queue (#6): the Pl@ntNet client and image handling.
+requests
+pillow
+pillow-heif     # iPhone photos
+
+# Test-only:
+pytest

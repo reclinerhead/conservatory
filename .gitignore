@@ -40,3 +40,8 @@ spikes/**/photos*/
 spikes/**/out/
 spikes/**/.venv/
 __pycache__/
+
+# local runtime: Fern's venv and the data directory (database + photos)
+/.venv/
+/data/
+/.pytest_cache/
