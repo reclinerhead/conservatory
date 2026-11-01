@@ -5,7 +5,7 @@ import { PhotoRemover } from "@/components/photo-remover";
 import { PlantEditor } from "@/components/plant-editor";
 import { Term } from "@/components/term";
 import { LeafMark } from "@/components/topbar";
-import { dayLabel, displayName, metaLine, STATUS_LABEL, tileName } from "@/lib/collection";
+import { cardNames, dayLabel, displayName, metaLine, STATUS_LABEL } from "@/lib/collection";
 import { withReadDb } from "@/lib/jobs";
 import { relativeCount, relativesLine, relativesOf } from "@/lib/relatives";
 import { speciesList } from "@/lib/species";
@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const plant = withReadDb((db) => readSpecimen(db, Number(id)), null);
-  return { title: plant ? `${tileName({ ...plant, scientificName: plant.species.scientificName, cultivar: plant.species.cultivar })} · The Conservatory` : "The Conservatory" };
+  return { title: plant ? `${cardNames({ ...plant.species, nickname: plant.nickname }).name} · The Conservatory` : "The Conservatory" };
 }
 
 export default async function PlantPage({ params }: { params: Promise<{ id: string }> }) {
@@ -35,7 +35,23 @@ export default async function PlantPage({ params }: { params: Promise<{ id: stri
   const { plant, locations, relatives } = data;
   const sp = plant.species;
   const relCount = relativeCount(relatives);
-  const name = tileName({ nickname: plant.nickname, scientificName: sp.scientificName, cultivar: sp.cultivar });
+  // Named as its dashboard card is: the nickname, else the common name, else the species.
+  const { name, common, species } = cardNames({ ...sp, nickname: plant.nickname });
+  const binomial = <Binomial scientificName={sp.scientificName} cultivar={sp.cultivar} />;
+  const mark = (
+    <span className="font-sans text-body">
+      <Term k="scientific-name">
+        <span className="sr-only">scientific name</span>
+      </Term>
+    </span>
+  );
+  const noNickname = <span className="font-sans text-body">No nickname yet</span>;
+  // The lines under the title, in the card's order. The info mark follows the
+  // binomial, or ends the first line when the binomial is the title.
+  const lines: React.ReactNode[] = [];
+  if (common) lines.push(common);
+  if (species) lines.push(<>{binomial} {mark}</>);
+  if (!plant.nickname) lines.push(species ? noNickname : <>{noNickname} {mark}</>);
   const [hero, ...rest] = plant.photos;
   const removeFrom = plant.photos.length > 1 ? plant.id : null; // a plant keeps at least one photo
   const record = plant.named
@@ -50,25 +66,28 @@ export default async function PlantPage({ params }: { params: Promise<{ id: stri
         </Link>
         <span aria-hidden>›</span>
         <span aria-current="page" className="font-semibold text-ink">
-          {name}
+          {species ? name : binomial}
         </span>
       </nav>
 
-      {/* Title block, DESIGN.md §5: name, the Latin name in italics, a row of tags. */}
+      {/* Title block, DESIGN.md §5: the name, the common name under a nickname,
+          the Latin name in italics, a row of tags. Two lines are always reserved
+          under the title, so the block keeps its height when Fern fills in the
+          common name or a nickname is saved. */}
       <div className="flex flex-col gap-2.5">
-        <h1 className="text-h1 leading-[1.05] sm:text-page-title">{plant.nickname ?? <Binomial scientificName={sp.scientificName} cultivar={sp.cultivar} />}</h1>
-        <p className="font-display text-section leading-tight text-ink-2">
-          {plant.nickname ? (
-            <Binomial scientificName={sp.scientificName} cultivar={sp.cultivar} />
-          ) : (
-            <span className="font-sans text-body">No nickname yet</span>
-          )}{" "}
-          <span className="font-sans text-body">
-            <Term k="scientific-name">
-              <span className="sr-only">scientific name</span>
-            </Term>
-          </span>
-        </p>
+        <h1 className="text-h1 leading-[1.05] sm:text-page-title">{species ? name : binomial}</h1>
+        <div className="flex flex-col gap-1">
+          {lines.map((line, i) => (
+            <p key={i} className="font-display text-section leading-tight text-ink-2">
+              {line}
+            </p>
+          ))}
+          {lines.length < 2 ? (
+            <p aria-hidden className="invisible font-display text-section leading-tight">
+              &nbsp;
+            </p>
+          ) : null}
+        </div>
         <div className="flex flex-wrap gap-2">
           {plant.status !== "alive" ? <span className="tag tag-warn">{STATUS_LABEL[plant.status]}</span> : null}
           <span className="tag">{metaLine(plant)}</span>
