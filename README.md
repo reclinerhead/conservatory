@@ -100,5 +100,15 @@ Plant identification by [Pl@ntNet](https://plantnet.org/). Species summaries fro
 
 MIT.
 
+## Dashboard
+<img width="1387" height="1290" alt="image" src="https://github.com/user-attachments/assets/8b11fce9-9a80-4cdd-9d88-7c2a0c090c97" />
+
+## Species Page 
 <img width="1394" height="1215" alt="image" src="https://github.com/user-attachments/assets/1ef0b4a6-19fa-445b-bb80-ae1ac944aee6" />
+
+## Species Page Care & Related Plants
+<img width="1043" height="1310" alt="image" src="https://github.com/user-attachments/assets/7522d587-2175-44da-b6ea-02df0a92c165" />
+
+
+
 
