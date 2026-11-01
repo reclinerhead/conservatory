@@ -7,8 +7,9 @@ import { DatabaseSync } from "node:sqlite";
 // that record a person's actions. Bracket access on purpose: Next inlines a
 // static `process.env.FOO` at build time, and these must be read at runtime
 // on the box. Resolved at call time against the working directory, with the
-// tracer told to look away: otherwise Turbopack's file tracing follows the
-// relative default out of web/ and pulls the whole repo into the build.
+// tracer told to look away where the path is built and where it is checked:
+// otherwise Turbopack's file tracing follows the relative default and pulls
+// all of web/ into every route that opens the database.
 function dbPath(): string {
   const configured = process.env["CONSERVATORY_DB"] ?? "../data/conservatory.db";
   return path.resolve(/* turbopackIgnore: true */ process.cwd(), configured);
@@ -23,14 +24,14 @@ export function dataDir(): string {
 /** Open the database read-only, or null when Fern has not created it yet. */
 export function openReadOnly(): DatabaseSync | null {
   const file = dbPath();
-  if (!existsSync(file)) return null;
+  if (!existsSync(/* turbopackIgnore: true */ file)) return null;
   return new DatabaseSync(file, { readOnly: true });
 }
 
 /** Open the database for writing. Throws when Fern has not created it yet. */
 export function openReadWrite(): DatabaseSync {
   const file = dbPath();
-  if (!existsSync(file)) throw new Error(`database not found at ${file}; is Fern running?`);
+  if (!existsSync(/* turbopackIgnore: true */ file)) throw new Error(`database not found at ${file}; is Fern running?`);
   const db = new DatabaseSync(file);
   db.exec("PRAGMA busy_timeout = 5000"); // Fern writes to this file too
   db.exec("PRAGMA foreign_keys = ON");
