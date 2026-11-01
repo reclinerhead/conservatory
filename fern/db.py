@@ -62,6 +62,15 @@ MIGRATIONS: list[tuple[int, str]] = [
         );
         """,
     ),
+    # v4 (#26): a photo added straight to a plant from its page has no job, so
+    # run_once never writes its thumbnail. The idle sweep (worker.sweep_once)
+    # does, and stamps this column; job photos never read it.
+    (
+        4,
+        """
+        ALTER TABLE photos ADD COLUMN thumb_at TEXT;  -- when the sweep wrote a job-less photo's thumbnail, else NULL
+        """,
+    ),
 ]
 
 LATEST_VERSION = MIGRATIONS[-1][0] if MIGRATIONS else BASELINE_VERSION

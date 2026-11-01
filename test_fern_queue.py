@@ -120,3 +120,101 @@ def test_run_once_sends_the_photos_and_records_the_answer(tmp_path):
     assert (data / worker.thumb_path(rel)).exists()
     assert conn.execute("SELECT status, quota_remaining FROM jobs WHERE id = ?", (jid,)).fetchone()[1] == 7
     assert worker.run_once(conn, data, "k", NOW, identify=fake_identify) is None
+
+
+# --- the thumbnail sweep (#26): photos added straight to a plant --------------
+
+
+def _plant(conn):
+    conn.execute("INSERT INTO species (scientific_name) VALUES ('Ficus elastica')")
+    cur = conn.execute("INSERT INTO specimens (species_id) VALUES (1)")
+    conn.commit()
+    return cur.lastrowid
+
+
+def _photo_file(data, rel, size=(1600, 1200)):
+    from PIL import Image
+
+    src = data / rel
+    src.parent.mkdir(parents=True, exist_ok=True)
+    Image.new("RGB", size, (40, 120, 60)).save(src, "JPEG")
+
+
+def _added_photo(conn, rel, specimen_id, thumb_at=None):
+    cur = conn.execute("INSERT INTO photos (path, specimen_id, thumb_at) VALUES (?, ?, ?)", (rel, specimen_id, thumb_at))
+    conn.commit()
+    return cur.lastrowid
+
+
+def test_sweep_writes_the_thumbnail_of_a_photo_added_to_a_plant(tmp_path):
+    conn = _db(tmp_path)
+    data = tmp_path / "data"
+    rel = "photos/2026/10/added.jpg"
+    _photo_file(data, rel)
+    pid = _added_photo(conn, rel, _plant(conn))
+
+    assert worker.sweep_once(conn, data, NOW) is True
+    from PIL import Image
+
+    with Image.open(data / worker.thumb_path(rel)) as im:
+        assert max(im.size) == plantnet.THUMB_SIDE
+    assert conn.execute("SELECT thumb_at FROM photos WHERE id = ?", (pid,)).fetchone()[0] == queue.iso(NOW)
+    assert worker.sweep_once(conn, data, NOW) is False  # stamped, so never picked again
+
+
+def test_sweep_leaves_job_photos_and_stamped_photos_alone(tmp_path):
+    conn = _db(tmp_path)
+    data = tmp_path / "data"
+    sid = _plant(conn)
+    job_rel, stamped_rel = "photos/2026/10/job.jpg", "photos/2026/10/stamped.jpg"
+    _photo_file(data, job_rel)
+    _photo_file(data, stamped_rel)
+    jid = _job(conn, "2026-10-31T14:00:00.000Z")
+    conn.execute("INSERT INTO photos (path, job_id, specimen_id) VALUES (?, ?, ?)", (job_rel, jid, sid))
+    conn.commit()
+    _added_photo(conn, stamped_rel, sid, thumb_at="2026-10-31T14:30:00.000Z")
+
+    assert worker.sweep_once(conn, data, NOW) is False
+    assert not (data / worker.thumb_path(job_rel)).exists()
+    assert not (data / worker.thumb_path(stamped_rel)).exists()
+    assert conn.execute("SELECT thumb_at FROM photos WHERE job_id = ?", (jid,)).fetchone()[0] is None
+
+
+def test_sweep_stamps_an_unreadable_photo_and_moves_on(tmp_path, caplog):
+    conn = _db(tmp_path)
+    data = tmp_path / "data"
+    sid = _plant(conn)
+    bad_rel, good_rel = "photos/2026/10/bad.jpg", "photos/2026/10/good.jpg"
+    (data / bad_rel).parent.mkdir(parents=True)
+    (data / bad_rel).write_bytes(b"not a picture")
+    _photo_file(data, good_rel)
+    bad = _added_photo(conn, bad_rel, sid)
+    _added_photo(conn, good_rel, sid)
+
+    with caplog.at_level("WARNING", logger="fern"):
+        assert worker.sweep_once(conn, data, NOW) is True
+    assert f"photo {bad} (specimen {sid}): {bad_rel} unreadable" in caplog.text
+    assert conn.execute("SELECT thumb_at FROM photos WHERE id = ?", (bad,)).fetchone()[0] == queue.iso(NOW)
+    assert not (data / worker.thumb_path(bad_rel)).exists()
+    assert worker.sweep_once(conn, data, NOW) is True  # the next tick takes the good one, not the bad one again
+    assert (data / worker.thumb_path(good_rel)).exists()
+    assert worker.sweep_once(conn, data, NOW) is False
+
+
+def test_idle_tick_sweeps_first_then_hands_the_tick_to_enrichment(tmp_path, monkeypatch):
+    from fern import care, enrich
+
+    conn = _db(tmp_path)
+    data = tmp_path / "data"
+    rel = "photos/2026/10/added.jpg"
+    _photo_file(data, rel)
+    _added_photo(conn, rel, _plant(conn))
+    calls = []
+    monkeypatch.setattr(enrich, "run_once", lambda *a, **k: calls.append("enrich") or True)
+    monkeypatch.setattr(care, "run_once", lambda *a, **k: calls.append("care") or True)
+
+    assert worker.idle_tick(conn, data, NOW) is True
+    assert calls == []  # the thumbnail had the tick
+    assert (data / worker.thumb_path(rel)).exists()
+    assert worker.idle_tick(conn, data, NOW) is True
+    assert calls == ["enrich"]  # nothing left to sweep: enrichment's turn, and it had work

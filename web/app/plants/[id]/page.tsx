@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PhotoAdder } from "@/components/photo-adder";
 import { PlantEditor } from "@/components/plant-editor";
 import { Term } from "@/components/term";
 import { LeafMark } from "@/components/topbar";
@@ -89,12 +90,10 @@ export default async function PlantPage({ params }: { params: Promise<{ id: stri
             ))}
           </div>
           <div className="flex flex-1 flex-col justify-end gap-2 rounded-tile bg-sage px-4 py-3">
-            <p className="text-meta text-ink-2">
-              {plant.photos.length === 0 ? "No photos yet." : plant.photos.length === 1 ? "1 photo of this plant." : `${plant.photos.length} photos of this plant, newest first.`}
-            </p>
-            <Link href="/add" className="btn btn-ghost btn-compact self-start bg-surface hover:no-underline">
-              Add a photo
-            </Link>
+            <PhotoAdder
+              plantId={plant.id}
+              countLine={plant.photos.length === 0 ? "No photos yet." : plant.photos.length === 1 ? "1 photo of this plant." : `${plant.photos.length} photos of this plant, newest first.`}
+            />
           </div>
         </div>
         {rest.length > 2 ? (

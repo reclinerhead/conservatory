@@ -128,14 +128,14 @@ def test_v3_migrates_a_v2_database_and_cascades_with_the_species(tmp_path, monke
     conn.execute("INSERT INTO species (scientific_name, gbif_key, enriched_at) VALUES ('Ficus elastica', 7835333, ?)", (iso(NOW),))
     conn.commit()
     monkeypatch.undo()
-    assert db.apply_schema(conn) == 3 == db.LATEST_VERSION
+    assert db.apply_schema(conn) == db.LATEST_VERSION >= 3
     cols = {r["name"] for r in conn.execute("PRAGMA table_info(care_sheets)")}
     assert cols == {"species_id", "zone", "model", "prompt_version", "cells", "notes", "written_at", "tried_at", "error"}
     assert conn.execute("SELECT gbif_key FROM species").fetchone()[0] == 7835333
     conn.execute("INSERT INTO care_sheets (species_id, prompt_version, tried_at) VALUES (1, 1, ?)", (iso(NOW),))
     conn.execute("DELETE FROM species WHERE id = 1")  # the web app does this when the last specimen goes
     assert conn.execute("SELECT COUNT(*) FROM care_sheets").fetchone()[0] == 0
-    assert db.apply_schema(conn) == 3
+    assert db.apply_schema(conn) == db.LATEST_VERSION
 
 
 # --- the worklist ------------------------------------------------------------

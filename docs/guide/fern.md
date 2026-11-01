@@ -9,7 +9,7 @@ Fern is the Conservatory's worker: a Python 3.13 package in `fern/`, run as `pyt
 .venv\Scripts\python -m fern
 ```
 
-Environment: `CONSERVATORY_DB` (default `data/conservatory.db`), `CONSERVATORY_DATA` (default `data/`; photos under `photos/`, reference images under `reference/`), and `PLANTNET_API_KEY`, without which Fern refuses to start. On start it opens the database, applies the schema, logs the queue depth, and drains the queue until stopped (SIGTERM or Ctrl-C); whenever the queue is idle it gives the tick to the enrichment pass instead (below). `python -m fern --enrich <species id>` runs that pass for one species by hand, prints its journal line, and exits; it needs no Pl@ntNet key. `python -m fern --care <species id>` does the same for the care sheet (exit 2 with no model configured, 1 when the call or the answer fails, leaving the row as it was).
+Environment: `CONSERVATORY_DB` (default `data/conservatory.db`), `CONSERVATORY_DATA` (default `data/`; photos under `photos/`, reference images under `reference/`), and `PLANTNET_API_KEY`, without which Fern refuses to start. On start it opens the database, applies the schema, logs the queue depth, and drains the queue until stopped (SIGTERM or Ctrl-C); whenever the queue is idle it gives the tick to the thumbnail sweep, the enrichment pass or the care pass instead (below). `python -m fern --enrich <species id>` runs that pass for one species by hand, prints its journal line, and exits; it needs no Pl@ntNet key. `python -m fern --care <species id>` does the same for the care sheet (exit 2 with no model configured, 1 when the call or the answer fails, leaving the row as it was).
 
 The care sheets add three optional variables: `AI_GATEWAY_API_KEY` (the Vercel AI Gateway key; unset, the care pass is off), `CONSERVATORY_LLM` (the gateway's model slug, default `anthropic/claude-sonnet-5.5`) and `CONSERVATORY_ZONE` (the household's USDA hardiness zone, `6a`; unset or unparseable, sheets are written without one, and a set-but-invalid value logs a warning). On start Fern logs one line saying which: `care sheets: on, anthropic/claude-sonnet-5.5, zone 6a` or `care sheets: off (AI_GATEWAY_API_KEY is not set)`.
 
@@ -17,13 +17,13 @@ The care sheets add three optional variables: `AI_GATEWAY_API_KEY` (the Vercel A
 
 `fern/db.py` is the one place that opens the file for writing from Python. `connect(path)` creates parent directories, opens SQLite with `journal_mode=WAL`, `synchronous=FULL`, `foreign_keys=ON`, and a 5 s `busy_timeout` (the web app writes to the same file), then applies the schema.
 
-**Schema ownership.** `fern/schema.sql` is the baseline, version 1, and is idempotent: every statement is `CREATE ... IF NOT EXISTS`, so applying it to a live database is a no-op. Changes to an existing table are never edited into the baseline. They are appended to `MIGRATIONS` in `db.py` as `(version, sql)` steps; each runs once, in order, inside a transaction, and records its version in `schema_version`. The baseline may be rewritten to match only once a step has shipped to every box. `db.LATEST_VERSION` is the version a fresh database comes up at: **3** today (v2 is the enrichment columns on `species`, v3 the `care_sheets` table, both below). The web app never creates or alters tables; it trusts that Fern ran first, and `web/lib/db.ts` returns empty counts when the file does not exist yet.
+**Schema ownership.** `fern/schema.sql` is the baseline, version 1, and is idempotent: every statement is `CREATE ... IF NOT EXISTS`, so applying it to a live database is a no-op. Changes to an existing table are never edited into the baseline. They are appended to `MIGRATIONS` in `db.py` as `(version, sql)` steps; each runs once, in order, inside a transaction, and records its version in `schema_version`. The baseline may be rewritten to match only once a step has shipped to every box. `db.LATEST_VERSION` is the version a fresh database comes up at: **4** today (v2 is the enrichment columns on `species`, v3 the `care_sheets` table, v4 `photos.thumb_at`, all below). The web app never creates or alters tables; it trusts that Fern ran first, and `web/lib/db.ts` returns empty counts when the file does not exist yet.
 
 **Tables.** All timestamps are ISO 8601 text in UTC.
 
 | Table | Holds | Notes |
 | --- | --- | --- |
-| `photos` | one uploaded photo | `path` relative to `CONSERVATORY_DATA`; `organ` is the Pl@ntNet hint (`leaf`, `flower`, `fruit`, `bark`, `auto`); linked to a job and, once confirmed, a specimen |
+| `photos` | one uploaded photo | `path` relative to `CONSERVATORY_DATA`; `organ` is the Pl@ntNet hint (`leaf`, `flower`, `fruit`, `bark`, `auto`); linked to a job and, once confirmed, a specimen, or to a specimen alone when added from the plant's page (#26). v4 adds `thumb_at`: when the idle sweep wrote a job-less photo's thumbnail, NULL until then and always for job photos |
 | `jobs` | one identification request | `status`: `queued` → `identifying` → `identified` or `rejected` (Pl@ntNet 404, no candidates) or `failed` (retry after `next_attempt_at`); `quota_remaining` is Pl@ntNet's count after the call |
 | `candidates` | Pl@ntNet's ranked answers for a job | `kind` is `species`, `genus`, or `family` (the rollups from `detailed=true`); `common_names` is a JSON array |
 | `species` | a taxon the household has confirmed | `scientific_name` may be a species, a genus alone, or whatever the person typed; `cultivar` is the nursery-tag name; unique on the pair. v2 adds the columns the enrichment pass fills (listed under Enrichment); all nullable, so the confirm route's insert is unchanged |
@@ -31,7 +31,7 @@ The care sheets add three optional variables: `AI_GATEWAY_API_KEY` (the Vercel A
 | `confirmations` | what the person tapped for a job | `chosen_rank` or `typed_name`; feeds the roster match and the accuracy picture |
 | `care_sheets` | one species' care sheet (v3) | keyed on `species_id`, cascading on delete; columns under The care pass |
 
-Tests: `test_fern_db.py` at the repo root covers the baseline apply, idempotence, migration ordering, and the status constraint.
+Tests: `test_fern_db.py` at the repo root covers the baseline apply, idempotence, migration ordering, v4 over a v3 database, and the status constraint.
 
 ## The queue (`fern/queue.py`)
 
@@ -45,7 +45,7 @@ One job at a time, oldest first. `claim_next` picks the oldest job that is `queu
 | `retry` | `failed` with `next_attempt_at` | network errors and 5xx: 30 s, 60 s, 120 s, 240 s, 480 s, then it stays `failed` with its error after five attempts |
 | `failed` | `failed` for good | 400, 401 (a bad key), 403, 413, 415 |
 
-Timestamps are ISO 8601 UTC text in the shape the schema's defaults write, so string comparison orders them. The thumbnail (`<stem>.thumb.jpg`, 320 px) is written for every processed job, rejected ones included, because the confirm screen shows the photo either way.
+Timestamps are ISO 8601 UTC text in the shape the schema's defaults write, so string comparison orders them. The thumbnail (`<stem>.thumb.jpg`, 320 px) is written for every processed job, rejected ones included, because the confirm screen shows the photo either way. A photo added straight to a plant has no job, and gets its thumbnail from the worker's sweep instead (below).
 
 ## The Pl@ntNet client (`fern/plantnet.py`)
 
@@ -54,11 +54,13 @@ Timestamps are ISO 8601 UTC text in the shape the schema's defaults write, so st
 - `parse_candidates` takes the `results` list in rank order (name, genus, family, score, GBIF id, up to three common names) and adds **genus and family rollups**: from `otherResults` when the API sends them, otherwise computed here by summing species scores per genus and per family. With `detailed=true` the API does send them (confirmed live 2026-10-31: five genus rows and five family rows per job, with their own scores, including genera that appear in no species row, e.g. Sedum 0.79 and Pachyphytum 0.06 beside Sedum pachyphyllum 0.67), so the computed sum is only the fallback. The rollups exist because of Phase 0 (#1): a shelf succulent often comes back as three species of one genus at 0.03 each, and the genus row is what the confirm screen should lead with.
 - `classify` maps the HTTP status to an `Outcome` as in the table above.
 
-Tests: `test_fern_plantnet.py` (parser and classifier, with fixtures shaped on the Phase 0 responses) and `test_fern_queue.py` (backoff, claim order, each outcome's effect on the row, and `worker.run_once` with a fake identify function).
+Tests: `test_fern_plantnet.py` (parser and classifier, with fixtures shaped on the Phase 0 responses) and `test_fern_queue.py` (backoff, claim order, each outcome's effect on the row, `worker.run_once` with a fake identify function, the thumbnail sweep, and the idle tick's order).
 
 ## The worker (`fern/worker.py`)
 
-`run_once` claims a job, prepares its photos, calls identify, records the outcome, writes thumbnails, and logs one line: `job 7: identified Ficus elastica 0.80 (quota left 487)`. `run_forever` repeats it: one second between jobs, a pause until the reset time after a quota outcome, and when the queue is idle one call to `enrich.run_once`, or, when there is nothing to enrich, one call to `care.run_once` (one species either way, then a second of sleep; two when neither had anything). The queue always wins the tick: an upload never waits behind Wikipedia, and behind at most one model call. The clock and the identify function are parameters so the tests run without the network.
+`run_once` claims a job, prepares its photos, calls identify, records the outcome, writes thumbnails, and logs one line: `job 7: identified Ficus elastica 0.80 (quota left 487)`. `run_forever` repeats it: one second between jobs, a pause until the reset time after a quota outcome, and when the queue is idle one call to `idle_tick`, which gives the tick to the first of these with work: the thumbnail sweep (`sweep_once`), the enrichment pass (`enrich.run_once`), the care pass (`care.run_once`). Each does one photo or one species, then a second of sleep; two when none had anything. The queue always wins the tick: an upload never waits behind Wikipedia, and behind at most one model call. The clock and the identify function are parameters so the tests run without the network.
+
+**The thumbnail sweep** (`sweep_once`, schema v4) exists for photos added straight to a plant from its page (`POST /api/plants/[id]/photos`), which have no job and so never pass through `run_once`. It picks the oldest photo with no `job_id` and no `thumb_at`, writes its 320 px thumbnail with `plantnet.write_thumbnail`, stamps `thumb_at`, and logs `photo 12 (specimen 3): thumbnail written`. It goes ahead of enrichment because its photo is on a page someone is looking at, so a new photo has its thumbnail within a couple of seconds of an idle queue. The row is stamped whatever happens: an unreadable file is one warning line (`photo 12 (specimen 3): photos/2026/11/<uuid>.jpg unreadable, no thumbnail: ...`) and never a stall. Job photos keep their thumbnail from `run_once` and never read the column. Rejected: looking for the thumbnail file on disk instead of a column (no migration, but a stat of every job-less photo on every idle tick, forever), and having the browser make the thumbnail (a desktop browser cannot decode HEIC, and there would be two thumbnail makers). Until the sweep has run, the web app's media route serves the original in the thumbnail's place ([web.md](web.md)).
 
 ## Enrichment (`fern/enrich.py`)
 

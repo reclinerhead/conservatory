@@ -33,6 +33,17 @@ export function thumbPathFor(rel: string): string {
   return `${stem}.thumb.jpg`;
 }
 
+/**
+ * The originals that can stand in for a photo's thumbnail Fern has not
+ * written yet (a photo added to a plant waits for the idle sweep), in the
+ * extensions the upload route writes. Empty for anything but a photo's
+ * thumbnail; reference thumbnails are written with their image.
+ */
+export function originalsForThumb(rel: string): string[] {
+  const m = /^(photos\/.+)\.thumb\.jpg$/.exec(rel);
+  return m ? ["jpg", "png", "heic"].map((ext) => `${m[1]}.${ext}`) : [];
+}
+
 const SEGMENT = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const SERVABLE = new Set(["jpg", "jpeg", "png", "heic"]);
 const REFERENCE_FILE = /^[0-9]+(\.thumb)?\.jpg$/;
