@@ -9,6 +9,7 @@ type TileRow = {
   nickname: string | null;
   scientific_name: string;
   cultivar: string | null;
+  common_name: string | null;
   location: string | null;
   acquired_on: string | null;
   status: SpecimenStatus;
@@ -23,7 +24,7 @@ const HERO = `(SELECT p.path FROM photos p WHERE p.specimen_id = sp.id
 /** Every specimen as a grid tile (or every specimen of one species), in no particular order: the caller groups and sorts. */
 export function collectionTiles(db: DatabaseSync, speciesId?: number): Tile[] {
   const sql = `SELECT sp.id, sp.nickname, sp.location, sp.acquired_on, sp.status, sp.created_at,
-                      s.scientific_name, s.cultivar, ${HERO} AS hero
+                      s.scientific_name, s.cultivar, s.common_name, ${HERO} AS hero
                  FROM specimens sp JOIN species s ON s.id = sp.species_id`;
   const rows = (
     speciesId === undefined ? db.prepare(sql).all() : db.prepare(`${sql} WHERE sp.species_id = ?`).all(speciesId)
@@ -33,6 +34,7 @@ export function collectionTiles(db: DatabaseSync, speciesId?: number): Tile[] {
     nickname: r.nickname,
     scientificName: r.scientific_name,
     cultivar: r.cultivar,
+    commonName: r.common_name,
     location: r.location,
     acquiredOn: r.acquired_on,
     status: r.status,

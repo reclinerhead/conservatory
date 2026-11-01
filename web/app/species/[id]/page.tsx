@@ -5,14 +5,13 @@ import { SpecimenCard } from "@/components/collection";
 import { Term } from "@/components/term";
 import { LeafMark } from "@/components/topbar";
 import { CARE_CELLS, careScopeLine, careWrittenLine } from "@/lib/care";
-import { dayLabel, groupTiles, speciesLabel, TILE_TINTS } from "@/lib/collection";
+import { dayLabel, displayName, groupTiles, speciesLabel, TILE_TINTS } from "@/lib/collection";
 import type { GlossaryKey } from "@/lib/glossary";
 import { withReadDb } from "@/lib/jobs";
 import { familyExample, genusExample, relativeCount } from "@/lib/relatives";
 import { readSpecies, type SpeciesView } from "@/lib/species";
 import {
   aboutState,
-  displayName,
   galleryLine,
   inCollectionLine,
   latinRuns,

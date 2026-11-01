@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   aboutState,
   compareSpecies,
-  displayName,
   familyChips,
   galleryLine,
   inFamily,
@@ -22,11 +21,8 @@ import {
 
 const ficus = { commonName: "India Rubber Fig", scientificName: "Ficus elastica", cultivar: "Ruby", family: "Moraceae", genus: "Ficus", rank: "species" };
 
-describe("displayName and speciesTitle", () => {
-  it("capitalises GBIF's vernacular and falls back to the scientific name with its cultivar", () => {
-    expect(displayName("echeveria")).toBe("Echeveria");
-    expect(displayName("  ")).toBeNull();
-    expect(displayName(null)).toBeNull();
+describe("speciesTitle", () => {
+  it("leads with the common name and falls back to the scientific name with its cultivar", () => {
     expect(speciesTitle(ficus)).toBe("India Rubber Fig");
     expect(speciesTitle({ ...ficus, commonName: null })).toBe("Ficus elastica 'Ruby'");
   });

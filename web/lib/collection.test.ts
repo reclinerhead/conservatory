@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  cardNames,
   dayLabel,
+  displayName,
   GONE,
   groupTiles,
   locationChips,
@@ -19,6 +21,7 @@ function tile(over: Partial<Tile> & { id: number }): Tile {
     nickname: null,
     scientificName: "Echeveria agavoides",
     cultivar: null,
+    commonName: null,
     location: null,
     acquiredOn: null,
     status: "alive",
@@ -30,7 +33,7 @@ function tile(over: Partial<Tile> & { id: number }): Tile {
 
 const TILES: Tile[] = [
   tile({ id: 1, nickname: "Granddaddy", scientificName: "Echeveria", cultivar: "Black Prince", location: "Basement shelf A" }),
-  tile({ id: 2, scientificName: "Ficus elastica", cultivar: "Ruby", location: "Living room" }),
+  tile({ id: 2, scientificName: "Ficus elastica", cultivar: "Ruby", commonName: "India Rubber Fig", location: "Living room" }),
   tile({ id: 3, scientificName: "Sedum pachyphyllum", location: "basement shelf A" }),
   tile({ id: 4, nickname: "Mom's jade", scientificName: "Crassula ovata" }),
   tile({ id: 5, scientificName: "Hosta", location: "Front bed", status: "died" }),
@@ -43,6 +46,32 @@ describe("names and dates", () => {
     expect(speciesLabel("Ficus elastica", null)).toBe("Ficus elastica");
     expect(tileName(TILES[0])).toBe("Granddaddy");
     expect(tileName(TILES[1])).toBe("Ficus elastica 'Ruby'");
+  });
+
+  it("capitalises GBIF's vernacular and treats a blank one as none", () => {
+    expect(displayName("echeveria")).toBe("Echeveria");
+    expect(displayName("India Rubber Fig")).toBe("India Rubber Fig");
+    expect(displayName("  ")).toBeNull();
+    expect(displayName(null)).toBeNull();
+  });
+
+  it("names a card by nickname, else common name, else species, with the lines it leaves out underneath", () => {
+    const ficus = { scientificName: "Ficus elastica", cultivar: "Ruby" };
+    expect(cardNames({ ...ficus, nickname: "Granddaddy", commonName: "India Rubber Fig" })).toEqual({
+      name: "Granddaddy",
+      common: "India Rubber Fig",
+      species: "Ficus elastica 'Ruby'",
+    });
+    expect(cardNames({ ...ficus, nickname: null, commonName: "India Rubber Fig" })).toEqual({ name: "India Rubber Fig", common: null, species: "Ficus elastica 'Ruby'" });
+    expect(cardNames({ ...ficus, nickname: "Granddaddy", commonName: null })).toEqual({ name: "Granddaddy", common: null, species: "Ficus elastica 'Ruby'" });
+    expect(cardNames({ ...ficus, nickname: null, commonName: null })).toEqual({ name: "Ficus elastica 'Ruby'", common: null, species: null });
+  });
+
+  it("capitalises the common name on a card and ignores a blank one", () => {
+    const echeveria = { nickname: null, scientificName: "Echeveria", cultivar: "Black Prince" };
+    expect(cardNames({ ...echeveria, commonName: "echeveria" })).toEqual({ name: "Echeveria", common: null, species: "Echeveria 'Black Prince'" });
+    expect(cardNames({ ...echeveria, nickname: "Granddaddy", commonName: "echeveria" }).common).toBe("Echeveria");
+    expect(cardNames({ ...echeveria, commonName: "  " })).toEqual({ name: "Echeveria 'Black Prince'", common: null, species: null });
   });
 
   it("reads month and day labels from the string without a time zone", () => {
@@ -68,6 +97,12 @@ describe("matchesQuery", () => {
     expect(matchesQuery(TILES[1], "RUBY")).toBe(true);
     expect(matchesQuery(TILES[2], "ficus")).toBe(false);
     expect(matchesQuery(TILES[2], "   ")).toBe(true);
+  });
+
+  it("matches any part of the common name, ignoring case", () => {
+    expect(matchesQuery(TILES[1], "rubber")).toBe(true);
+    expect(matchesQuery(TILES[1], "INDIA RUBBER FIG")).toBe(true);
+    expect(matchesQuery(TILES[0], "rubber")).toBe(false);
   });
 });
 

@@ -4,9 +4,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Term } from "@/components/term";
 import { LeafMark } from "@/components/topbar";
-import { showingLine, speciesLabel, TILE_TINTS } from "@/lib/collection";
+import { displayName, showingLine, speciesLabel, TILE_TINTS } from "@/lib/collection";
 import {
-  displayName,
   familyChips,
   inFamily,
   matchesSpecies,

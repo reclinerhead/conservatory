@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { LeafMark } from "@/components/topbar";
-import { groupTiles, locationChips, metaLine, showingLine, speciesLabel, STATUS_LABEL, TILE_TINTS, tileName, type Tile } from "@/lib/collection";
+import { cardNames, groupTiles, locationChips, metaLine, showingLine, STATUS_LABEL, TILE_TINTS, type Tile } from "@/lib/collection";
 
 // The life list from design/DESIGN.md §5: the filter row of location chips,
 // then the specimen cards grouped by location. Every tile is on the page
@@ -56,7 +56,7 @@ export function Collection({ tiles }: { tiles: Tile[] }) {
             </div>
             <div className="flex flex-col gap-1.5 px-4 pb-4 pt-3.5">
               <p className="text-lead font-bold">{q ? `Nothing called “${q.trim()}”` : "Nothing here"}</p>
-              <p className="text-meta text-ink-2">{q ? "Try part of the nickname or the Latin name." : "Pick another location, or add a plant."}</p>
+              <p className="text-meta text-ink-2">{q ? "Try part of the nickname, the common name or the Latin name." : "Pick another location, or add a plant."}</p>
               <button type="button" onClick={() => setCollectionParams({ q: "", at: "all" })} className="btn btn-soft btn-compact mt-2 self-start">
                 Show everything
               </button>
@@ -65,7 +65,7 @@ export function Collection({ tiles }: { tiles: Tile[] }) {
           {[2, 3].map((i) => (
             <li key={i} aria-hidden className="card flex flex-col overflow-hidden opacity-60">
               <div className={`h-[168px] ${TILE_TINTS[i]}`} />
-              <div className="h-[104px]" />
+              <div className="h-[128px]" />
             </li>
           ))}
         </ul>
@@ -94,12 +94,15 @@ export function Collection({ tiles }: { tiles: Tile[] }) {
 
 /**
  * The specimen card from DESIGN.md §4: photo or tinted tile 168 px tall,
- * nickname, italic species, meta line, tags. One link. `compact` is the
- * species page's variant: 140 px and a 16 px radius, as the mockup's `rel`.
+ * the name, the common name under a nickname, the italic species, meta line,
+ * tags. One link. `compact` is the species page's variant: 140 px and a
+ * 16 px radius, as the mockup's `rel`, and no common name, since every card
+ * there is the page's own species and its common name is the page's title.
  */
 export function SpecimenCard({ tile, tint, compact = false }: { tile: Tile; tint: string; compact?: boolean }) {
-  const name = tileName(tile);
-  const species = speciesLabel(tile.scientificName, tile.cultivar);
+  const { name, common, species } = cardNames(compact ? { ...tile, commonName: null } : tile);
+  // Lines under the name are reserved, so a card keeps its height when Fern finds a common name.
+  const blanks = (compact ? 1 : 2) - (common ? 1 : 0) - (species ? 1 : 0);
   const h = compact ? "h-[140px]" : "h-[168px]";
   return (
     <Link
@@ -116,9 +119,13 @@ export function SpecimenCard({ tile, tint, compact = false }: { tile: Tile; tint
       )}
       <div className="flex flex-col gap-1 px-4 pb-4 pt-3.5">
         <p className="text-lead font-bold leading-snug">{name}</p>
-        <p className={`sp ${tile.nickname ? "" : "invisible"}`} aria-hidden={!tile.nickname}>
-          {tile.nickname ? species : name}
-        </p>
+        {common ? <p className="text-ink-2">{common}</p> : null}
+        {species ? <p className="sp">{species}</p> : null}
+        {Array.from({ length: blanks }, (_, i) => (
+          <p key={i} aria-hidden className="invisible">
+            &nbsp;
+          </p>
+        ))}
         <p className="text-meta text-ink-2">{metaLine(tile)}</p>
         {tile.status !== "alive" ? (
           <div className="mt-1 flex flex-wrap gap-1.5">

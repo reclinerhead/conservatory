@@ -3,11 +3,10 @@ import { notFound } from "next/navigation";
 import { PlantEditor } from "@/components/plant-editor";
 import { Term } from "@/components/term";
 import { LeafMark } from "@/components/topbar";
-import { dayLabel, metaLine, STATUS_LABEL, tileName } from "@/lib/collection";
+import { dayLabel, displayName, metaLine, STATUS_LABEL, tileName } from "@/lib/collection";
 import { withReadDb } from "@/lib/jobs";
 import { relativeCount, relativesLine, relativesOf } from "@/lib/relatives";
 import { speciesList } from "@/lib/species";
-import { displayName } from "@/lib/species-page";
 import { knownLocations, readSpecimen } from "@/lib/specimens";
 
 // /plants/[id]: one specimen. Breadcrumb, title block, its photos as a
