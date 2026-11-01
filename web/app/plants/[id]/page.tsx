@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PhotoAdder } from "@/components/photo-adder";
+import { PhotoRemover } from "@/components/photo-remover";
 import { PlantEditor } from "@/components/plant-editor";
 import { Term } from "@/components/term";
 import { LeafMark } from "@/components/topbar";
@@ -36,6 +37,7 @@ export default async function PlantPage({ params }: { params: Promise<{ id: stri
   const relCount = relativeCount(relatives);
   const name = tileName({ nickname: plant.nickname, scientificName: sp.scientificName, cultivar: sp.cultivar });
   const [hero, ...rest] = plant.photos;
+  const removeFrom = plant.photos.length > 1 ? plant.id : null; // a plant keeps at least one photo
   const record = plant.named
     ? `Named ${plant.named.how === "pill" ? "from Fern's suggestion" : plant.named.how === "typed" ? "by typing the name" : "as another photo of a plant you had just named"} on ${dayLabel(plant.named.at)}.`
     : `Added on ${dayLabel(plant.createdAt)}.`;
@@ -74,10 +76,12 @@ export default async function PlantPage({ params }: { params: Promise<{ id: stri
         </div>
       </div>
 
-      {/* Photos, newest first. The hero is the newest; each opens the original. */}
+      {/* Photos, newest first. The hero is the newest; each opens the original and,
+          while there is more than one, carries Remove. Removing the hero makes the
+          next newest the hero; its key keeps the new hero's Remove fresh. */}
       <section aria-label="Photos" className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
         {hero ? (
-          <Photo photo={hero} hero />
+          <Photo key={hero.id} photo={hero} removeFrom={removeFrom} hero />
         ) : (
           <div className="flex h-[320px] items-center justify-center rounded-[22px] border border-line bg-sage sm:col-span-2 sm:h-[480px]">
             <LeafMark size={96} className="text-[#6B8F66]" />
@@ -86,7 +90,7 @@ export default async function PlantPage({ params }: { params: Promise<{ id: stri
         <div className="flex flex-col gap-3.5">
           <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-1">
             {rest.slice(0, 2).map((p) => (
-              <Photo key={p.id} photo={p} />
+              <Photo key={p.id} photo={p} removeFrom={removeFrom} />
             ))}
           </div>
           <div className="flex flex-1 flex-col justify-end gap-2 rounded-tile bg-sage px-4 py-3">
@@ -100,7 +104,7 @@ export default async function PlantPage({ params }: { params: Promise<{ id: stri
           <ul className="grid grid-cols-2 gap-3.5 sm:col-span-3 sm:grid-cols-4 lg:grid-cols-6">
             {rest.slice(2).map((p) => (
               <li key={p.id}>
-                <Photo photo={p} small />
+                <Photo photo={p} removeFrom={removeFrom} small />
               </li>
             ))}
           </ul>
@@ -193,7 +197,17 @@ function Binomial({ scientificName, cultivar }: { scientificName: string; cultiv
   );
 }
 
-function Photo({ photo, hero = false, small = false }: { photo: { url: string; thumbUrl: string; takenAt: string | null; uploadedAt: string }; hero?: boolean; small?: boolean }) {
+function Photo({
+  photo,
+  removeFrom,
+  hero = false,
+  small = false,
+}: {
+  photo: { id: number; url: string; thumbUrl: string; takenAt: string | null; uploadedAt: string };
+  removeFrom: number | null;
+  hero?: boolean;
+  small?: boolean;
+}) {
   const caption = photo.takenAt ? `Taken ${dayLabel(photo.takenAt)}` : `Added ${dayLabel(photo.uploadedAt)}`;
   const h = hero ? "h-[320px] sm:h-[480px]" : small ? "h-[120px]" : "h-[160px] sm:h-[233px]";
   return (
@@ -207,6 +221,7 @@ function Photo({ photo, hero = false, small = false }: { photo: { url: string; t
       >
         {caption}
       </figcaption>
+      {removeFrom !== null ? <PhotoRemover plantId={removeFrom} photoId={photo.id} caption={caption} small={small} /> : null}
     </figure>
   );
 }
