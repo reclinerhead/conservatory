@@ -3,15 +3,9 @@
 // after Fern has looked it up, and how the list is sorted and searched. The
 // server reads the rows (lib/species.ts); the pages render what this decides.
 
-import { dayLabel, speciesLabel, type Tile } from "./collection";
+import { dayLabel, displayName, speciesLabel, type Tile } from "./collection";
 import { percent } from "./pills";
 import { thumbPathFor } from "./photos";
-
-/** GBIF's vernacular names arrive in any case ("echeveria", "India Rubber Fig"); a title starts with a capital. */
-export function displayName(commonName: string | null | undefined): string | null {
-  const t = (commonName ?? "").trim();
-  return t ? t[0].toUpperCase() + t.slice(1) : null;
-}
 
 /** What a species is called: its common name when Fern found one, else the scientific name with any cultivar. */
 export function speciesTitle(s: { commonName: string | null; scientificName: string; cultivar: string | null }): string {

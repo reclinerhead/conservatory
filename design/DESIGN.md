@@ -88,8 +88,9 @@ tiny 11 px icon (the cutting/division "sprout" glyph).
 `line-strong` plus `shadow-hover`.
 
 **Specimen card** (life list) — photo or tinted tile 168 px tall, then
-nickname (17/700), italic species (`ink-2`), "Location · since Month YYYY"
-(meta), then a row of tags. The whole card is one `<a>`.
+nickname (17/700; the common name when there is no nickname), the common name
+under a nickname (`ink-2`, upright), italic species (`ink-2`), "Location ·
+since Month YYYY" (meta), then a row of tags. The whole card is one `<a>`.
 
 **Relative card** (species page) — the same at 120 px photo height and
 16 px radius, four across.

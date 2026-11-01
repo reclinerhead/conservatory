@@ -68,15 +68,15 @@ Tests: `lib/photos.test.ts` (paths, the media guard, MIME mapping), `lib/exif.te
 
 ## The collection
 
-The life list on the home page is `components/collection.tsx` over the pure shape in `lib/collection.ts` (tested). The server sends every specimen as a tile (`collectionTiles` in `lib/specimens.ts`: nickname, species and cultivar, location, acquired date, status, created time, and the 320 px thumbnail of its newest photo, never an original); the client filters, groups and sorts on the phone, so a search over 150 plants makes no request.
+The life list on the home page is `components/collection.tsx` over the pure shape in `lib/collection.ts` (tested). The server sends every specimen as a tile (`collectionTiles` in `lib/specimens.ts`: nickname, species, cultivar and common name, location, acquired date, status, created time, and the 320 px thumbnail of its newest photo, never an original); the client filters, groups and sorts on the phone, so a search over 150 plants makes no request.
 
 - **Grouped by location**, because a shelf, a room or a bed is how a person thinks about their plants. Named locations A to Z, then "No location yet", then "No longer here" for anything gifted or died (whatever its location). Within a group, newest first by the specimen's created time, then id.
 - **The filter row** is one chip per group with its count, led by "All", counted from the whole collection so the row never changes shape while a person types. The special groups appear only when they have someone in them.
-- **The search** lives in the top bar (`components/topbar.tsx`) and matches any part of the nickname or the species label ("Ficus elastica 'Ruby'"), ignoring case. On the collection it filters as you type (and on the species list, below); anywhere else, Enter goes to `/?q=`.
+- **The search** lives in the top bar (`components/topbar.tsx`) and matches any part of the nickname, the common name or the species label ("Ficus elastica 'Ruby'"), ignoring case. On the collection it filters as you type (and on the species list, below); anywhere else, Enter goes to `/?q=`.
 - **Both live in the URL** (`?q=` and `?at=`), written with the native `history.replaceState`, which Next syncs with `useSearchParams`: the back button returns to the same view, the top bar's box and the grid agree, and nothing is fetched. The top bar reads the URL behind a `Suspense` boundary because `/add` is static, and a static page can only read search params that way; the fallback is the same box, not yet live.
 - **No match** draws the "nothing" card in the specimen card's own shape with a "Show everything" button, and the "Showing N of M" line is always there.
 
-Specimen cards are DESIGN.md §4's: photo or tinted tile (one of the five tile greens, varied between neighbours) 168 px tall, name (nickname, else the species), the italic species under a nickname, "Location · since May 2019" (or "added Oct 2026" when no acquired date is known), a tag for a plant no longer here. The whole card is one link to `/plants/[id]`.
+Specimen cards are DESIGN.md §4's: photo or tinted tile (one of the five tile greens, varied between neighbours) 168 px tall, then the names (`cardNames`): the name is the nickname, else the common name (capitalised by `displayName`), else the species; under a nickname comes the common name, upright in `ink-2`; then the italic species under any name that is not already it. "Granddaddy / India Rubber Fig / *Ficus elastica 'Ruby'*", or "India Rubber Fig / *Ficus elastica 'Ruby'*" without a nickname. Two lines under the name are always reserved, so when Fern finds a common name the text changes, not the height, and the meta lines line up across a row; the placeholder cards are drawn at the same height. Then "Location · since May 2019" (or "added Oct 2026" when no acquired date is known), and a tag for a plant no longer here. The whole card is one link to `/plants/[id]`. The species page's compact cards leave the common name out, since every card there is that species and its common name is the page's title; they reserve one line.
 
 ## A specimen
 
@@ -128,4 +128,4 @@ Defined in [`design/DESIGN.md`](../../design/DESIGN.md), made with Claude Design
 - **Tap targets** are at least 44 px tall, the buttons and chips 44 by recipe.
 - **The app teaches** (#10). Every horticultural term carries an info mark; the glossary component lands with the confirm screen.
 
-Tests: `lib/ledger.test.ts` covers the counts line and the strip's two lines; `lib/collection.test.ts` the grid's names, dates, search, grouping, ordering and chips. The React Compiler is on (`reactCompiler: true`), as in the Aviary.
+Tests: `lib/ledger.test.ts` covers the counts line and the strip's two lines; `lib/collection.test.ts` the grid's names (the card's lines and `displayName` among them), dates, search, grouping, ordering and chips. The React Compiler is on (`reactCompiler: true`), as in the Aviary.

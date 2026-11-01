@@ -11,6 +11,7 @@ export type Tile = {
   nickname: string | null;
   scientificName: string;
   cultivar: string | null;
+  commonName: string | null; // GBIF's vernacular, as Fern stored it
   location: string | null;
   acquiredOn: string | null; // ISO date
   status: SpecimenStatus;
@@ -35,9 +36,31 @@ export function speciesLabel(scientificName: string, cultivar: string | null): s
   return cultivar ? `${scientificName} '${cultivar}'` : scientificName;
 }
 
+/** GBIF's vernacular names arrive in any case ("echeveria", "India Rubber Fig"); a title starts with a capital. */
+export function displayName(commonName: string | null | undefined): string | null {
+  const t = (commonName ?? "").trim();
+  return t ? t[0].toUpperCase() + t.slice(1) : null;
+}
+
 /** What a tile is called: the nickname when there is one, else the species. */
 export function tileName(t: Pick<Tile, "nickname" | "scientificName" | "cultivar">): string {
   return t.nickname ?? speciesLabel(t.scientificName, t.cultivar);
+}
+
+/**
+ * What a life-list card says above its meta line: the name (the nickname,
+ * else the common name, else the species), then the common name under a
+ * nickname, then the italic species under any name that is not already it.
+ */
+export function cardNames(t: Pick<Tile, "nickname" | "commonName" | "scientificName" | "cultivar">): {
+  name: string;
+  common: string | null;
+  species: string | null;
+} {
+  const common = displayName(t.commonName);
+  const species = speciesLabel(t.scientificName, t.cultivar);
+  const name = t.nickname ?? common ?? species;
+  return { name, common: t.nickname ? common : null, species: name === species ? null : species };
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -65,11 +88,11 @@ export function metaLine(t: Pick<Tile, "location" | "acquiredOn" | "createdAt">)
   return t.location ? `${t.location} · ${when}` : when;
 }
 
-/** Does the search box's text match this tile? Nickname or species name, case-insensitive, any part. */
-export function matchesQuery(t: Pick<Tile, "nickname" | "scientificName" | "cultivar">, q: string): boolean {
+/** Does the search box's text match this tile? Nickname, common name or species name, case-insensitive, any part. */
+export function matchesQuery(t: Pick<Tile, "nickname" | "commonName" | "scientificName" | "cultivar">, q: string): boolean {
   const needle = q.trim().toLowerCase();
   if (!needle) return true;
-  return (t.nickname ?? "").toLowerCase().includes(needle) || speciesLabel(t.scientificName, t.cultivar).toLowerCase().includes(needle);
+  return [t.nickname ?? "", t.commonName ?? "", speciesLabel(t.scientificName, t.cultivar)].some((v) => v.toLowerCase().includes(needle));
 }
 
 function groupKey(t: Tile): string {

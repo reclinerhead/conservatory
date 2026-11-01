@@ -85,7 +85,7 @@ export default function Home() {
               {[1, 2].map((i) => (
                 <li key={i} aria-hidden className="card flex flex-col overflow-hidden opacity-60">
                   <div className={`h-[168px] ${TILE_TINTS[i]}`} />
-                  <div className="h-[104px]" />
+                  <div className="h-[128px]" />
                 </li>
               ))}
             </ul>
