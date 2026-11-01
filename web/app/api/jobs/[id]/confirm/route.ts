@@ -10,7 +10,8 @@
 // DELETE /api/jobs/:id/confirm: "Change". Reverses it: removes the
 // confirmation, unlinks the photos, deletes the specimen if nothing else is
 // attached to it and the species if no specimen is left, and the job is back
-// in the strip.
+// in the strip. Refused (409) once every photo of the job has been removed
+// from the plant's page (#34): the strip would get a job with nothing to show.
 
 import { openReadWrite } from "@/lib/db";
 import { nextWaitingJob, waitingJobIds } from "@/lib/jobs";
@@ -175,6 +176,8 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   try {
     const conf = db.prepare("SELECT specimen_id FROM confirmations WHERE job_id = ?").get(jobId) as { specimen_id: number } | undefined;
     if (!conf) return Response.json({ error: "not named" }, { status: 404 });
+    const photos = (db.prepare("SELECT COUNT(*) AS n FROM photos WHERE job_id = ?").get(jobId) as { n: number }).n;
+    if (photos === 0) return Response.json({ error: "its photos were removed from the plant's page" }, { status: 409 });
     db.exec("BEGIN IMMEDIATE");
     db.prepare("DELETE FROM confirmations WHERE job_id = ?").run(jobId);
     db.prepare("UPDATE photos SET specimen_id = NULL WHERE job_id = ?").run(jobId);

@@ -4,8 +4,10 @@
 // DELETE /api/plants/:id: remove the specimen for good. Its photos go from
 // the table and from disk, and so do the jobs that brought them (otherwise
 // an identified job with no confirmation would reappear in the "waiting for
-// a name" strip). The species row goes too when no specimen is left on it,
-// as "Change" does on the confirm screen.
+// a name" strip). The jobs are found through the photos and through the
+// plant's confirmations, since a photo removed from the page (#34) leaves its
+// job behind with no photo pointing at it. The species row goes too when no
+// specimen is left on it, as "Change" does on the confirm screen.
 
 import { openReadWrite } from "@/lib/db";
 import { removeStored } from "@/lib/storage";
@@ -102,7 +104,8 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     const sp = db.prepare("SELECT species_id FROM specimens WHERE id = ?").get(id) as { species_id: number } | undefined;
     if (!sp) return Response.json({ error: "no such plant" }, { status: 404 });
     const photos = db.prepare("SELECT path, job_id FROM photos WHERE specimen_id = ?").all(id) as Array<{ path: string; job_id: number | null }>;
-    const jobIds = [...new Set(photos.map((p) => p.job_id).filter((j): j is number => j !== null))];
+    const confirmed = db.prepare("SELECT job_id FROM confirmations WHERE specimen_id = ?").all(id) as Array<{ job_id: number }>;
+    const jobIds = [...new Set([...photos.map((p) => p.job_id).filter((j): j is number => j !== null), ...confirmed.map((c) => c.job_id)])];
 
     db.exec("BEGIN IMMEDIATE");
     db.prepare("DELETE FROM photos WHERE specimen_id = ?").run(id);
