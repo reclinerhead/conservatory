@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contentTypeFor, extForMime, isOrgan, mediaRelPath, referenceUrls, relPathFor, thumbPathFor } from "./photos";
+import { contentTypeFor, extForMime, isOrgan, mediaRelPath, originalsForThumb, referenceUrls, relPathFor, thumbPathFor } from "./photos";
 
 describe("relPathFor", () => {
   it("files by upload year and month in UTC", () => {
@@ -12,6 +12,17 @@ describe("thumbPathFor", () => {
   it("mirrors Fern's thumb_path", () => {
     expect(thumbPathFor("photos/2026/10/abc.jpg")).toBe("photos/2026/10/abc.thumb.jpg");
     expect(thumbPathFor("photos/2026/10/abc.heic")).toBe("photos/2026/10/abc.thumb.jpg");
+  });
+});
+
+describe("originalsForThumb", () => {
+  it("names the originals a photo's missing thumbnail can fall back to, in every extension uploads get", () => {
+    expect(originalsForThumb("photos/2026/10/abc.thumb.jpg")).toEqual(["photos/2026/10/abc.jpg", "photos/2026/10/abc.png", "photos/2026/10/abc.heic"]);
+    for (const ext of ["jpg", "png", "heic"]) expect(originalsForThumb(thumbPathFor(`photos/2026/10/abc.${ext}`))).toContain(`photos/2026/10/abc.${ext}`);
+  });
+  it("has nothing for an original or a reference thumbnail", () => {
+    expect(originalsForThumb("photos/2026/10/abc.jpg")).toEqual([]);
+    expect(originalsForThumb("reference/1.thumb.jpg")).toEqual([]);
   });
 });
 

@@ -42,6 +42,22 @@ def test_migration_steps_run_once_in_order(tmp_path, monkeypatch):
     assert [r["version"] for r in conn.execute("SELECT version FROM schema_version ORDER BY version")] == [1, 2, 3]
 
 
+def test_v4_adds_thumb_at_over_a_v3_database_once(tmp_path, monkeypatch):
+    monkeypatch.setattr(db, "MIGRATIONS", db.MIGRATIONS[:2])
+    conn = db.connect(tmp_path / "c.db")
+    assert db.current_version(conn) == 3
+    conn.execute("INSERT INTO photos (path) VALUES ('photos/2026/10/abc.jpg')")
+    conn.commit()
+    monkeypatch.undo()
+    assert db.apply_schema(conn) == 4 == db.LATEST_VERSION
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(photos)")}
+    assert "thumb_at" in cols
+    assert tuple(conn.execute("SELECT path, thumb_at FROM photos").fetchone()) == ("photos/2026/10/abc.jpg", None)
+    # A second apply is a no-op: the ALTER would fail if it ran again.
+    assert db.apply_schema(conn) == 4
+    assert [r["version"] for r in conn.execute("SELECT version FROM schema_version ORDER BY version")] == [1, 2, 3, 4]
+
+
 def test_job_status_is_constrained(tmp_path):
     conn = db.connect(tmp_path / "c.db")
     try:
