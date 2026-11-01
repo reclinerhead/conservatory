@@ -99,3 +99,6 @@ Plant identification by [Pl@ntNet](https://plantnet.org/). Species summaries fro
 ## License
 
 MIT.
+
+<img width="1394" height="1215" alt="image" src="https://github.com/user-attachments/assets/1ef0b4a6-19fa-445b-bb80-ae1ac944aee6" />
+
