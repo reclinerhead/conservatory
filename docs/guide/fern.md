@@ -4,14 +4,17 @@ Fern is the Conservatory's worker: a Python 3.13 package in `fern/`, run as `pyt
 
 ## Running it
 
-```powershell
-.venv\Scripts\pip install -r fern\requirements.txt
-.venv\Scripts\python -m fern
+```bash
+uv venv --python 3.13 .venv
+uv pip install --python .venv/bin/python -r fern/requirements.txt
+.venv/bin/python -m fern
 ```
 
 Environment: `CONSERVATORY_DB` (default `data/conservatory.db`), `CONSERVATORY_DATA` (default `data/`; photos under `photos/`, reference images under `reference/`), and `PLANTNET_API_KEY`, without which Fern refuses to start. On start it opens the database, applies the schema, logs the queue depth, and drains the queue until stopped (SIGTERM or Ctrl-C); whenever the queue is idle it gives the tick to the thumbnail sweep, the enrichment pass or the care pass instead (below). `python -m fern --enrich <species id>` runs that pass for one species by hand, prints its journal line, and exits; it needs no Pl@ntNet key. `python -m fern --care <species id>` does the same for the care sheet (exit 2 with no model configured, 1 when the call or the answer fails, leaving the row as it was).
 
 The care sheets add three optional variables: `AI_GATEWAY_API_KEY` (the Vercel AI Gateway key; unset, the care pass is off), `CONSERVATORY_LLM` (the gateway's model slug, default `anthropic/claude-sonnet-5.5`) and `CONSERVATORY_ZONE` (the household's USDA hardiness zone, `6a`; unset or unparseable, sheets are written without one, and a set-but-invalid value logs a warning). On start Fern logs one line saying which: `care sheets: on, anthropic/claude-sonnet-5.5, zone 6a` or `care sheets: off (AI_GATEWAY_API_KEY is not set)`.
+
+Fern reads all of these from its process environment and never loads a `.env` file. On orchid systemd supplies them; for a local run, export the root `.env` (a copy of `.env.example`) into the shell first: `set -a; . ./.env; set +a`.
 
 ## The database
 

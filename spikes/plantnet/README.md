@@ -4,16 +4,16 @@ Phase 0 of the Conservatory ([#1](https://github.com/reclinerhead/conservatory/i
 
 ## Setup, once
 
-```powershell
-cd C:\WEBDEV\conservatory\spikes\plantnet
-python -m venv .venv
-.venv\Scripts\pip install -r requirements.txt
+```bash
+cd spikes/plantnet
+uv venv .venv
+uv pip install --python .venv/bin/python -r requirements.txt
 ```
 
-Get a free API key from [my.plantnet.org](https://my.plantnet.org/) and set it in the shell you run from. It is never passed on the command line and nothing here writes it to disk.
+Get a free API key from [my.plantnet.org](https://my.plantnet.org/) and set it in the shell you run from. It is never passed on the command line and nothing here writes it to disk. `read -s` takes the pasted key without echoing it or leaving it in the shell history.
 
-```powershell
-$env:PLANTNET_API_KEY = "paste it here"
+```bash
+read -rs PLANTNET_API_KEY && export PLANTNET_API_KEY
 ```
 
 ## Photos
@@ -39,8 +39,8 @@ Keep the two collections apart by running the script twice, on `photos-succulent
 
 ## Run
 
-```powershell
-.venv\Scripts\python identify_spike.py photos-succulents
+```bash
+.venv/bin/python identify_spike.py photos-succulents
 ```
 
 Add `--group` to send photos that share a stem (`shelf-a-1.jpg` and `shelf-a-1_flower.jpg`) as one query of up to five images, which is how the product would do it. Run once without and once with to see whether the second photo helps.
