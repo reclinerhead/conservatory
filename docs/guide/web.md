@@ -4,7 +4,7 @@
 
 ## Running it
 
-```powershell
+```bash
 cd web
 pnpm install
 pnpm dev
