@@ -182,6 +182,91 @@
   .field:focus {
     border-color: var(--color-line-strong);
   }
+
+  /* The pot-tag label sheet (#36): 30 labels of 1in × 2⅝in on US letter, the
+     Avery 5160 layout (½in top margin, 3⁄16in sides, 3 across at a 2¾in
+     pitch, 10 down at 1in), whose weatherproof versions share it. Inside a
+     sheet 1em is one inch of paper: on screen the sheet's font-size is its
+     frame's width over 8.5, so the preview is the printed sheet scaled to
+     fit; in print it is 1in (see the print rules at the bottom). These
+     sizes, and the labels' black on white, belong to the paper and are the
+     one place this file picks them. */
+  .label-sheets {
+    container-type: inline-size;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .label-sheet {
+    font-size: calc(100cqw / 8.5);
+    width: 8.5em;
+    height: 11em;
+    padding: 0.5em 0.1875em;
+    display: grid;
+    grid-template-columns: repeat(3, 2.625em);
+    grid-template-rows: repeat(10, 1em);
+    column-gap: 0.125em;
+    overflow: hidden;
+    background: #fff;
+    color: #000;
+    border: 1px solid var(--color-line);
+  }
+  /* One label: the code at the left, three lines beside it, everything at
+     least 1⁄16in inside the edge; the 0.11in round the code is its quiet zone. */
+  .label {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.09em;
+    padding: 0 0.11em;
+    overflow: hidden;
+    border-radius: 0.0625em;
+    outline: 1px solid var(--color-line);
+    outline-offset: -1px;
+  }
+  .label-used {
+    background: var(--color-sage);
+  }
+  .label-code {
+    width: 0.78em;
+    height: 0.78em;
+    flex: none;
+  }
+  .label-code-missing {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    border: 1px dashed var(--color-line-strong);
+    color: var(--color-ink-2);
+  }
+  .label-code-missing > span {
+    font-size: 0.075em;
+    line-height: 1.2;
+  }
+  .label-text {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.015em;
+  }
+  .label-text > * {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    line-height: 1.25;
+  }
+  .label-name {
+    font-size: 0.125em; /* 9 pt */
+    font-weight: 700;
+  }
+  .label-species {
+    font-size: 0.111em; /* 8 pt */
+    font-style: italic;
+  }
+  .label-meta {
+    font-size: 0.104em; /* 7.5 pt */
+  }
 }
 
 /* App-only base rules. In the base layer on purpose: an unlayered rule would
@@ -207,5 +292,53 @@
   :focus-visible {
     outline: 2px solid var(--color-moss);
     outline-offset: 2px;
+  }
+}
+
+/* Printing the label sheets (#36). Unlayered on purpose, so these outrank
+   the utilities in print. The sheet goes to the printer at its true size on
+   letter with no page margin (print at 100%, not "fit to page"). Only the
+   sheets print: anything that neither holds them nor sits inside them is
+   gone, and what holds them loses its box, so sheet one starts at the top
+   left corner of page one. */
+@page {
+  size: letter;
+  margin: 0;
+}
+
+@media print {
+  body:has(.label-sheets) *:not(.label-sheets, .label-sheets *, :has(.label-sheets)) {
+    display: none;
+  }
+  body:has(.label-sheets),
+  body:has(.label-sheets) :has(.label-sheets) {
+    display: block;
+    min-height: 0;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: #fff;
+    box-shadow: none;
+  }
+  .label-sheets {
+    display: block;
+    container-type: normal;
+    margin: 0;
+    padding: 0;
+  }
+  .label-sheet {
+    font-size: 1in;
+    border: 0;
+    break-after: page;
+  }
+  .label-sheet:last-child {
+    break-after: auto;
+  }
+  .label {
+    outline: 0;
+  }
+  .label-used {
+    visibility: hidden;
   }
 }

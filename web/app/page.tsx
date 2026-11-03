@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Collection } from "@/components/collection";
+import { Collection, PrintTagsLink } from "@/components/collection";
 import { LeafMark } from "@/components/topbar";
 import { TILE_TINTS } from "@/lib/collection";
 import { collectionCounts, waitingThumbs } from "@/lib/db";
@@ -66,6 +66,7 @@ export default function Home() {
               </h2>
               <p className="mt-1 text-meta text-ink-2 tabular-nums">{ledger.join(" · ")}</p>
             </div>
+            <PrintTagsLink />
           </div>
 
           {tiles.length === 0 ? (

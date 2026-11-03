@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { QrIcon } from "@/components/tag-code";
 import { LeafMark } from "@/components/topbar";
 import { cardNames, groupTiles, locationChips, metaLine, showingLine, STATUS_LABEL, TILE_TINTS, type Tile } from "@/lib/collection";
 
@@ -89,6 +90,17 @@ export function Collection({ tiles }: { tiles: Tile[] }) {
 
       <p className="text-center text-meta text-ink-2 tabular-nums">{showingLine(shown, tiles.length)}</p>
     </div>
+  );
+}
+
+/** "Print pot tags" in the life list's header: the print page, narrowed to the place on screen (?at=). */
+export function PrintTagsLink() {
+  const at = useSearchParams().get("at");
+  return (
+    <Link href={at && at !== "all" ? `/tags?at=${encodeURIComponent(at)}` : "/tags"} className="btn btn-soft btn-compact hover:no-underline">
+      <QrIcon />
+      Print pot tags
+    </Link>
   );
 }
 

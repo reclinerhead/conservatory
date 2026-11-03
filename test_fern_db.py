@@ -43,13 +43,14 @@ def test_migration_steps_run_once_in_order(tmp_path, monkeypatch):
 
 
 def test_v4_adds_thumb_at_over_a_v3_database_once(tmp_path, monkeypatch):
-    monkeypatch.setattr(db, "MIGRATIONS", db.MIGRATIONS[:2])
+    steps = db.MIGRATIONS
+    monkeypatch.setattr(db, "MIGRATIONS", steps[:2])
     conn = db.connect(tmp_path / "c.db")
     assert db.current_version(conn) == 3
     conn.execute("INSERT INTO photos (path) VALUES ('photos/2026/10/abc.jpg')")
     conn.commit()
-    monkeypatch.undo()
-    assert db.apply_schema(conn) == 4 == db.LATEST_VERSION
+    monkeypatch.setattr(db, "MIGRATIONS", steps[:3])
+    assert db.apply_schema(conn) == 4
     cols = {r["name"] for r in conn.execute("PRAGMA table_info(photos)")}
     assert "thumb_at" in cols
     assert tuple(conn.execute("SELECT path, thumb_at FROM photos").fetchone()) == ("photos/2026/10/abc.jpg", None)
@@ -65,3 +66,74 @@ def test_job_status_is_constrained(tmp_path):
         raise AssertionError("CHECK constraint did not fire")
     except sqlite3.IntegrityError:
         pass
+
+
+def _v4_database_with_plants(path, monkeypatch):
+    """A v4 database with three plants (ids 1, 2 and 5), their photos and naming records."""
+    steps = db.MIGRATIONS
+    monkeypatch.setattr(db, "MIGRATIONS", steps[:3])
+    conn = db.connect(path)
+    assert db.current_version(conn) == 4
+    conn.execute("INSERT INTO species (id, scientific_name) VALUES (1, 'Ficus elastica')")
+    for sid, nick in [(1, "Granddaddy"), (2, None), (5, "Shelf baby")]:
+        conn.execute("INSERT INTO specimens (id, species_id, nickname, location) VALUES (?, 1, ?, 'Shelf 2')", (sid, nick))
+        conn.execute("INSERT INTO jobs (id, status) VALUES (?, 'identified')", (sid,))
+        conn.execute("INSERT INTO photos (path, job_id, specimen_id) VALUES (?, ?, ?)", (f"photos/2026/10/{sid}.jpg", sid, sid))
+        conn.execute("INSERT INTO confirmations (job_id, specimen_id, chosen_rank) VALUES (?, ?, 1)", (sid, sid))
+    conn.commit()
+    monkeypatch.setattr(db, "MIGRATIONS", steps)
+    return conn
+
+
+def test_v5_rebuilds_specimens_keeping_every_id_and_link(tmp_path, monkeypatch):
+    conn = _v4_database_with_plants(tmp_path / "c.db", monkeypatch)
+    assert db.apply_schema(conn) == 5 == db.LATEST_VERSION
+
+    assert [tuple(r) for r in conn.execute("SELECT id, nickname, location, tagged_at FROM specimens ORDER BY id")] == [
+        (1, "Granddaddy", "Shelf 2", None),
+        (2, None, "Shelf 2", None),
+        (5, "Shelf baby", "Shelf 2", None),
+    ]
+    # With foreign keys on, DROP TABLE would have cascaded the confirmations
+    # away and nulled the photos' links; both survive.
+    assert [tuple(r) for r in conn.execute("SELECT path, specimen_id FROM photos ORDER BY id")] == [
+        ("photos/2026/10/1.jpg", 1),
+        ("photos/2026/10/2.jpg", 2),
+        ("photos/2026/10/5.jpg", 5),
+    ]
+    assert [tuple(r) for r in conn.execute("SELECT job_id, specimen_id FROM confirmations ORDER BY job_id")] == [(1, 1), (2, 2), (5, 5)]
+
+    indexes = {r["name"] for r in conn.execute("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'specimens'")}
+    assert {"specimens_location", "specimens_species"} <= indexes
+    assert "AUTOINCREMENT" in conn.execute("SELECT sql FROM sqlite_master WHERE name = 'specimens'").fetchone()[0]
+    assert conn.execute("SELECT seq FROM sqlite_sequence WHERE name = 'specimens'").fetchone()[0] == 5
+    assert conn.execute("PRAGMA foreign_keys").fetchone()[0] == 1
+    assert conn.execute("PRAGMA foreign_key_check").fetchall() == []
+    # A second apply is a no-op.
+    assert db.apply_schema(conn) == 5
+    assert [r["version"] for r in conn.execute("SELECT version FROM schema_version ORDER BY version")] == [1, 2, 3, 4, 5]
+
+
+def test_after_v5_a_removed_plants_id_is_never_reused(tmp_path, monkeypatch):
+    conn = _v4_database_with_plants(tmp_path / "c.db", monkeypatch)
+    db.apply_schema(conn)
+    conn.execute("DELETE FROM specimens WHERE id = 5")  # the newest plant, removed
+    conn.commit()
+    new_id = conn.execute("INSERT INTO specimens (species_id) VALUES (1)").lastrowid
+    assert new_id == 6
+
+
+def test_a_rebuild_that_breaks_a_link_rolls_back_with_foreign_keys_on(tmp_path, monkeypatch):
+    conn = _v4_database_with_plants(tmp_path / "c.db", monkeypatch)
+    # A rebuild that forgets plant 5: its photo and confirmation would point at nothing.
+    broken = db.MIGRATIONS[3][1].replace("FROM specimens;", "FROM specimens WHERE id < 5;")
+    monkeypatch.setattr(db, "MIGRATIONS", [*db.MIGRATIONS[:3], (5, broken, db.FOREIGN_KEYS_OFF)])
+    try:
+        db.apply_schema(conn)
+        raise AssertionError("foreign_key_check did not stop the step")
+    except sqlite3.IntegrityError as err:
+        assert "foreign_key_check" in str(err)
+    assert db.current_version(conn) == 4
+    assert conn.execute("SELECT COUNT(*) FROM specimens").fetchone()[0] == 3
+    assert "tagged_at" not in {r["name"] for r in conn.execute("PRAGMA table_info(specimens)")}
+    assert conn.execute("PRAGMA foreign_keys").fetchone()[0] == 1

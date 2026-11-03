@@ -5,7 +5,8 @@ same file with node:sqlite and trusts that this module has run first.
 
 Schema changes after the baseline go in MIGRATIONS as (version, sql) steps.
 Each step runs once, in order, inside a transaction, and records its version
-in schema_version. The baseline (schema.sql) is version 1.
+in schema_version. The baseline (schema.sql) is version 1. A step that
+rebuilds a table carries a third element, FOREIGN_KEYS_OFF (below).
 """
 
 from __future__ import annotations
@@ -16,8 +17,15 @@ from pathlib import Path
 SCHEMA_PATH = Path(__file__).with_name("schema.sql")
 BASELINE_VERSION = 1
 
+# The step kind for a table rebuild, SQLite's documented procedure (create the
+# new table, copy, drop the old, rename). With foreign keys on, DROP TABLE
+# first deletes the old table's rows, and the cascades take every child row
+# with them, so the step runs with foreign keys off and is checked with
+# PRAGMA foreign_key_check before it commits (_apply_rebuild).
+FOREIGN_KEYS_OFF = "foreign_keys_off"
+
 # Append only. Never edit a step that has shipped.
-MIGRATIONS: list[tuple[int, str]] = [
+MIGRATIONS: list[tuple[int, str] | tuple[int, str, str]] = [
     # v2 (#20): what the enrichment pass writes on a species row. All nullable,
     # so Phase 1 rows and the confirm route's INSERT are untouched. genus and
     # family already exist in the baseline; the pass overwrites them from GBIF.
@@ -71,6 +79,35 @@ MIGRATIONS: list[tuple[int, str]] = [
         ALTER TABLE photos ADD COLUMN thumb_at TEXT;  -- when the sweep wrote a job-less photo's thumbnail, else NULL
         """,
     ),
+    # v5 (#36): a printed pot tag opens /t/<specimen id> for years, so an id
+    # must never be handed out twice. A plain INTEGER PRIMARY KEY reuses the
+    # highest id once its row is deleted; AUTOINCREMENT never does. Copying
+    # the rows with their ids seeds sqlite_sequence with the highest, so
+    # nothing at or below it is used again. tagged_at is when the plant's tag
+    # was last printed and marked as tagged.
+    (
+        5,
+        """
+        CREATE TABLE specimens_new (
+          id          INTEGER PRIMARY KEY AUTOINCREMENT,
+          species_id  INTEGER NOT NULL REFERENCES species(id),
+          nickname    TEXT,
+          location    TEXT,
+          acquired_on TEXT,
+          status      TEXT    NOT NULL DEFAULT 'alive'
+                              CHECK (status IN ('alive', 'gifted', 'died')),
+          created_at  TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+          tagged_at   TEXT                                 -- when its pot tag was last printed and marked, else NULL
+        );
+        INSERT INTO specimens_new (id, species_id, nickname, location, acquired_on, status, created_at)
+          SELECT id, species_id, nickname, location, acquired_on, status, created_at FROM specimens;
+        DROP TABLE specimens;
+        ALTER TABLE specimens_new RENAME TO specimens;
+        CREATE INDEX specimens_location ON specimens (location);
+        CREATE INDEX specimens_species ON specimens (species_id);
+        """,
+        FOREIGN_KEYS_OFF,
+    ),
 ]
 
 LATEST_VERSION = MIGRATIONS[-1][0] if MIGRATIONS else BASELINE_VERSION
@@ -108,14 +145,44 @@ def apply_schema(conn: sqlite3.Connection) -> int:
         conn.execute("INSERT INTO schema_version (version) VALUES (?)", (BASELINE_VERSION,))
         conn.commit()
         version = BASELINE_VERSION
-    for step_version, sql in MIGRATIONS:
+    for step_version, sql, *kind in MIGRATIONS:
         if step_version <= version:
             continue
-        with conn:
-            conn.executescript(sql)
-            conn.execute("INSERT INTO schema_version (version) VALUES (?)", (step_version,))
+        if kind == [FOREIGN_KEYS_OFF]:
+            _apply_rebuild(conn, step_version, sql)
+        else:
+            with conn:
+                conn.executescript(sql)
+                conn.execute("INSERT INTO schema_version (version) VALUES (?)", (step_version,))
         version = step_version
     return version
+
+
+def _apply_rebuild(conn: sqlite3.Connection, step_version: int, sql: str) -> None:
+    """Run a table-rebuild step with foreign keys off, all or nothing.
+
+    PRAGMA foreign_keys is a no-op inside a transaction, so it is switched
+    outside one. The step and its version row commit together only when
+    PRAGMA foreign_key_check finds nothing; any broken link rolls it back.
+    """
+    conn.commit()
+    conn.execute("PRAGMA foreign_keys=OFF")
+    try:
+        conn.executescript("BEGIN;\n" + sql)
+        broken = conn.execute("PRAGMA foreign_key_check").fetchall()
+        if broken:
+            first = broken[0]
+            raise sqlite3.IntegrityError(
+                f"v{step_version}: foreign_key_check found {len(broken)} broken link(s), "
+                f"first {first[0]} row {first[1]} -> {first[2]}"
+            )
+        conn.execute("INSERT INTO schema_version (version) VALUES (?)", (step_version,))
+        conn.commit()
+    except BaseException:
+        conn.rollback()
+        raise
+    finally:
+        conn.execute("PRAGMA foreign_keys=ON")
 
 
 def queued_jobs(conn: sqlite3.Connection) -> int:

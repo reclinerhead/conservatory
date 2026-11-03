@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { PhotoAdder } from "@/components/photo-adder";
 import { PhotoRemover } from "@/components/photo-remover";
 import { PlantEditor } from "@/components/plant-editor";
+import { TagCodeBox } from "@/components/tag-code";
 import { Term } from "@/components/term";
 import { LeafMark } from "@/components/topbar";
 import { cardNames, dayLabel, displayName, metaLine, STATUS_LABEL } from "@/lib/collection";
@@ -10,11 +11,13 @@ import { withReadDb } from "@/lib/jobs";
 import { relativeCount, relativesLine, relativesOf } from "@/lib/relatives";
 import { speciesList } from "@/lib/species";
 import { knownLocations, readSpecimen } from "@/lib/specimens";
+import { tagCode } from "@/lib/tag-code";
 
 // /plants/[id]: one specimen. Breadcrumb, title block, its photos as a
 // timeline, the editable facts, and its species in the side column with how
-// many relatives it has and a link to the species page. Minimal on purpose:
-// care, events and tags arrive with the phases that bring them.
+// many relatives it has and a link to the species page, then how it was
+// named and, while it lives, its pot tag (#36). Care and events arrive with
+// the phases that bring them.
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -201,6 +204,23 @@ export default async function PlantPage({ params }: { params: Promise<{ id: stri
               Identification by Pl@ntNet; what you confirmed is what counts.
             </p>
           </section>
+          {plant.status === "alive" ? (
+            <section className="card p-5" aria-labelledby="tag-h">
+              <h3 id="tag-h" className="mb-3 text-h3">
+                Pot tag
+              </h3>
+              <div className="flex items-center gap-3.5">
+                <TagCodeBox code={tagCode(plant.id)} label={`QR code for plant #${plant.id}`} />
+                <div className="flex min-w-0 flex-col">
+                  <p className="font-semibold">{plant.taggedAt ? `Tagged ${dayLabel(plant.taggedAt)}` : "No tag yet"}</p>
+                  <p className="text-meta text-ink-2 tabular-nums">Tag #{plant.id} opens this page.</p>
+                  <Link href={`/tags?plant=${plant.id}`} className="mt-1.5 self-start font-semibold">
+                    Print this tag
+                  </Link>
+                </div>
+              </div>
+            </section>
+          ) : null}
         </aside>
       </div>
     </main>

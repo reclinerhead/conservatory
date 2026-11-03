@@ -43,6 +43,32 @@ export function collectionTiles(db: DatabaseSync, speciesId?: number): Tile[] {
   }));
 }
 
+/**
+ * Whether the specimens table has `tagged_at` (schema v5, #36). A database
+ * Fern has not migrated yet has none, which reads as no plant tagged.
+ */
+export function hasTaggedAt(db: DatabaseSync): boolean {
+  return db.prepare("SELECT 1 FROM pragma_table_info('specimens') WHERE name = 'tagged_at'").get() !== undefined;
+}
+
+export type TagRow = Tile & { speciesId: number; taggedAt: string | null };
+
+/** Every living specimen as a tile with its species and when its pot tag was last marked, for /tags. Unordered: the caller groups. */
+export function tagRows(db: DatabaseSync): TagRow[] {
+  const tagged = hasTaggedAt(db) ? "tagged_at" : "NULL";
+  const extra = new Map(
+    (db.prepare(`SELECT id, species_id, ${tagged} AS tagged_at FROM specimens WHERE status = 'alive'`).all() as Array<{
+      id: number;
+      species_id: number;
+      tagged_at: string | null;
+    }>).map((r) => [r.id, r]),
+  );
+  return collectionTiles(db).flatMap((t) => {
+    const e = extra.get(t.id);
+    return e ? [{ ...t, speciesId: e.species_id, taggedAt: e.tagged_at }] : [];
+  });
+}
+
 export type SpecimenView = {
   id: number;
   nickname: string | null;
@@ -50,6 +76,7 @@ export type SpecimenView = {
   acquiredOn: string | null;
   status: SpecimenStatus;
   createdAt: string;
+  taggedAt: string | null;
   species: { id: number; scientificName: string; genus: string | null; family: string | null; cultivar: string | null; commonName: string | null };
   photos: Array<{ id: number; url: string; thumbUrl: string; takenAt: string | null; uploadedAt: string }>;
   named: { how: "pill" | "typed" | "same"; at: string } | null;
@@ -59,6 +86,7 @@ export function readSpecimen(db: DatabaseSync, id: number): SpecimenView | null 
   const row = db
     .prepare(
       `SELECT sp.id, sp.nickname, sp.location, sp.acquired_on, sp.status, sp.created_at,
+              ${hasTaggedAt(db) ? "sp.tagged_at" : "NULL"} AS tagged_at,
               s.id AS species_id, s.scientific_name, s.genus, s.family, s.cultivar, s.common_name
          FROM specimens sp JOIN species s ON s.id = sp.species_id
         WHERE sp.id = ?`,
@@ -71,6 +99,7 @@ export function readSpecimen(db: DatabaseSync, id: number): SpecimenView | null 
         acquired_on: string | null;
         status: SpecimenStatus;
         created_at: string;
+        tagged_at: string | null;
         species_id: number;
         scientific_name: string;
         genus: string | null;
@@ -97,6 +126,7 @@ export function readSpecimen(db: DatabaseSync, id: number): SpecimenView | null 
     acquiredOn: row.acquired_on,
     status: row.status,
     createdAt: row.created_at,
+    taggedAt: row.tagged_at,
     species: {
       id: row.species_id,
       scientificName: row.scientific_name,
