@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CareFigures, CareRewrite } from "@/components/care";
 import { SpecimenCard } from "@/components/collection";
+import { QrIcon, TagCodeBox } from "@/components/tag-code";
 import { Term } from "@/components/term";
 import { LeafMark } from "@/components/topbar";
 import { CARE_CELLS, careScopeLine, careWrittenLine } from "@/lib/care";
@@ -10,6 +11,7 @@ import type { GlossaryKey } from "@/lib/glossary";
 import { withReadDb } from "@/lib/jobs";
 import { familyExample, genusExample, relativeCount } from "@/lib/relatives";
 import { readSpecies, type SpeciesView } from "@/lib/species";
+import { tagCode } from "@/lib/tag-code";
 import {
   aboutState,
   galleryLine,
@@ -27,10 +29,10 @@ import {
 // /species/[id]: one species, design/mockups/species.html in its Phase 2
 // subset. Breadcrumb, title block, the gallery (owner photos first, the
 // reference image after), About this species, the care sheet, In your
-// collection, Relatives you already have, and the taxonomy card. Everything
-// is what Fern wrote; before it has looked a species up, each block keeps
-// its space and says so. Lineage, events and pot tags arrive with their
-// phases; their space is not faked.
+// collection, Relatives you already have, the taxonomy card and the pot
+// tags card (#36). Everything is what Fern wrote; before it has looked a
+// species up, each block keeps its space and says so. Lineage and events
+// arrive with their phases; their space is not faked.
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -80,27 +82,34 @@ export default async function SpeciesPage({ params }: { params: Promise<{ id: st
       </nav>
 
       {/* Title block, DESIGN.md §5: the common name, the binomial with its
-          author upright in ink-3, then the chips. Both lines are always there,
-          so the block keeps its height when Fern fills in the common name. */}
-      <div className="flex flex-col gap-2.5">
-        <h1 className="text-h1 leading-[1.05] sm:text-page-title">{common ?? <Binomial s={s} />}</h1>
-        <p className="font-display text-section leading-tight text-ink-2">
-          {common ? <Binomial s={s} withAuthor /> : <span className="font-sans text-body">No common name on file{s.enrichedAt ? "" : " yet"}</span>}{" "}
-          <span className="font-sans text-body">
-            <Term k="scientific-name">
-              <span className="sr-only">scientific name</span>
-            </Term>
-          </span>
-        </p>
-        <div className="mt-1 flex flex-wrap gap-2">
-          {s.family ? (
-            <span className="tag">
-              <Term k="family">Family {s.family}</Term>
+          author upright in ink-3, then the chips; Print pot tags on the right.
+          Both lines are always there, so the block keeps its height when Fern
+          fills in the common name. */}
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+        <div className="flex flex-col gap-2.5">
+          <h1 className="text-h1 leading-[1.05] sm:text-page-title">{common ?? <Binomial s={s} />}</h1>
+          <p className="font-display text-section leading-tight text-ink-2">
+            {common ? <Binomial s={s} withAuthor /> : <span className="font-sans text-body">No common name on file{s.enrichedAt ? "" : " yet"}</span>}{" "}
+            <span className="font-sans text-body">
+              <Term k="scientific-name">
+                <span className="sr-only">scientific name</span>
+              </Term>
             </span>
-          ) : null}
-          {s.rank === "genus" ? <span className="tag">Known to genus</span> : null}
-          <span className="tag">{living === 1 ? "1 in your collection" : `${living} in your collection`}</span>
+          </p>
+          <div className="mt-1 flex flex-wrap gap-2">
+            {s.family ? (
+              <span className="tag">
+                <Term k="family">Family {s.family}</Term>
+              </span>
+            ) : null}
+            {s.rank === "genus" ? <span className="tag">Known to genus</span> : null}
+            <span className="tag">{living === 1 ? "1 in your collection" : `${living} in your collection`}</span>
+          </div>
         </div>
+        <Link href={`/tags?species=${s.id}`} className="btn btn-soft hover:no-underline">
+          <QrIcon />
+          Print pot tags
+        </Link>
       </div>
 
       {/* The gallery: owner photos first, newest first, one per specimen; the
@@ -232,6 +241,7 @@ export default async function SpeciesPage({ params }: { params: Promise<{ id: st
 
         <aside className="flex w-full flex-[1_1_300px] flex-col gap-5 lg:max-w-sidebar">
           <Taxonomy s={s} naming={naming} />
+          <PotTags s={s} living={living} />
         </aside>
       </div>
     </main>
@@ -527,6 +537,38 @@ function Taxonomy({ s, naming }: { s: SpeciesView; naming: string | null }) {
         <p className="mt-2 text-meta text-ink-2">Named to the genus, as most nursery hybrids are; care advice works at this level anyway.</p>
       ) : null}
       {naming ? <p className="mt-3 text-meta text-ink-2">{naming}</p> : null}
+    </section>
+  );
+}
+
+/**
+ * The mockup's "Pot tags" card: a sample code (the newest living plant's),
+ * how many living plants of this species have no tag yet, and the way to the
+ * print page narrowed to this species.
+ */
+function PotTags({ s, living }: { s: SpeciesView; living: number }) {
+  const ready = s.tags.ready;
+  return (
+    <section className="card p-5" aria-labelledby="tags-h">
+      <h3 id="tags-h" className="mb-3 text-h3">
+        Pot tags
+      </h3>
+      <div className="flex items-center gap-3.5">
+        <TagCodeBox code={s.tags.sampleId === null ? null : tagCode(s.tags.sampleId)} label={`QR code for plant #${s.tags.sampleId}`} />
+        <div className="flex min-w-0 flex-col">
+          <p className="font-semibold">Each plant gets its own QR tag that opens its page.</p>
+          <p className="mt-1 text-meta text-ink-2">
+            {living === 0
+              ? "No living plants of this species to tag."
+              : ready === 0
+                ? "Every plant of this species is tagged."
+                : `${ready === 1 ? "1 tag" : `${ready} tags`} ready for this species.`}
+          </p>
+          <Link href={`/tags?species=${s.id}`} className="mt-1.5 self-start font-semibold">
+            Print label sheet
+          </Link>
+        </div>
+      </div>
     </section>
   );
 }

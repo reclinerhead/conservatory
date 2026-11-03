@@ -9,7 +9,7 @@ import { tileName, type Tile } from "./collection";
 import { referenceUrls, thumbPathFor } from "./photos";
 import { relativesOf, type Relatives } from "./relatives";
 import { compareSpecies, type Naming, type OwnerPhoto, type SpeciesListRow } from "./species-page";
-import { collectionTiles } from "./specimens";
+import { collectionTiles, hasTaggedAt } from "./specimens";
 
 export type SpeciesView = {
   id: number;
@@ -36,6 +36,7 @@ export type SpeciesView = {
   relatives: Relatives;
   care: CareState;
   careModel: boolean; // whether this box has a care model configured; Rewrite is offered only then
+  tags: { ready: number; sampleId: number | null }; // living specimens with no pot tag yet; the newest living one, whose code the card shows
 };
 
 /**
@@ -129,6 +130,15 @@ export function readSpecies(db: DatabaseSync, id: number): SpeciesView | null {
     ? { how: conf.chosen_rank !== null ? "pill" : conf.typed_name ? "typed" : "same", score: conf.score, at: conf.confirmed_at }
     : null;
 
+  const tagged = hasTaggedAt(db) ? "tagged_at" : "NULL";
+  const tags = db
+    .prepare(
+      `SELECT COALESCE(SUM(${tagged} IS NULL), 0) AS ready,
+              (SELECT id FROM specimens WHERE species_id = ? AND status = 'alive' ORDER BY created_at DESC, id DESC LIMIT 1) AS sample
+         FROM specimens WHERE species_id = ? AND status = 'alive'`,
+    )
+    .get(id, id) as { ready: number; sample: number | null };
+
   const ref = referenceUrls(r.image_path, r.enriched_at);
   return {
     id: r.id,
@@ -155,6 +165,7 @@ export function readSpecies(db: DatabaseSync, id: number): SpeciesView | null {
     relatives: relativesOf(r, speciesList(db)),
     care: careState({ row: readCareRow(db, id), configured: careModelConfigured(), gbifKey: r.gbif_key, enrichedAt: r.enriched_at }),
     careModel: careModelConfigured(),
+    tags: { ready: tags.ready, sampleId: tags.sample },
   };
 }
 
