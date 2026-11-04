@@ -89,12 +89,16 @@ export default async function SpeciesPage({ params }: { params: Promise<{ id: st
         <div className="flex flex-col gap-2.5">
           <h1 className="text-h1 leading-[1.05] sm:text-page-title">{common ?? <Binomial s={s} />}</h1>
           <p className="font-display text-section leading-tight text-ink-2">
-            {common ? <Binomial s={s} withAuthor /> : <span className="font-sans text-body">No common name on file{s.enrichedAt ? "" : " yet"}</span>}{" "}
-            <span className="font-sans text-body">
-              <Term k="scientific-name">
-                <span className="sr-only">scientific name</span>
-              </Term>
-            </span>
+            {common ? (
+              <Binomial s={s} withAuthor />
+            ) : (
+              <span className="font-sans text-body">
+                No common name on file{s.enrichedAt ? "" : " yet"}{" "}
+                <Term k="scientific-name">
+                  <span className="sr-only">scientific name</span>
+                </Term>
+              </span>
+            )}
           </p>
           <div className="mt-1 flex flex-wrap gap-2">
             {s.family ? (
@@ -456,11 +460,19 @@ function RelativeCard({ row, tint }: { row: SpeciesListRow; tint: string }) {
   );
 }
 
-/** The italic binomial, its author upright and small in ink-3, then the cultivar upright in quotes. */
+/** The italic binomial, its author upright and small in ink-3, then the cultivar upright in quotes.
+ *  With the author (the subtitle), the scientific-name mark sits on the binomial itself, before the author. */
 function Binomial({ s, withAuthor = false }: { s: SpeciesView; withAuthor?: boolean }) {
   return (
     <>
       <em>{s.scientificName}</em>
+      {withAuthor ? (
+        <span className="font-sans text-body">
+          <Term k="scientific-name">
+            <span className="sr-only">scientific name</span>
+          </Term>
+        </span>
+      ) : null}
       {withAuthor && s.authorship ? (
         <span className="font-sans text-[16px] not-italic text-ink-3">
           {" "}
