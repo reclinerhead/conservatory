@@ -77,7 +77,13 @@ variant inside cards.
 fill, white text. Counts after the label at 400 weight, 80 % opacity.
 Chips wrap; never scroll a chip row horizontally.
 
-**Selects** — same pill shape as chips, chevron drawn in, 40 px right padding.
+**Selects** — the chip's pill at the compact 40 px, 14/600, a drawn chevron in
+40 px of right padding, a visible label to its left ("Sort by"). Native
+`<select>`, so a phone gets its own big picker; every option's label sits
+invisible in the same cell, so choosing never changes the width. On a mouse,
+where the browser lets a `<select>` style its list, the open list is a white
+card of 44 px pill rows: sage under the pointer, the chosen one moss and bold
+with a check.
 
 **Tags (status)** — 12 px / 700, 4 × 10 px padding, pill. Default = sage.
 `bloom`, `warn`, `water` variants only for those meanings. A tag may carry a
@@ -149,9 +155,9 @@ generated per specimen and link to its page.
 ## 5. Page anatomy
 
 **Top bar** (both pages, white, hairline bottom border): leaf mark + "The
-Conservatory" in Fraunces 24 · nav pills (Collection, Locations, Reminders,
-Flower Show; active = `sage-2` fill; Collection is lit on the species and
-plant pages it leads to) · search (pill, leading icon,
+Conservatory" in Fraunces 24 · nav pills (Collection, Tags, Locations,
+Reminders, Flower Show; active = `sage-2` fill; Collection is lit on the
+species and plant pages it leads to) · search (pill, leading icon,
 "Search species") · primary "Add a plant" with camera icon. Wraps
 to two rows on narrow screens.
 
@@ -163,7 +169,8 @@ cards, which are species tiles, not specimen cards), top to bottom:
 3. Pending identifications strip.
 4. Two columns, 28 px gap: **Life list** (`flex: 999 1 560px`) and a **side
    column** (`flex: 1 1 300px; max-width: 360px`) that drops below on phones.
-   - Life list header: title, counts line, view toggle (grid/list/table), sort.
+   - Life list header: title, counts line, and Sort by (Name, A to Z or
+     Latest added) on the right. Pot tags are printed from the Tags nav pill.
    - Filter chips by place: All · each place A to Z · No location yet · No
      longer here, each with its count. The mockup's other chips and selects
      (Houseplants, Blooming now, Family, Arrived) are not drawn; a family is

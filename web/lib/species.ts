@@ -186,6 +186,7 @@ export function speciesList(db: DatabaseSync): SpeciesListRow[] {
       `SELECT s.id, s.scientific_name, s.cultivar, s.common_name, s.canonical_name, s.family, s.genus, s.image_path, s.enriched_at,
               (SELECT COUNT(*) FROM specimens sp WHERE sp.species_id = s.id AND sp.status = 'alive') AS n,
               (SELECT COUNT(*) FROM specimens sp WHERE sp.species_id = s.id AND sp.status <> 'alive') AS gone,
+              (SELECT MAX(sp.created_at) FROM specimens sp WHERE sp.species_id = s.id) AS latest,
               (SELECT json_group_array(json_object('at', g.location, 'n', g.c))
                  FROM (SELECT sp.location, COUNT(*) AS c FROM specimens sp
                         WHERE sp.species_id = s.id AND sp.status = 'alive' GROUP BY sp.location) g) AS places,
@@ -207,6 +208,7 @@ export function speciesList(db: DatabaseSync): SpeciesListRow[] {
     enriched_at: string | null;
     n: number;
     gone: number;
+    latest: string | null;
     places: string; // JSON
     hero: string | null;
   }>;
@@ -222,6 +224,7 @@ export function speciesList(db: DatabaseSync): SpeciesListRow[] {
       specimens: r.n,
       places: JSON.parse(r.places) as Array<{ at: string | null; n: number }>,
       gone: r.gone,
+      latest: r.latest,
       thumbUrl: r.hero ? `/media/${thumbPathFor(r.hero)}` : (referenceUrls(r.image_path, r.enriched_at)?.thumbUrl ?? null),
     }))
     .sort(compareSpecies);

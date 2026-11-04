@@ -5,12 +5,13 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
 // The top bar from design/DESIGN.md §5: leaf mark and wordmark, nav pills,
-// the search box, the primary "Add a plant". Collection has a page, and is
-// lit on the species and plant pages it leads to; the other three are drawn
-// in their places so the bar keeps its shape as phases land, and are plainly
-// not links.
+// the search box, the primary "Add a plant". Collection and Tags have pages;
+// Collection is lit on the species and plant pages it leads to. The other
+// three are drawn in their places so the bar keeps its shape as phases land,
+// and are plainly not links.
 const NAV: Array<{ label: string; href: string | null; also?: string[] }> = [
   { label: "Collection", href: "/", also: ["/species/", "/plants/"] },
+  { label: "Tags", href: "/tags" },
   { label: "Locations", href: null },
   { label: "Reminders", href: null },
   { label: "Flower Show", href: null },
@@ -50,7 +51,8 @@ export function TopBar() {
         {/* On a phone the Add button stays on the first row beside the
             wordmark, the nav takes the second and the search the third.
             From sm the nav joins the first row; from lg the search does
-            too and the bar is the mockup's one row. */}
+            too and the bar is the mockup's one row, the search giving up
+            width (260 px down to 180) before anything wraps. */}
         <nav aria-label="Main" className="order-3 flex basis-full flex-wrap gap-0.5 sm:order-none sm:ml-4 sm:basis-auto">
           {NAV.map((item) =>
             item.href ? (
@@ -64,7 +66,7 @@ export function TopBar() {
             ),
           )}
         </nav>
-        <div className="order-4 flex basis-full items-center lg:order-none lg:ml-auto lg:basis-auto">
+        <div className="order-4 flex min-w-0 basis-full items-center lg:order-none lg:ml-auto lg:max-w-[260px] lg:flex-1 lg:basis-[180px]">
           {/* The search reads the URL, which a static page can only do behind
               a Suspense boundary; the fallback is the same box, not yet live. */}
           <Suspense fallback={<SearchBox live={false} />}>
@@ -134,7 +136,7 @@ function SearchForm({ value, onChange, onSubmit }: { value: string; onChange?: (
     <form
       role="search"
       action="/"
-      className="relative flex w-full items-center lg:w-[260px]"
+      className="relative flex w-full items-center"
       onSubmit={(e) => {
         e.preventDefault();
         onSubmit?.();

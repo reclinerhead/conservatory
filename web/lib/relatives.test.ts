@@ -13,6 +13,7 @@ const row = (id: number, scientificName: string, genus: string | null, family: s
   specimens,
   places: [],
   gone: 0,
+  latest: null,
   thumbUrl: null,
 });
 
