@@ -6,7 +6,7 @@ import type { JobView } from "@/app/api/jobs/[id]/route";
 import { LeafMark } from "@/components/topbar";
 import { exifTakenAt } from "@/lib/exif";
 import { NoRetry, withRetry } from "@/lib/retry";
-import { shrinkToJpeg } from "@/lib/shrink";
+import { decodeHeic, shrinkToJpeg } from "@/lib/shrink";
 
 // /add (#58): one plant at a time, up to five photos, all of them on one job,
 // so Fern asks Pl@ntNet with every photo of the plant together. The plant
@@ -15,12 +15,15 @@ import { shrinkToJpeg } from "@/lib/shrink";
 // one request each, then POST /api/jobs makes the job from their ids, so Fern
 // never starts on half a plant. No organ chips: every photo goes as `auto`,
 // which Pl@ntNet's docs say is fine; the tips aside says what helps instead.
+// A HEIC the browser cannot draw is decoded in the page (#60).
 
 type Photo = {
   key: string;
   file: File;
   preview: string;
-  look: "photo" | "none"; // none: a file this browser cannot draw (a HEIC on a desktop); it still goes up, and Fern re-encodes it
+  // reading: a HEIC this browser cannot draw, being decoded in the page (#60);
+  // none: a file it cannot draw or decode, which still goes up for Fern to re-encode.
+  look: "photo" | "reading" | "none";
 };
 
 type Plant = {
@@ -72,6 +75,8 @@ export function Uploader() {
   const rollRef = useRef<HTMLInputElement>(null);
   const nextKey = useRef(0); // a counter, not crypto.randomUUID, which a phone on the house's plain-http LAN does not have
   const uploaded = useRef(new Map<string, number>()); // photo key -> photos.id, once the Conservatory has it
+  const decoded = useRef(new Map<string, Promise<File | null>>()); // photo key -> its HEIC as a JPEG, once the browser could not draw it
+  const gone = useRef(new Set<string>()); // photos removed while their decode was still running
   const line = useRef<Promise<void>>(Promise.resolve()); // plants send one after another
 
   function pick(input: HTMLInputElement | null) {
@@ -95,13 +100,37 @@ export function Uploader() {
 
   function removePhoto(key: string) {
     const p = current.find((x) => x.key === key);
-    if (p) URL.revokeObjectURL(p.preview);
+    if (p) forget(p);
     setCurrent((cur) => cur.filter((x) => x.key !== key));
     setNotice(null);
   }
 
-  function noPreview(key: string) {
-    const mark = (ps: Photo[]) => ps.map((p) => (p.key === key ? { ...p, look: "none" as const } : p));
+  function forget(p: Photo) {
+    URL.revokeObjectURL(p.preview);
+    gone.current.add(p.key);
+  }
+
+  // The <img> failing is the one sign this browser cannot draw the file (an
+  // iPhone draws HEIC itself and never gets here). Decode it in the page, show
+  // the JPEG, and keep it for the send; a file that isn't a HEIC, or one the
+  // decoder can't read, gets "No preview" and goes up as it is (#60).
+  function noPreview(p: Photo) {
+    if (decoded.current.has(p.key)) return;
+    patchPhoto(p.key, { look: "reading" });
+    const job = decodeHeic(p.file).then((jpeg) => {
+      if (gone.current.has(p.key)) return jpeg;
+      if (!jpeg) patchPhoto(p.key, { look: "none" });
+      else {
+        URL.revokeObjectURL(p.preview);
+        patchPhoto(p.key, { look: "photo", preview: URL.createObjectURL(jpeg) });
+      }
+      return jpeg;
+    });
+    decoded.current.set(p.key, job);
+  }
+
+  function patchPhoto(key: string, change: Partial<Photo>) {
+    const mark = (ps: Photo[]) => ps.map((p) => (p.key === key ? { ...p, ...change } : p));
     setCurrent(mark);
     setPlants((cur) => cur.map((pl) => (pl.photos.some((p) => p.key === key) ? { ...pl, photos: mark(pl.photos) } : pl)));
   }
@@ -129,7 +158,7 @@ export function Uploader() {
   }
 
   function removePlant(plant: Plant) {
-    for (const p of plant.photos) URL.revokeObjectURL(p.preview);
+    for (const p of plant.photos) forget(p);
     setPlants((cur) => cur.filter((pl) => pl.key !== plant.key)); // photos it already sent are swept by the next upload a day later
   }
 
@@ -162,8 +191,9 @@ export function Uploader() {
   async function sendPhoto(plantKey: string, p: Photo): Promise<{ ok: true; photoId: number } | { ok: false; status: number | null }> {
     let status: number | null = null;
     try {
-      const takenAt = exifTakenAt(await p.file.arrayBuffer()); // from the original: the shrink drops EXIF
-      const { blob, mime } = await shrinkToJpeg(p.file);
+      const takenAt = exifTakenAt(await p.file.arrayBuffer()); // from the original: the decode and the shrink both drop EXIF
+      const jpeg = await decoded.current.get(p.key); // a decode still running is waited for, never run twice
+      const { blob, mime } = await shrinkToJpeg(jpeg ?? p.file);
       const res = await withRetry(
         async (attempt) => {
           patch(plantKey, { attempt });
@@ -308,7 +338,7 @@ export function Uploader() {
             const p = current[i];
             return p ? (
               <li key={p.key} className="flex flex-col gap-2">
-                <Thumb photo={p} onNoPreview={() => noPreview(p.key)} className="aspect-square w-full" />
+                <Thumb photo={p} onNoPreview={() => noPreview(p)} className="aspect-square w-full" />
                 <button type="button" onClick={() => removePhoto(p.key)} aria-label={`Remove photo ${i + 1}`} className="btn btn-ghost btn-compact w-full px-3">
                   Remove
                 </button>
@@ -372,10 +402,10 @@ function Tip({ icon, lead, why }: { icon: React.ReactNode; lead: string; why: st
 function Thumb({ photo, onNoPreview, className }: { photo: Photo; onNoPreview: () => void; className: string }) {
   return (
     <div className={`overflow-hidden rounded-thumb bg-tile-2 ${className}`}>
-      {photo.look === "none" ? (
+      {photo.look !== "photo" ? (
         <div className="flex size-full flex-col items-center justify-center gap-1 px-2 text-center">
-          <LeafMark size={34} className="text-moss" />
-          <span className="text-meta text-ink-2">No preview</span>
+          <LeafMark size={34} className={`text-moss ${photo.look === "reading" ? "animate-pulse motion-reduce:animate-none" : ""}`} />
+          <span className="text-meta text-ink-2">{photo.look === "reading" ? "Reading the photo…" : "No preview"}</span>
         </div>
       ) : (
         // eslint-disable-next-line @next/next/no-img-element -- a local blob: URL, nothing for next/image to optimise
@@ -417,7 +447,7 @@ function SentStrip({
   onRemove,
 }: {
   plants: Plant[];
-  onNoPreview: (key: string) => void;
+  onNoPreview: (photo: Photo) => void;
   onSendAgain: () => void;
   onRemove: () => void;
 }) {
@@ -497,7 +527,7 @@ function SentStrip({
             <span key={pl.key} className={`thumb overflow-hidden border-2 border-sage bg-tile-2 ${i < 2 ? "-mr-2.5" : ""}`}>
               {p.look === "photo" ? (
                 // eslint-disable-next-line @next/next/no-img-element -- a local blob: URL, nothing for next/image to optimise
-                <img src={p.preview} alt="" onError={() => onNoPreview(p.key)} className="size-full object-cover" />
+                <img src={p.preview} alt="" onError={() => onNoPreview(p)} className="size-full object-cover" />
               ) : (
                 <LeafMark size={26} className="text-moss" />
               )}
