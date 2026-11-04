@@ -108,6 +108,17 @@ MIGRATIONS: list[tuple[int, str] | tuple[int, str, str]] = [
         """,
         FOREIGN_KEYS_OFF,
     ),
+    # v6 (#46): the photo a plant is known by, chosen on its page. NULL means
+    # its newest, as before, so no plant changes on deploy; the web app orders
+    # a plant's photos main first, then newest. It goes with the photo, so a
+    # removed photo leaves the plant on its newest again. A later rebuild of
+    # specimens must carry this column.
+    (
+        6,
+        """
+        ALTER TABLE specimens ADD COLUMN hero_photo_id INTEGER REFERENCES photos(id) ON DELETE SET NULL;
+        """,
+    ),
 ]
 
 LATEST_VERSION = MIGRATIONS[-1][0] if MIGRATIONS else BASELINE_VERSION

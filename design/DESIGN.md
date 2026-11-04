@@ -126,7 +126,17 @@ cuttings, divisions and offsets; the child's meta line says which.
 photo stacked right, then a 120 px reference thumb + "Add a photo". Each photo
 carries a dark pill caption naming its source and date ("Your photo · Front bed
 coneflower · Jul 12, 2026" / "Wikipedia"). Owner photos always outrank the
-reference image.
+reference image. A plant is shown by its main photo, the one chosen for it, else
+its newest; on its own page that is the hero, its caption ending "· Main photo".
+
+**Lightbox** — a tap on any photo opens it full size over the page: the ink
+backdrop nearly solid, white line-icon buttons (zoom, close, previous, next),
+"2 of 5" top left. Under the photo, the caption pill at the left and at most
+one action at the right as a white pill, 44 px: "Use as main photo" on a
+plant's photos ("Main photo" in its place on the main one, so nothing moves),
+or where the photo leads on the species page ("Open Granddaddy", "The image and
+its licence on Wikimedia Commons"). Escape, Close or the backdrop closes it,
+and the page is where it was.
 
 **QR pot tag** — a 7 × 7 module placeholder in the mockup; real tags are
 generated per specimen and link to its page.

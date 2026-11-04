@@ -295,6 +295,31 @@
   }
 }
 
+/* The lightbox (#46): yet-another-react-lightbox on the plant and species
+   pages, themed from the tokens rather than left to its defaults. The
+   backdrop is ink, nearly solid; the buttons are surface white, without the
+   library's drop shadow, and keep a visible focus ring (the library removes
+   the outline). The counter reads as the photos' captions do. Its own
+   stylesheet is unlayered, so these are too. */
+.yarl__portal {
+  --yarl__color_backdrop: color-mix(in srgb, var(--color-ink) 96%, transparent);
+  --yarl__color_button: rgb(255 255 255 / 0.85);
+  --yarl__color_button_active: var(--color-surface);
+  --yarl__color_button_disabled: rgb(255 255 255 / 0.35);
+  --yarl__button_filter: none;
+  --yarl__counter_filter: none;
+  --yarl__navigation_button_padding: 24px 12px;
+}
+.yarl__button:focus-visible {
+  outline: 2px solid var(--color-surface);
+  outline-offset: -6px;
+  border-radius: var(--radius-pill);
+}
+.yarl__counter {
+  font-size: var(--text-meta);
+  font-weight: 700;
+}
+
 /* Printing the label sheets (#36). Unlayered on purpose, so these outrank
    the utilities in print. The sheet goes to the printer at its true size on
    letter with no page margin (print at 100%, not "fit to page"). Only the
