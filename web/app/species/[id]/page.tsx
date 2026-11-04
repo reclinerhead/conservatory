@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { CareFigures, CareRewrite } from "@/components/care";
 import { SpecimenCard } from "@/components/collection";
 import { OpenPhoto, PhotoLightbox, type PhotoSlide } from "@/components/lightbox";
+import { PhotoAdder } from "@/components/photo-adder";
 import { QrIcon, TagCodeBox } from "@/components/tag-code";
 import { Term } from "@/components/term";
 import { LeafMark } from "@/components/topbar";
@@ -19,6 +20,7 @@ import {
   inCollectionLine,
   latinRuns,
   namingLine,
+  photoTargets,
   speciesCrumbs,
   speciesGallery,
   specimenCount,
@@ -73,6 +75,7 @@ export default async function SpeciesPage({ params }: { params: Promise<{ id: st
   const living = s.tiles.filter((t) => t.status === "alive").length;
   const groups = groupTiles(s.tiles);
   const naming = namingLine(s.naming);
+  const targets = photoTargets(s.tiles);
 
   return (
     <main className="mx-auto flex w-full max-w-page flex-1 flex-col gap-6 px-4 pb-14 pt-6 sm:gap-7 sm:px-8 sm:pt-8">
@@ -159,17 +162,21 @@ export default async function SpeciesPage({ params }: { params: Promise<{ id: st
                 </p>
               </div>
             )}
-            <div className="flex min-h-[120px] items-center gap-3">
+            <div className="flex min-h-[120px] flex-wrap items-center gap-3">
               {small ? <Figure item={small} size="small" /> : null}
-              <div className="flex flex-col gap-2">
-                <p className="text-meta text-ink-2">{galleryLine(s.photos.length, s.reference !== null)}</p>
-                <Link href="/add" className="btn btn-ghost btn-compact self-start hover:no-underline">
-                  <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
-                    <circle cx="12" cy="13" r="3.5" />
-                  </svg>
-                  Add a photo
-                </Link>
+              {/* Add a photo puts it straight onto a plant of this species (#55);
+                  /add is for a plant not in the collection yet. */}
+              <div className="flex min-w-[9.5rem] flex-1 flex-col gap-2">
+                {targets.length > 0 ? (
+                  <PhotoAdder plants={targets} countLine={galleryLine(s.photos.length, s.reference !== null)} compact />
+                ) : (
+                  <>
+                    <p className="text-meta text-ink-2">{galleryLine(s.photos.length, s.reference !== null)}</p>
+                    <Link href="/add" className="btn btn-ghost btn-compact self-start hover:no-underline">
+                      Add a plant
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>

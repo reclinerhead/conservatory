@@ -7,6 +7,7 @@ import {
   latinRuns,
   matchesSpecies,
   namingLine,
+  photoTargets,
   speciesCrumbs,
   speciesGallery,
   speciesTitle,
@@ -173,6 +174,39 @@ describe("counts lines", () => {
       ]),
     ).toBe("3 specimens · 2 locations · 1 no longer here");
     expect(inCollectionLine([{ status: "alive", location: null }])).toBe("1 specimen");
+  });
+});
+
+describe("photoTargets", () => {
+  const plant = (id: number, status: "alive" | "died" | "gifted", location: string | null, createdAt: string) => ({ id, status, location, createdAt });
+
+  it("offers the one living plant, named by its tag number and place", () => {
+    expect(photoTargets([plant(142, "alive", "Kitchen", "2026-10-30T12:00:00Z")])).toEqual([{ id: 142, label: "Plant #142 · Kitchen" }]);
+  });
+
+  it("offers every living plant, newest first, and leaves out the ones no longer here", () => {
+    const targets = photoTargets([
+      plant(3, "alive", "Front bed", "2026-09-01T12:00:00Z"),
+      plant(7, "died", "Kitchen", "2026-10-15T12:00:00Z"),
+      plant(9, "alive", null, "2026-10-20T12:00:00Z"),
+      plant(5, "alive", "  ", "2026-09-01T12:00:00Z"),
+    ]);
+    expect(targets).toEqual([
+      { id: 9, label: "Plant #9" },
+      { id: 5, label: "Plant #5" },
+      { id: 3, label: "Plant #3 · Front bed" },
+    ]);
+  });
+
+  it("falls back to the plants no longer here when none is living", () => {
+    expect(photoTargets([plant(4, "gifted", "Office", "2026-08-01T12:00:00Z"), plant(6, "died", null, "2026-09-01T12:00:00Z")])).toEqual([
+      { id: 6, label: "Plant #6" },
+      { id: 4, label: "Plant #4 · Office" },
+    ]);
+  });
+
+  it("offers nothing for a species with no plants", () => {
+    expect(photoTargets([])).toEqual([]);
   });
 });
 
