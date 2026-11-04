@@ -25,8 +25,8 @@ export type JobView = {
   confirmation: { specimenId: number; name: string; chosenRank: number | null; typedName: string | null } | null;
 };
 
-/** How a specimen is named in prose: its nickname, else "Ficus elastica 'Ruby'". Needs `sp` (specimens) and `s` (species) in scope. */
-const SPECIMEN_NAME = `COALESCE(sp.nickname, s.scientific_name || CASE WHEN s.cultivar IS NOT NULL THEN ' ''' || s.cultivar || '''' ELSE '' END)`;
+/** How a specimen is named in prose on the confirm screen: its species, "Ficus elastica 'Ruby'". Needs `s` (species) in scope. */
+const SPECIMEN_NAME = `s.scientific_name || CASE WHEN s.cultivar IS NOT NULL THEN ' ''' || s.cultivar || '''' ELSE '' END`;
 
 export function readJob(db: DatabaseSync, jobId: number): JobView | null {
   const job = db.prepare("SELECT id, status, error, quota_remaining FROM jobs WHERE id = ?").get(jobId) as

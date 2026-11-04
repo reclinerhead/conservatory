@@ -154,7 +154,8 @@ def test_v2_migrates_a_phase_1_database_with_its_rows_intact(tmp_path, monkeypat
             "summary", "summary_url", "image_path", "image_credit", "image_source_url", "enriched_at", "enrich_error"} <= cols
     rows = conn.execute("SELECT scientific_name, genus, cultivar, enriched_at FROM species ORDER BY id").fetchall()
     assert [tuple(r) for r in rows] == [("Ficus elastica", "Ficus", None, None), ("Echeveria", None, "Black Prince", None)]
-    assert conn.execute("SELECT nickname FROM specimens WHERE species_id = 1").fetchone()[0] == "Rubber"
+    # The plant survives every step since, the nickname's drop (v7) included.
+    assert conn.execute("SELECT COUNT(*) FROM specimens WHERE species_id = 1").fetchone()[0] == 1
     assert db.apply_schema(conn) == db.LATEST_VERSION  # idempotent: the ALTERs do not run twice
 
 

@@ -25,7 +25,7 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const plant = withReadDb((db) => readSpecimen(db, Number(id)), null);
-  return { title: plant ? `${cardNames({ ...plant.species, nickname: plant.nickname }).name} · The Conservatory` : "The Conservatory" };
+  return { title: plant ? `${cardNames(plant.species).name} · The Conservatory` : "The Conservatory" };
 }
 
 export default async function PlantPage({ params }: { params: Promise<{ id: string }> }) {
@@ -40,8 +40,8 @@ export default async function PlantPage({ params }: { params: Promise<{ id: stri
   const { plant, locations, relatives } = data;
   const sp = plant.species;
   const relCount = relativeCount(relatives);
-  // Named as its dashboard card is: the nickname, else the common name, else the species.
-  const { name, common, species } = cardNames({ ...sp, nickname: plant.nickname });
+  // Named as its dashboard card is: the common name, else the species.
+  const { name, species } = cardNames(sp);
   const binomial = <Binomial scientificName={sp.scientificName} cultivar={sp.cultivar} />;
   const mark = (
     <span className="font-sans text-body">
@@ -50,13 +50,6 @@ export default async function PlantPage({ params }: { params: Promise<{ id: stri
       </Term>
     </span>
   );
-  const noNickname = <span className="font-sans text-body">No nickname yet</span>;
-  // The lines under the title, in the card's order. The info mark follows the
-  // binomial, or ends the first line when the binomial is the title.
-  const lines: React.ReactNode[] = [];
-  if (common) lines.push(common);
-  if (species) lines.push(<>{binomial} {mark}</>);
-  if (!plant.nickname) lines.push(species ? noNickname : <>{noNickname} {mark}</>);
   const [hero, ...rest] = plant.photos;
   const several = plant.photos.length > 1;
   const removeFrom = several ? plant.id : null; // a plant keeps at least one photo
@@ -85,24 +78,22 @@ export default async function PlantPage({ params }: { params: Promise<{ id: stri
         </span>
       </nav>
 
-      {/* Title block, DESIGN.md §5: the name, the common name under a nickname,
-          the Latin name in italics, a row of tags. Two lines are always reserved
-          under the title, so the block keeps its height when Fern fills in the
-          common name or a nickname is saved. */}
+      {/* Title block, DESIGN.md §5, as the species page draws it: the common
+          name, the Latin name in italics under it with the info mark, a row of
+          tags. With no common name the binomial is the title and the line under
+          it says so. The line is always there, so the block keeps its height
+          when Fern fills in the common name. */}
       <div className="flex flex-col gap-2.5">
         <h1 className="text-h1 leading-[1.05] sm:text-page-title">{species ? name : binomial}</h1>
-        <div className="flex flex-col gap-1">
-          {lines.map((line, i) => (
-            <p key={i} className="font-display text-section leading-tight text-ink-2">
-              {line}
-            </p>
-          ))}
-          {lines.length < 2 ? (
-            <p aria-hidden className="invisible font-display text-section leading-tight">
-              &nbsp;
-            </p>
-          ) : null}
-        </div>
+        <p className="font-display text-section leading-tight text-ink-2">
+          {species ? (
+            <>
+              {binomial} {mark}
+            </>
+          ) : (
+            <span className="font-sans text-body">No common name on file {mark}</span>
+          )}
+        </p>
         <div className="flex flex-wrap gap-2">
           {plant.status !== "alive" ? <span className="tag tag-warn">{STATUS_LABEL[plant.status]}</span> : null}
           <span className="tag">{metaLine(plant)}</span>
@@ -161,7 +152,7 @@ export default async function PlantPage({ params }: { params: Promise<{ id: stri
           </h2>
           <PlantEditor
             id={plant.id}
-            facts={{ nickname: plant.nickname, location: plant.location, acquiredOn: plant.acquiredOn, status: plant.status }}
+            facts={{ location: plant.location, acquiredOn: plant.acquiredOn, status: plant.status }}
             locations={locations}
             photoCount={plant.photos.length}
           />

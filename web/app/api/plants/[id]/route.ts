@@ -1,7 +1,7 @@
-// PATCH /api/plants/:id: edit a specimen's own facts: nickname, location,
-// the date it was acquired, its status, and heroPhotoId, the photo the plant
-// is known by (#46: one of its own photos, or null for its newest). Any
-// subset; an empty string clears.
+// PATCH /api/plants/:id: edit a specimen's own facts: its location, the date
+// it was acquired, its status, and heroPhotoId, the photo the plant is known
+// by (#46: one of its own photos, or null for its newest). Any subset; an
+// empty string clears. Unknown keys are ignored.
 //
 // DELETE /api/plants/:id: remove the specimen for good. Its photos go from
 // the table and from disk, and so do the jobs that brought them (otherwise
@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
 
 const STATUSES = new Set(["alive", "gifted", "died"]);
 
-type Body = { nickname?: unknown; location?: unknown; acquiredOn?: unknown; status?: unknown; heroPhotoId?: unknown };
+type Body = { location?: unknown; acquiredOn?: unknown; status?: unknown; heroPhotoId?: unknown };
 
 /** A trimmed string of at most `max` characters, or null when blank; undefined when the field was not sent. */
 function text(v: unknown, max: number): string | null | undefined {
@@ -46,11 +46,6 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
   const sets: string[] = [];
   const values: Array<string | number | null> = [];
-  const nickname = text(body.nickname, 80);
-  if (nickname !== undefined) {
-    sets.push("nickname = ?");
-    values.push(nickname);
-  }
   const location = text(body.location, 80);
   if (location !== undefined) {
     sets.push("location = ?");
@@ -91,14 +86,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     }
     const r = db.prepare(`UPDATE specimens SET ${sets.join(", ")} WHERE id = ?`).run(...values, id);
     if (r.changes === 0) return Response.json({ error: "no such plant" }, { status: 404 });
-    const row = db.prepare(`SELECT nickname, location, acquired_on, status, ${hasHeroPhoto(db) ? "hero_photo_id" : "NULL"} AS hero_photo_id FROM specimens WHERE id = ?`).get(id) as {
-      nickname: string | null;
+    const row = db.prepare(`SELECT location, acquired_on, status, ${hasHeroPhoto(db) ? "hero_photo_id" : "NULL"} AS hero_photo_id FROM specimens WHERE id = ?`).get(id) as {
       location: string | null;
       acquired_on: string | null;
       status: string;
       hero_photo_id: number | null;
     };
-    return Response.json({ nickname: row.nickname, location: row.location, acquiredOn: row.acquired_on, status: row.status, heroPhotoId: row.hero_photo_id });
+    return Response.json({ location: row.location, acquiredOn: row.acquired_on, status: row.status, heroPhotoId: row.hero_photo_id });
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 500 });
   } finally {

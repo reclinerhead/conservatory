@@ -158,6 +158,39 @@ def test_v6_adds_hero_photo_id_over_a_v5_database_once(tmp_path, monkeypatch):
     assert [r["version"] for r in conn.execute("SELECT version FROM schema_version ORDER BY version")] == [1, 2, 3, 4, 5, 6]
 
 
+def test_v7_drops_the_nickname_keeping_every_plant(tmp_path, monkeypatch):
+    # The fixture's plants carry nicknames, as a box's real rows might.
+    conn = _v4_database_with_plants(tmp_path / "c.db", monkeypatch)
+    steps = db.MIGRATIONS
+    monkeypatch.setattr(db, "MIGRATIONS", steps[:5])
+    assert db.apply_schema(conn) == 6
+    photo = conn.execute("SELECT id FROM photos WHERE specimen_id = 5").fetchone()[0]
+    conn.execute("UPDATE specimens SET tagged_at = '2026-10-30T12:00:00Z', hero_photo_id = ?, status = 'gifted' WHERE id = 5", (photo,))
+    conn.commit()
+    monkeypatch.setattr(db, "MIGRATIONS", steps)
+    assert db.apply_schema(conn) == 7
+
+    assert "nickname" not in {r["name"] for r in conn.execute("PRAGMA table_info(specimens)")}
+    assert [tuple(r) for r in conn.execute("SELECT id, location, status, tagged_at, hero_photo_id FROM specimens ORDER BY id")] == [
+        (1, "Shelf 2", "alive", None, None),
+        (2, "Shelf 2", "alive", None, None),
+        (5, "Shelf 2", "gifted", "2026-10-30T12:00:00Z", photo),
+    ]
+    assert [tuple(r) for r in conn.execute("SELECT job_id, specimen_id FROM confirmations ORDER BY job_id")] == [(1, 1), (2, 2), (5, 5)]
+    indexes = {r["name"] for r in conn.execute("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'specimens'")}
+    assert {"specimens_location", "specimens_species"} <= indexes
+    assert conn.execute("PRAGMA foreign_key_check").fetchall() == []
+    # A second apply is a no-op: the DROP would fail if it ran again.
+    assert db.apply_schema(conn) == 7
+    assert [r["version"] for r in conn.execute("SELECT version FROM schema_version ORDER BY version")] == [1, 2, 3, 4, 5, 6, 7]
+
+
+def test_a_fresh_database_has_no_nickname(tmp_path):
+    conn = db.connect(tmp_path / "c.db")
+    assert db.current_version(conn) == db.LATEST_VERSION == 7
+    assert "nickname" not in {r["name"] for r in conn.execute("PRAGMA table_info(specimens)")}
+
+
 def test_removing_a_plants_main_photo_puts_it_back_on_its_newest(tmp_path, monkeypatch):
     conn = _v4_database_with_plants(tmp_path / "c.db", monkeypatch)
     db.apply_schema(conn)

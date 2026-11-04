@@ -57,7 +57,7 @@ export function Collection({ tiles }: { tiles: Tile[] }) {
             </div>
             <div className="flex flex-col gap-1.5 px-4 pb-4 pt-3.5">
               <p className="text-lead font-bold">{q ? `Nothing called “${q.trim()}”` : "Nothing here"}</p>
-              <p className="text-meta text-ink-2">{q ? "Try part of the nickname, the common name or the Latin name." : "Pick another location, or add a plant."}</p>
+              <p className="text-meta text-ink-2">{q ? "Try part of the common name or the Latin name." : "Pick another location, or add a plant."}</p>
               <button type="button" onClick={() => setCollectionParams({ q: "", at: "all" })} className="btn btn-soft btn-compact mt-2 self-start">
                 Show everything
               </button>
@@ -106,15 +106,13 @@ export function PrintTagsLink() {
 
 /**
  * The specimen card from DESIGN.md §4: photo or tinted tile 168 px tall,
- * the name, the common name under a nickname, the italic species, meta line,
- * tags. One link. `compact` is the species page's variant: 140 px and a
+ * the name (the common name, else the species), the italic species under a
+ * common name, meta line, tags. One link. `compact` is the species page's variant: 140 px and a
  * 16 px radius, as the mockup's `rel`, and no common name, since every card
  * there is the page's own species and its common name is the page's title.
  */
 export function SpecimenCard({ tile, tint, compact = false }: { tile: Tile; tint: string; compact?: boolean }) {
-  const { name, common, species } = cardNames(compact ? { ...tile, commonName: null } : tile);
-  // Lines under the name are reserved, so a card keeps its height when Fern finds a common name.
-  const blanks = (compact ? 1 : 2) - (common ? 1 : 0) - (species ? 1 : 0);
+  const { name, species } = cardNames(compact ? { ...tile, commonName: null } : tile);
   const h = compact ? "h-[140px]" : "h-[168px]";
   return (
     <Link
@@ -131,13 +129,14 @@ export function SpecimenCard({ tile, tint, compact = false }: { tile: Tile; tint
       )}
       <div className="flex flex-col gap-1 px-4 pb-4 pt-3.5">
         <p className="text-lead font-bold leading-snug">{name}</p>
-        {common ? <p className="text-ink-2">{common}</p> : null}
-        {species ? <p className="sp">{species}</p> : null}
-        {Array.from({ length: blanks }, (_, i) => (
-          <p key={i} aria-hidden className="invisible">
+        {/* The line under the name is reserved, so a card keeps its height when Fern finds a common name. */}
+        {species ? (
+          <p className="sp">{species}</p>
+        ) : (
+          <p aria-hidden className="invisible">
             &nbsp;
           </p>
-        ))}
+        )}
         <p className="text-meta text-ink-2">{metaLine(tile)}</p>
         {tile.status !== "alive" ? (
           <div className="mt-1 flex flex-wrap gap-1.5">

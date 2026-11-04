@@ -5,17 +5,17 @@ import { useId, useState } from "react";
 import { Term } from "@/components/term";
 import { STATUS_LABEL, type SpecimenStatus } from "@/lib/collection";
 
-// The editable facts of one specimen: nickname, location, the date it was
+// The editable facts of one specimen: its location, the date it was
 // acquired, its status. A plain form with one Save button, enabled only when
 // something changed, and a line that says "Saved" afterwards (reserved, so
 // the card never moves). Remove is two taps on purpose and then deletes the
 // plant, its photos and the files, through DELETE /api/plants/[id].
-export type PlantFacts = { nickname: string | null; location: string | null; acquiredOn: string | null; status: SpecimenStatus };
+export type PlantFacts = { location: string | null; acquiredOn: string | null; status: SpecimenStatus };
 
-type Draft = { nickname: string; location: string; acquiredOn: string; status: SpecimenStatus };
+type Draft = { location: string; acquiredOn: string; status: SpecimenStatus };
 
 function toDraft(f: PlantFacts): Draft {
-  return { nickname: f.nickname ?? "", location: f.location ?? "", acquiredOn: f.acquiredOn ?? "", status: f.status };
+  return { location: f.location ?? "", acquiredOn: f.acquiredOn ?? "", status: f.status };
 }
 
 export function PlantEditor({ id, facts, locations, photoCount }: { id: number; facts: PlantFacts; locations: string[]; photoCount: number }) {
@@ -36,7 +36,7 @@ export function PlantEditor({ id, facts, locations, photoCount }: { id: number; 
       const r = await fetch(`/api/plants/${id}`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ nickname: draft.nickname, location: draft.location, acquiredOn: draft.acquiredOn, status: draft.status }),
+        body: JSON.stringify({ location: draft.location, acquiredOn: draft.acquiredOn, status: draft.status }),
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error ?? `HTTP ${r.status}`);
@@ -82,18 +82,6 @@ export function PlantEditor({ id, facts, locations, photoCount }: { id: number; 
       }}
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <label className="flex flex-col gap-1.5">
-          <span className={label}>Nickname</span>
-          <input
-            type="text"
-            value={draft.nickname}
-            onChange={(e) => setDraft({ ...draft, nickname: e.target.value })}
-            placeholder="What you call it, e.g. Granddaddy"
-            maxLength={80}
-            autoComplete="off"
-            className="field"
-          />
-        </label>
         <label className="flex flex-col gap-1.5">
           <span className={label}>Location</span>
           <input

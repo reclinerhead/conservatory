@@ -87,7 +87,7 @@ export function TopBar() {
 }
 
 /**
- * "Search nickname or species". On the collection and on the species list it
+ * "Search species". On the collection and on the species list it
  * filters as you type, through the URL (?q=) with the native history API, so
  * no request leaves the phone. On a species page Enter goes to the species
  * list with the search applied; anywhere else, to the collection.
@@ -152,7 +152,7 @@ function SearchForm({ value, onChange, onSubmit }: { value: string; onChange?: (
         value={value}
         onChange={(e) => onChange?.(e.target.value)}
         readOnly={!onChange}
-        placeholder="Search nickname or species"
+        placeholder="Search species"
         aria-label="Search the collection"
         autoComplete="off"
         className="field w-full pl-10"

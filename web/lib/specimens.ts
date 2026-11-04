@@ -6,7 +6,6 @@ import { thumbPathFor } from "./photos";
 
 type TileRow = {
   id: number;
-  nickname: string | null;
   scientific_name: string;
   cultivar: string | null;
   common_name: string | null;
@@ -41,7 +40,7 @@ export function photoOrder(db: DatabaseSync, p = "p"): string {
 /** Every specimen as a grid tile (or every specimen of one species), in no particular order: the caller groups and sorts. */
 export function collectionTiles(db: DatabaseSync, speciesId?: number): Tile[] {
   const hero = `(SELECT p.path FROM photos p WHERE p.specimen_id = sp.id ORDER BY ${photoOrder(db)} LIMIT 1)`;
-  const sql = `SELECT sp.id, sp.nickname, sp.location, sp.acquired_on, sp.status, sp.created_at,
+  const sql = `SELECT sp.id, sp.location, sp.acquired_on, sp.status, sp.created_at,
                       s.scientific_name, s.cultivar, s.common_name, ${hero} AS hero
                  FROM specimens sp JOIN species s ON s.id = sp.species_id`;
   const rows = (
@@ -49,7 +48,6 @@ export function collectionTiles(db: DatabaseSync, speciesId?: number): Tile[] {
   ) as TileRow[];
   return rows.map((r) => ({
     id: r.id,
-    nickname: r.nickname,
     scientificName: r.scientific_name,
     cultivar: r.cultivar,
     commonName: r.common_name,
@@ -89,7 +87,6 @@ export function tagRows(db: DatabaseSync): TagRow[] {
 
 export type SpecimenView = {
   id: number;
-  nickname: string | null;
   location: string | null;
   acquiredOn: string | null;
   status: SpecimenStatus;
@@ -103,7 +100,7 @@ export type SpecimenView = {
 export function readSpecimen(db: DatabaseSync, id: number): SpecimenView | null {
   const row = db
     .prepare(
-      `SELECT sp.id, sp.nickname, sp.location, sp.acquired_on, sp.status, sp.created_at,
+      `SELECT sp.id, sp.location, sp.acquired_on, sp.status, sp.created_at,
               ${hasTaggedAt(db) ? "sp.tagged_at" : "NULL"} AS tagged_at,
               s.id AS species_id, s.scientific_name, s.genus, s.family, s.cultivar, s.common_name
          FROM specimens sp JOIN species s ON s.id = sp.species_id
@@ -112,7 +109,6 @@ export function readSpecimen(db: DatabaseSync, id: number): SpecimenView | null 
     .get(id) as
     | {
         id: number;
-        nickname: string | null;
         location: string | null;
         acquired_on: string | null;
         status: SpecimenStatus;
@@ -137,7 +133,6 @@ export function readSpecimen(db: DatabaseSync, id: number): SpecimenView | null 
     .get(id) as { chosen_rank: number | null; typed_name: string | null; confirmed_at: string } | undefined;
   return {
     id: row.id,
-    nickname: row.nickname,
     location: row.location,
     acquiredOn: row.acquired_on,
     status: row.status,

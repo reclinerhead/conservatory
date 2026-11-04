@@ -48,7 +48,7 @@ export function PhotoLightbox({
   children,
 }: {
   slides: PhotoSlide[];
-  title: string; // names the dialog: "Photos of Granddaddy"
+  title: string; // names the dialog: "Photos of India Rubber Fig"
   plantId?: number; // set on a plant's page with more than one photo: offers "Use as main photo"
   children: React.ReactNode;
 }) {
