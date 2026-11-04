@@ -24,7 +24,7 @@ Organic, light, unhurried. A homeowner's garden notebook, not a SaaS dashboard.
   Icons are 1.8–2 px stroke line icons, inline SVG.
 - Copy is plain and specific: "3 plants waiting for a name", "Water Fiddle",
   "Cut back the coneflowers, or leave the seed heads for the finches". The app
-  talks about the owner's own plants by nickname whenever it can.
+  talks about the owner's own plants by their common names whenever it can.
 
 ## 2. Colour
 
@@ -87,10 +87,10 @@ tiny 11 px icon (the cutting/division "sprout" glyph).
 28 × 32; side-panel cards pad 20. Hover (when the card is a link): border
 `line-strong` plus `shadow-hover`.
 
-**Specimen card** (life list) — photo or tinted tile 168 px tall, then
-nickname (17/700; the common name when there is no nickname), the common name
-under a nickname (`ink-2`, upright), italic species (`ink-2`), "Location ·
-since Month YYYY" (meta), then a row of tags. The whole card is one `<a>`.
+**Specimen card** (life list) — photo or tinted tile 168 px tall, then the
+common name (17/700; the species when there is none), the italic species under
+a common name (`ink-2`), "Location · since Month YYYY" (meta), then a row of
+tags. The whole card is one `<a>`.
 
 **Relative card** (species page) — the same at 120 px photo height and
 16 px radius, four across.
@@ -103,7 +103,7 @@ label. Two across in a side panel.
 
 **Info mark** — 18 px ring in `line-strong`, "i" in moss, sits after the term
 with 4 px gap. Clicking opens a sage note block (14 px radius) that explains the
-term using the owner's own plants by nickname, with links to them. This is a
+term using the owner's own plants by name, with links to them. This is a
 README requirement: every horticultural term gets one.
 
 **Reminder card** — card with a status tag on top, bold one-line task, meta
@@ -134,7 +134,7 @@ backdrop nearly solid, white line-icon buttons (zoom, close, previous, next),
 "2 of 5" top left. Under the photo, the caption pill at the left and at most
 one action at the right as a white pill, 44 px: "Use as main photo" on a
 plant's photos ("Main photo" in its place on the main one, so nothing moves),
-or where the photo leads on the species page ("Open Granddaddy", "The image and
+or where the photo leads on the species page ("Open Ficus elastica", "The image and
 its licence on Wikimedia Commons"). Escape, Close or the backdrop closes it,
 and the page is where it was.
 
@@ -146,7 +146,7 @@ generated per specimen and link to its page.
 **Top bar** (both pages, white, hairline bottom border): leaf mark + "The
 Conservatory" in Fraunces 24 · nav pills (Collection, Species, Locations,
 Reminders, Flower Show; active = `sage-2` fill) · search (pill, leading icon,
-"Search nickname or species") · primary "Add a plant" with camera icon. Wraps
+"Search species") · primary "Add a plant" with camera icon. Wraps
 to two rows on narrow screens.
 
 **Dashboard** (`mockups/dashboard.html`), top to bottom:

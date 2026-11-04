@@ -245,7 +245,7 @@ export function Namer({ initialJob, waiting, position, nextJobId: initialNext, l
                 <em className="sp text-ink">{named.name}</em>
               </p>
               <p className="text-body text-ink-2">
-                It is in your collection now. You can give it a nickname and a place on its own page.
+                It is in your collection now. You can give it a place on its own page.
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {nextJobId ? (

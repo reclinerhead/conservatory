@@ -72,8 +72,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     if (body.sameAsSpecimenId) {
       const sp = db
         .prepare(
-          `SELECT sp.id, COALESCE(sp.nickname, s.scientific_name) AS name FROM specimens sp
-             JOIN species s ON s.id = sp.species_id WHERE sp.id = ?`,
+          `SELECT sp.id, s.scientific_name || CASE WHEN s.cultivar IS NOT NULL THEN ' ''' || s.cultivar || '''' ELSE '' END AS name
+             FROM specimens sp JOIN species s ON s.id = sp.species_id WHERE sp.id = ?`,
         )
         .get(Number(body.sameAsSpecimenId)) as { id: number; name: string } | undefined;
       if (!sp) {

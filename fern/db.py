@@ -119,6 +119,15 @@ MIGRATIONS: list[tuple[int, str] | tuple[int, str, str]] = [
         ALTER TABLE specimens ADD COLUMN hero_photo_id INTEGER REFERENCES photos(id) ON DELETE SET NULL;
         """,
     ),
+    # v7 (#47): a plant is known by its species (its common name, else its
+    # binomial), so the nickname goes. The column is in no index, view or
+    # trigger, so SQLite's DROP COLUMN (3.35+) does it in place; no rebuild.
+    (
+        7,
+        """
+        ALTER TABLE specimens DROP COLUMN nickname;
+        """,
+    ),
 ]
 
 LATEST_VERSION = MIGRATIONS[-1][0] if MIGRATIONS else BASELINE_VERSION
