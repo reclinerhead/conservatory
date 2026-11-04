@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { GONE, NO_LOCATION } from "./collection";
-import { ALL, countAt, gridRows, placeChips, selectedPlace, showingSpecies, tileLine } from "./species-grid";
+import { ALL, countAt, gridRows, placeChips, readSort, selectedPlace, showingSpecies, SORTS, tileLine } from "./species-grid";
 import type { SpeciesListRow } from "./species-page";
 
 function row(id: number, over: Partial<SpeciesListRow> = {}): SpeciesListRow {
@@ -16,6 +16,7 @@ function row(id: number, over: Partial<SpeciesListRow> = {}): SpeciesListRow {
     specimens: places.reduce((n, p) => n + p.n, 0),
     places,
     gone: 0,
+    latest: null,
     thumbUrl: null,
     ...over,
   };
@@ -68,8 +69,9 @@ describe("selectedPlace", () => {
 });
 
 describe("gridRows", () => {
-  it("shows every species with a living plant at All, most plants first, then by name", () => {
-    expect(gridRows(ROWS).map((r) => r.id)).toEqual([1, 2, 3, 5]);
+  it("shows every species with a living plant at All, by the name the tile shows, A to Z", () => {
+    expect(gridRows(ROWS).map((r) => r.id)).toEqual([2, 1, 3, 5]);
+    expect(gridRows(ROWS, { sort: "name" }).map((r) => r.id)).toEqual([2, 1, 3, 5]);
   });
 
   it("narrows to a place, to no location, or to the plants no longer here", () => {
@@ -79,10 +81,21 @@ describe("gridRows", () => {
     expect(gridRows(ROWS, { at: GONE.key }).map((r) => r.id)).toEqual([4, 5]);
   });
 
-  it("orders by the plants on the chip, not by every plant", () => {
-    const rows = [row(1, { commonName: "B", places: [{ at: "Porch", n: 1 }, { at: "Den", n: 5 }] }), row(2, { commonName: "A", places: [{ at: "Porch", n: 2 }] })];
-    expect(gridRows(rows, { at: "Porch" }).map((r) => r.id)).toEqual([2, 1]);
-    expect(gridRows(rows).map((r) => r.id)).toEqual([1, 2]);
+  it("breaks a tie on name by id, ignoring case", () => {
+    const rows = [row(3, { commonName: "jade plant", places: [{ at: null, n: 1 }] }), row(2, { commonName: "Jade plant", places: [{ at: null, n: 1 }] })];
+    expect(gridRows(rows).map((r) => r.id)).toEqual([2, 3]);
+  });
+
+  it("puts the species with the newest plant first under Latest added, then by name", () => {
+    const rows = [
+      row(1, { commonName: "Aloe", latest: "2026-10-01T12:00:00Z", places: [{ at: "Porch", n: 1 }] }),
+      row(2, { commonName: "Fern", latest: "2026-11-03T09:00:00Z", places: [{ at: "Porch", n: 1 }] }),
+      row(3, { commonName: "Cactus", latest: "2026-11-03T09:00:00Z", places: [{ at: "Den", n: 1 }] }),
+      row(4, { commonName: "Basil", latest: null, places: [{ at: "Porch", n: 1 }] }),
+    ];
+    expect(gridRows(rows, { sort: "latest" }).map((r) => r.id)).toEqual([3, 2, 1, 4]);
+    expect(gridRows(rows, { sort: "latest", at: "Porch" }).map((r) => r.id)).toEqual([2, 1, 4]);
+    expect(gridRows(rows, { sort: "latest", q: "a" }).map((r) => r.id)).toEqual([3, 1, 4]);
   });
 
   it("combines the search with the chip, and searches family and genus", () => {
@@ -117,6 +130,17 @@ describe("tileLine", () => {
     expect(countAt(ROWS[4], ALL)).toBe(1);
     expect(countAt(ROWS[4], GONE.key)).toBe(1);
     expect(countAt(ROWS[4], "Living room")).toBe(0);
+  });
+});
+
+describe("the sort options", () => {
+  it("lists Name first as the default and reads a stored value safely", () => {
+    expect(SORTS.map((s) => s.key)).toEqual(["name", "latest"]);
+    expect(readSort("latest")).toBe("latest");
+    expect(readSort("name")).toBe("name");
+    expect(readSort("most")).toBe("name");
+    expect(readSort(null)).toBe("name");
+    expect(readSort(undefined)).toBe("name");
   });
 });
 

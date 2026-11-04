@@ -89,6 +89,84 @@
     min-height: 40px;
   }
 
+  /* Selects: the chip's pill at the compact 40 px, with a chevron drawn in
+     beside it (the component's SVG) and 40 px of right padding for it.
+     Native, so a phone gets its own big picker. */
+  .select {
+    appearance: none;
+    min-height: 40px;
+    padding: 0 40px 0 14px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--color-line-2);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 120ms ease;
+  }
+  .select:hover {
+    background: var(--color-sage);
+  }
+  /* On a mouse, a browser that can draw a native <select>'s list
+     (appearance: base-select) draws it in the house style: a white card of
+     44 px pill rows, sage under the pointer, the chosen one moss and bold
+     with a check. Touch screens and other browsers keep their own picker. */
+  @supports (appearance: base-select) {
+    @media (hover: hover) and (pointer: fine) {
+      .select,
+      .select::picker(select) {
+        appearance: base-select;
+      }
+      .select {
+        display: inline-flex;
+        align-items: center;
+      }
+      .select::picker-icon {
+        display: none;
+      }
+      .select:open {
+        border-color: var(--color-line-strong);
+      }
+      .select::picker(select) {
+        margin-block: 6px;
+        padding: 6px;
+        border: 1px solid var(--color-line-2);
+        border-radius: var(--radius-tile);
+        background: var(--color-surface);
+        box-shadow: var(--shadow-hover);
+      }
+      .select option {
+        min-height: 44px;
+        padding: 0 18px 0 12px;
+        gap: 10px;
+        border-radius: var(--radius-pill);
+        color: var(--color-ink);
+        font-weight: 400;
+        cursor: pointer;
+      }
+      .select option::checkmark {
+        content: "";
+        width: 16px;
+        height: 16px;
+        background: currentColor;
+        mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5 9-10'/%3E%3C/svg%3E") center / contain no-repeat;
+      }
+      .select option:hover {
+        background: var(--color-sage);
+      }
+      .select option:focus-visible {
+        outline: 3px solid var(--color-moss);
+        outline-offset: -3px;
+      }
+      .select option:checked {
+        color: var(--color-moss);
+        font-weight: 700;
+      }
+    }
+  }
+
   /* Cards: white, hairline, 18 px radius. Flat at rest; a linked card lifts on hover. */
   .card {
     background: var(--color-surface);

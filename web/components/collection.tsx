@@ -1,27 +1,12 @@
-"use client";
-
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { QrIcon } from "@/components/tag-code";
 import { LeafMark } from "@/components/topbar";
 import { cardNames, metaLine, STATUS_LABEL, type Tile } from "@/lib/collection";
-
-/** "Print pot tags" in the life list's header: the print page, narrowed to the place on screen (?at=). */
-export function PrintTagsLink() {
-  const at = useSearchParams().get("at");
-  return (
-    <Link href={at && at !== "all" ? `/tags?at=${encodeURIComponent(at)}` : "/tags"} className="btn btn-soft btn-compact hover:no-underline">
-      <QrIcon />
-      Print pot tags
-    </Link>
-  );
-}
 
 /**
  * The specimen card from DESIGN.md §4: photo or tinted tile 168 px tall,
  * the name (the common name, else the species), the italic species under a
- * common name, meta line, tags. One link. `compact` is the species page's variant: 140 px and a
- * 16 px radius, as the mockup's `rel`, and no common name, since every card
+ * common name, meta line, tags. One link. `compact` is the species page's
+ * variant: 140 px and a 16 px radius, as the mockup's `rel`, and no common name, since every card
  * there is the page's own species and its common name is the page's title.
  */
 export function SpecimenCard({ tile, tint, compact = false }: { tile: Tile; tint: string; compact?: boolean }) {

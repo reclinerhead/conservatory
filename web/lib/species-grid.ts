@@ -9,6 +9,18 @@ import { matchesSpecies, speciesTitle, type SpeciesListRow } from "./species-pag
 
 export const ALL = "all";
 
+/** The grid's orders, as the Sort by select lists them; the first is the default. */
+export type Sort = "name" | "latest";
+export const SORTS: Array<{ key: Sort; label: string }> = [
+  { key: "name", label: "Name, A to Z" },
+  { key: "latest", label: "Latest added" },
+];
+
+/** A stored or typed sort, read safely: anything not on the list is the default. */
+export function readSort(v: string | null | undefined): Sort {
+  return SORTS.some((s) => s.key === v) ? (v as Sort) : "name";
+}
+
 type Row = Pick<SpeciesListRow, "specimens" | "places" | "gone">;
 
 /** How many of a species' plants a chip stands for: living ones at "All" or at a place, gifted or died ones at "No longer here". */
@@ -56,18 +68,21 @@ export function selectedPlace(chips: Chip[], param: string | null): string {
   return chips.some((c) => c.key === param) ? (param as string) : ALL;
 }
 
-/** The species a chip and the search leave on screen: most of the chip's plants first, then by name A to Z, then id. */
-export function gridRows<T extends SpeciesListRow>(rows: T[], opts: { q?: string; at?: string } = {}): T[] {
+/**
+ * The species a chip and the search leave on screen, in the chosen order:
+ * by the name the tile shows, A to Z, then id; or "latest", by when each
+ * species' newest plant was added, newest first, then by name.
+ */
+export function gridRows<T extends SpeciesListRow>(rows: T[], opts: { q?: string; at?: string; sort?: Sort } = {}): T[] {
   const at = opts.at ?? ALL;
   const q = opts.q ?? "";
-  return rows
-    .filter((r) => countAt(r, at) > 0 && matchesSpecies(r, q))
-    .sort((a, b) => {
-      const byCount = countAt(b, at) - countAt(a, at);
-      if (byCount !== 0) return byCount;
-      const byName = speciesTitle(a).localeCompare(speciesTitle(b), "en", { sensitivity: "base" });
-      return byName !== 0 ? byName : a.id - b.id;
-    });
+  const byName = (a: T, b: T) => speciesTitle(a).localeCompare(speciesTitle(b), "en", { sensitivity: "base" }) || a.id - b.id;
+  const byLatest = (a: T, b: T) => {
+    const la = a.latest ?? "";
+    const lb = b.latest ?? "";
+    return la === lb ? byName(a, b) : la < lb ? 1 : -1;
+  };
+  return rows.filter((r) => countAt(r, at) > 0 && matchesSpecies(r, q)).sort(opts.sort === "latest" ? byLatest : byName);
 }
 
 function plants(n: number): string {

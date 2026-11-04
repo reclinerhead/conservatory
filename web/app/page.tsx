@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { PrintTagsLink } from "@/components/collection";
-import { BlankTile, SpeciesGrid } from "@/components/species-grid";
+import { BlankTile, SortSelect, SpeciesGrid } from "@/components/species-grid";
 import { LeafMark } from "@/components/topbar";
 import { TILE_TINTS } from "@/lib/collection";
 import { collectionCounts, waitingThumbs } from "@/lib/db";
@@ -67,7 +66,7 @@ export default function Home() {
               </h2>
               <p className="mt-1 text-meta text-ink-2 tabular-nums">{ledger.join(" · ")}</p>
             </div>
-            <PrintTagsLink />
+            <SortSelect />
           </div>
 
           {rows.length === 0 ? (
