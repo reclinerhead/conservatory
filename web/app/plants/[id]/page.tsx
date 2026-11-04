@@ -14,10 +14,10 @@ import { speciesList } from "@/lib/species";
 import { knownLocations, readSpecimen } from "@/lib/specimens";
 import { tagCode } from "@/lib/tag-code";
 
-// /plants/[id]: one specimen. Breadcrumb, title block, its photos as a
-// timeline (its main photo first, #46, each opening the lightbox), the
-// editable facts, and its species in the side column with how many relatives
-// it has and a link to the species page, then how it was named and, while it
+// /plants/[id]: one specimen. Breadcrumb (through its species' page), title
+// block, its photos as a timeline (its main photo first, #46, each opening
+// the lightbox), the editable facts, and its species in the side column with
+// how many relatives it has, then how it was named and, while it
 // lives, its pot tag (#36). Care and events arrive with the phases that
 // bring them.
 export const dynamic = "force-dynamic";
@@ -73,8 +73,15 @@ export default async function PlantPage({ params }: { params: Promise<{ id: stri
           Collection
         </Link>
         <span aria-hidden>›</span>
-        <span aria-current="page" className="font-semibold text-ink">
+        {/* The species is one tap up: its page is where the care sheet and
+            the relatives live. The plant itself goes by its tag number,
+            since it shares the species' name. */}
+        <Link href={`/species/${sp.id}`} className="font-semibold text-ink-2">
           {species ? name : binomial}
+        </Link>
+        <span aria-hidden>›</span>
+        <span aria-current="page" className="font-semibold text-ink tabular-nums">
+          Plant #{plant.id}
         </span>
       </nav>
 
@@ -203,9 +210,6 @@ export default async function PlantPage({ params }: { params: Promise<{ id: stri
             <p className="mt-4 text-meta text-ink-2">
               {relCount > 0 ? <Link href={`/species/${sp.id}#relatives`}>{relativesLine(relatives)}</Link> : relativesLine(relatives)}
             </p>
-            <Link href={`/species/${sp.id}`} className="btn btn-soft btn-compact mt-3 hover:no-underline">
-              Open the species page
-            </Link>
           </section>
           <section className="card p-5" aria-labelledby="record-h">
             <h3 id="record-h" className="mb-3 text-h3">

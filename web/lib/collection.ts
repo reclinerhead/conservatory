@@ -1,8 +1,7 @@
-// The collection grid's shape, pure: what a tile says, how tiles are searched,
-// grouped by location and ordered within a group. The server reads the rows
-// (lib/specimens.ts); the client (components/collection.tsx) filters and
-// groups them here on every keystroke, so a search over 150 plants never
-// leaves the phone.
+// A plant as a tile, pure: what it is called, its meta line, how tiles are
+// searched, grouped by location and ordered within a group. The server reads
+// the rows (lib/specimens.ts); the species page's In your collection and the
+// pot tag printer group them here, the printer on every keystroke.
 
 export type SpecimenStatus = "alive" | "gifted" | "died";
 
@@ -146,10 +145,4 @@ export function groupTiles(tiles: Tile[], opts: { q?: string; where?: string } =
 export function locationChips(tiles: Tile[]): Chip[] {
   const groups = groupTiles(tiles);
   return [{ key: "all", label: "All", n: tiles.length }, ...groups.map((g) => ({ key: g.key, label: g.label, n: g.tiles.length }))];
-}
-
-/** "Showing 9 of 42", or "Showing all 42" when nothing is filtered out. */
-export function showingLine(shown: number, total: number): string {
-  if (total === 0) return "Nothing to show yet";
-  return shown === total ? `Showing all ${total}` : `Showing ${shown} of ${total}`;
 }

@@ -172,7 +172,10 @@ export function readSpecies(db: DatabaseSync, id: number): SpeciesView | null {
 }
 
 /**
- * Every species, most owned first, for /species. The thumbnail is an owner
+ * Every species, most owned first, for the home page's species grid and the
+ * relatives. With each, its living plants counted by place (a JSON array of
+ * { at, n }, at null for no location yet) and its plants no longer here, so
+ * the grid filters by place on the phone. The thumbnail is an owner
  * photo's when there is one (owner photos outrank the reference everywhere):
  * the photo that leads the species gallery, which is each plant's main photo
  * (#46), the newest of those.
@@ -182,6 +185,10 @@ export function speciesList(db: DatabaseSync): SpeciesListRow[] {
     .prepare(
       `SELECT s.id, s.scientific_name, s.cultivar, s.common_name, s.canonical_name, s.family, s.genus, s.image_path, s.enriched_at,
               (SELECT COUNT(*) FROM specimens sp WHERE sp.species_id = s.id AND sp.status = 'alive') AS n,
+              (SELECT COUNT(*) FROM specimens sp WHERE sp.species_id = s.id AND sp.status <> 'alive') AS gone,
+              (SELECT json_group_array(json_object('at', g.location, 'n', g.c))
+                 FROM (SELECT sp.location, COUNT(*) AS c FROM specimens sp
+                        WHERE sp.species_id = s.id AND sp.status = 'alive' GROUP BY sp.location) g) AS places,
               (SELECT m.path FROM specimens sp
                  JOIN photos m ON m.id = (SELECT p.id FROM photos p WHERE p.specimen_id = sp.id ORDER BY ${photoOrder(db)} LIMIT 1)
                 WHERE sp.species_id = s.id
@@ -199,6 +206,8 @@ export function speciesList(db: DatabaseSync): SpeciesListRow[] {
     image_path: string | null;
     enriched_at: string | null;
     n: number;
+    gone: number;
+    places: string; // JSON
     hero: string | null;
   }>;
   return rows
@@ -211,6 +220,8 @@ export function speciesList(db: DatabaseSync): SpeciesListRow[] {
       family: r.family,
       genus: r.genus,
       specimens: r.n,
+      places: JSON.parse(r.places) as Array<{ at: string | null; n: number }>,
+      gone: r.gone,
       thumbUrl: r.hero ? `/media/${thumbPathFor(r.hero)}` : (referenceUrls(r.image_path, r.enriched_at)?.thumbUrl ?? null),
     }))
     .sort(compareSpecies);

@@ -87,10 +87,15 @@ tiny 11 px icon (the cutting/division "sprout" glyph).
 28 × 32; side-panel cards pad 20. Hover (when the card is a link): border
 `line-strong` plus `shadow-hover`.
 
-**Specimen card** (life list) — photo or tinted tile 168 px tall, then the
+**Specimen card** (species page, In your collection) — photo or tinted tile 168 px tall, then the
 common name (17/700; the species when there is none), the italic species under
 a common name (`ink-2`), "Location · since Month YYYY" (meta), then a row of
 tags. The whole card is one `<a>`.
+
+**Species tile** (life list) — the specimen card's shape: photo or tinted tile
+168 px tall, the common name (17/700) with the italic binomial under it, or the
+binomial alone in Fraunces italic with the line under it reserved, then a meta
+line ("3 plants · 2 places"). One `<a>` to the species page.
 
 **Relative card** (species page) — the same at 120 px photo height and
 16 px radius, four across.
@@ -144,12 +149,14 @@ generated per specimen and link to its page.
 ## 5. Page anatomy
 
 **Top bar** (both pages, white, hairline bottom border): leaf mark + "The
-Conservatory" in Fraunces 24 · nav pills (Collection, Species, Locations,
-Reminders, Flower Show; active = `sage-2` fill) · search (pill, leading icon,
+Conservatory" in Fraunces 24 · nav pills (Collection, Locations, Reminders,
+Flower Show; active = `sage-2` fill; Collection is lit on the species and
+plant pages it leads to) · search (pill, leading icon,
 "Search species") · primary "Add a plant" with camera icon. Wraps
 to two rows on narrow screens.
 
-**Dashboard** (`mockups/dashboard.html`), top to bottom:
+**Dashboard** (`mockups/dashboard.html` for everything but the life list's
+cards, which are species tiles, not specimen cards), top to bottom:
 1. Greeting + date · zone · next weather event, with a tag or two of what needs
    attention today.
 2. "Today's care" — 4 reminder cards in a row (wraps), link to all reminders.
@@ -157,10 +164,13 @@ to two rows on narrow screens.
 4. Two columns, 28 px gap: **Life list** (`flex: 999 1 560px`) and a **side
    column** (`flex: 1 1 300px; max-width: 360px`) that drops below on phones.
    - Life list header: title, counts line, view toggle (grid/list/table), sort.
-   - Filter chips: All · Houseplants · Garden beds · Succulents · Blooming now ·
-     Grown from cuttings · Needs care. Then Location / Family / Arrived selects
-     and "Clear filters".
-   - 3-across specimen cards, "Showing 9 of 42" + Show more.
+   - Filter chips by place: All · each place A to Z · No location yet · No
+     longer here, each with its count. The mockup's other chips and selects
+     (Houseplants, Blooming now, Family, Arrived) are not drawn; a family is
+     found by typing it in the search.
+   - 3-across species tiles (the specimen card's shape: 168 px photo, common
+     name, italic binomial, a meta line for the chip on screen), each opening
+     the species page; "Showing 9 of 42 species".
    - Side panels in order: New species added recently · Collection at a glance ·
      Blooming now · Flower Show (ribbons).
 

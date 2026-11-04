@@ -422,7 +422,7 @@ function RelativesBlock({ s }: { s: SpeciesView }) {
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-sage pt-3.5">
         <span className="text-meta text-ink-2">Matched on genus and family, among the plants you own.</span>
         {r.placed ? (
-          <Link href={`/species?family=${encodeURIComponent(r.family)}`} className="text-[14px] font-semibold">
+          <Link href={`/?q=${encodeURIComponent(r.family)}`} className="text-[14px] font-semibold">
             Every species in {r.family}
           </Link>
         ) : null}

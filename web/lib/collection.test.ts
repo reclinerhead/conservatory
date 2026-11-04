@@ -10,7 +10,6 @@ import {
   metaLine,
   monthYear,
   NO_LOCATION,
-  showingLine,
   speciesLabel,
   type Tile,
 } from "./collection";
@@ -137,13 +136,5 @@ describe("locationChips", () => {
       { key: "Living room", label: "Living room", n: 1 },
     ]);
     expect(locationChips([])).toEqual([{ key: "all", label: "All", n: 0 }]);
-  });
-});
-
-describe("showingLine", () => {
-  it("says all, a fraction, or nothing", () => {
-    expect(showingLine(42, 42)).toBe("Showing all 42");
-    expect(showingLine(9, 42)).toBe("Showing 9 of 42");
-    expect(showingLine(0, 0)).toBe("Nothing to show yet");
   });
 });
