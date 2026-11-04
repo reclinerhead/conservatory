@@ -1,5 +1,7 @@
 // PATCH /api/plants/:id: edit a specimen's own facts: nickname, location,
-// the date it was acquired, its status. Any subset; an empty string clears.
+// the date it was acquired, its status, and heroPhotoId, the photo the plant
+// is known by (#46: one of its own photos, or null for its newest). Any
+// subset; an empty string clears.
 //
 // DELETE /api/plants/:id: remove the specimen for good. Its photos go from
 // the table and from disk, and so do the jobs that brought them (otherwise
@@ -10,13 +12,14 @@
 // specimen is left on it, as "Change" does on the confirm screen.
 
 import { openReadWrite } from "@/lib/db";
+import { hasHeroPhoto } from "@/lib/specimens";
 import { removeStored } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
 const STATUSES = new Set(["alive", "gifted", "died"]);
 
-type Body = { nickname?: unknown; location?: unknown; acquiredOn?: unknown; status?: unknown };
+type Body = { nickname?: unknown; location?: unknown; acquiredOn?: unknown; status?: unknown; heroPhotoId?: unknown };
 
 /** A trimmed string of at most `max` characters, or null when blank; undefined when the field was not sent. */
 function text(v: unknown, max: number): string | null | undefined {
@@ -42,7 +45,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   }
 
   const sets: string[] = [];
-  const values: Array<string | null> = [];
+  const values: Array<string | number | null> = [];
   const nickname = text(body.nickname, 80);
   if (nickname !== undefined) {
     sets.push("nickname = ?");
@@ -66,7 +69,10 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     sets.push("status = ?");
     values.push(body.status);
   }
-  if (sets.length === 0) return Response.json({ error: "nothing to change" }, { status: 400 });
+  const hero = body.heroPhotoId;
+  if (hero !== undefined && hero !== null && !(Number.isInteger(hero) && (hero as number) > 0))
+    return Response.json({ error: "heroPhotoId must be a photo id or null" }, { status: 400 });
+  if (sets.length === 0 && hero === undefined) return Response.json({ error: "nothing to change" }, { status: 400 });
 
   let db;
   try {
@@ -75,15 +81,24 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     return Response.json({ error: (err as Error).message }, { status: 503 });
   }
   try {
+    if (hero !== undefined) {
+      if (!hasHeroPhoto(db)) return Response.json({ error: "Fern has not brought the database to schema v6 yet" }, { status: 503 });
+      if (!db.prepare("SELECT 1 FROM specimens WHERE id = ?").get(id)) return Response.json({ error: "no such plant" }, { status: 404 });
+      if (typeof hero === "number" && !db.prepare("SELECT 1 FROM photos WHERE id = ? AND specimen_id = ?").get(hero, id))
+        return Response.json({ error: "not a photo of this plant" }, { status: 400 });
+      sets.push("hero_photo_id = ?");
+      values.push(hero as number | null);
+    }
     const r = db.prepare(`UPDATE specimens SET ${sets.join(", ")} WHERE id = ?`).run(...values, id);
     if (r.changes === 0) return Response.json({ error: "no such plant" }, { status: 404 });
-    const row = db.prepare("SELECT nickname, location, acquired_on, status FROM specimens WHERE id = ?").get(id) as {
+    const row = db.prepare(`SELECT nickname, location, acquired_on, status, ${hasHeroPhoto(db) ? "hero_photo_id" : "NULL"} AS hero_photo_id FROM specimens WHERE id = ?`).get(id) as {
       nickname: string | null;
       location: string | null;
       acquired_on: string | null;
       status: string;
+      hero_photo_id: number | null;
     };
-    return Response.json({ nickname: row.nickname, location: row.location, acquiredOn: row.acquired_on, status: row.status });
+    return Response.json({ nickname: row.nickname, location: row.location, acquiredOn: row.acquired_on, status: row.status, heroPhotoId: row.hero_photo_id });
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 500 });
   } finally {

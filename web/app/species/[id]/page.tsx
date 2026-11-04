@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CareFigures, CareRewrite } from "@/components/care";
 import { SpecimenCard } from "@/components/collection";
+import { OpenPhoto, PhotoLightbox, type PhotoSlide } from "@/components/lightbox";
 import { QrIcon, TagCodeBox } from "@/components/tag-code";
 import { Term } from "@/components/term";
 import { LeafMark } from "@/components/topbar";
@@ -53,6 +54,21 @@ export default async function SpeciesPage({ params }: { params: Promise<{ id: st
   const gallery = speciesGallery(s.photos, s.reference);
   const [hero, second, small, ...rest] = gallery;
   const ownerShown = gallery.filter((g) => g.kind === "owner").length;
+  // The lightbox's slides, in the gallery's order. A photo no longer navigates
+  // on tap, so where it led goes under it in the lightbox: its plant's page,
+  // or the reference's file page on Commons, where its licence lives.
+  const slides: PhotoSlide[] = gallery.map((g) => ({
+    key: g.key,
+    src: g.url,
+    alt: g.alt,
+    caption: g.caption,
+    link:
+      g.kind === "owner"
+        ? { href: g.href, label: `Open ${g.short}`, external: false }
+        : g.href !== g.url
+          ? { href: g.href, label: "The image and its licence on Wikimedia Commons", external: true }
+          : undefined,
+  }));
   const about = aboutState(s);
   const living = s.tiles.filter((t) => t.status === "alive").length;
   const groups = groupTiles(s.tiles);
@@ -116,55 +132,58 @@ export default async function SpeciesPage({ params }: { params: Promise<{ id: st
         </Link>
       </div>
 
-      {/* The gallery: owner photos first, newest first, one per specimen; the
-          reference image after them. Every slot keeps its size when empty. */}
-      <section aria-label="Photos" className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
-        {hero ? (
-          <Figure item={hero} size="hero" />
-        ) : (
-          <div className="flex h-[320px] items-center justify-center rounded-[22px] border border-line bg-sage sm:col-span-2 sm:h-[420px] lg:h-[560px]">
-            <LeafMark size={96} className="text-[#6B8F66]" />
-          </div>
-        )}
-        <div className="flex flex-col gap-3.5">
-          {second ? (
-            <Figure item={second} size="second" />
+      {/* The gallery: owner photos first, one per specimen by its main photo (#46),
+          newest first; the reference image after them. Every slot keeps its size
+          when empty. Every photo opens the lightbox. */}
+      <PhotoLightbox slides={slides} title={`Photos of ${speciesTitle(s)}`}>
+        <section aria-label="Photos" className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+          {hero ? (
+            <Figure item={hero} size="hero" />
           ) : (
-            <div className="flex h-[220px] flex-col items-center justify-center gap-2 rounded-[22px] border border-dashed border-line-2 bg-ground px-6 text-center sm:h-auto sm:min-h-[180px] sm:flex-1">
-              <LeafMark size={40} className="text-line-strong" />
-              <p className="text-meta text-ink-2">
-                {ownerShown === 0 && s.reference
-                  ? "Your own photo takes the lead here once you add one."
-                  : s.enrichedAt
-                    ? "Wikipedia has no reference image for this one."
-                    : "Fern has not fetched a reference image yet."}
-              </p>
+            <div className="flex h-[320px] items-center justify-center rounded-[22px] border border-line bg-sage sm:col-span-2 sm:h-[420px] lg:h-[560px]">
+              <LeafMark size={96} className="text-[#6B8F66]" />
             </div>
           )}
-          <div className="flex min-h-[120px] items-center gap-3">
-            {small ? <Figure item={small} size="small" /> : null}
-            <div className="flex flex-col gap-2">
-              <p className="text-meta text-ink-2">{galleryLine(s.photos.length, s.reference !== null)}</p>
-              <Link href="/add" className="btn btn-ghost btn-compact self-start hover:no-underline">
-                <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
-                  <circle cx="12" cy="13" r="3.5" />
-                </svg>
-                Add a photo
-              </Link>
+          <div className="flex flex-col gap-3.5">
+            {second ? (
+              <Figure item={second} size="second" />
+            ) : (
+              <div className="flex h-[220px] flex-col items-center justify-center gap-2 rounded-[22px] border border-dashed border-line-2 bg-ground px-6 text-center sm:h-auto sm:min-h-[180px] sm:flex-1">
+                <LeafMark size={40} className="text-line-strong" />
+                <p className="text-meta text-ink-2">
+                  {ownerShown === 0 && s.reference
+                    ? "Your own photo takes the lead here once you add one."
+                    : s.enrichedAt
+                      ? "Wikipedia has no reference image for this one."
+                      : "Fern has not fetched a reference image yet."}
+                </p>
+              </div>
+            )}
+            <div className="flex min-h-[120px] items-center gap-3">
+              {small ? <Figure item={small} size="small" /> : null}
+              <div className="flex flex-col gap-2">
+                <p className="text-meta text-ink-2">{galleryLine(s.photos.length, s.reference !== null)}</p>
+                <Link href="/add" className="btn btn-ghost btn-compact self-start hover:no-underline">
+                  <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
+                    <circle cx="12" cy="13" r="3.5" />
+                  </svg>
+                  Add a photo
+                </Link>
+              </div>
             </div>
           </div>
-        </div>
-        {rest.length > 0 ? (
-          <ul className="grid grid-cols-2 gap-3.5 sm:col-span-3 sm:grid-cols-4 lg:grid-cols-6">
-            {rest.map((g) => (
-              <li key={g.key}>
-                <Figure item={g} size="tile" />
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </section>
+          {rest.length > 0 ? (
+            <ul className="grid grid-cols-2 gap-3.5 sm:col-span-3 sm:grid-cols-4 lg:grid-cols-6">
+              {rest.map((g) => (
+                <li key={g.key}>
+                  <Figure item={g} size="tile" />
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+      </PhotoLightbox>
 
       <div className="flex flex-wrap items-start gap-7">
         <div className="flex min-w-0 flex-[999_1_560px] flex-col gap-7">
@@ -585,7 +604,7 @@ function PotTags({ s, living }: { s: SpeciesView; living: number }) {
   );
 }
 
-/** One photo in the gallery, with the mockup's dark caption: a pill on the large ones, a bar on the small ones. */
+/** One photo in the gallery, with the mockup's dark caption: a pill on the large ones, a bar on the small ones. A tap opens it in the lightbox. */
 function Figure({ item, size }: { item: GalleryItem; size: "hero" | "second" | "small" | "tile" }) {
   const box = {
     hero: "h-[320px] rounded-[22px] sm:col-span-2 sm:h-[420px] lg:h-[560px]",
@@ -594,18 +613,12 @@ function Figure({ item, size }: { item: GalleryItem; size: "hero" | "second" | "
     tile: "h-[120px] rounded-[16px]",
   }[size];
   const large = size === "hero" || size === "second";
-  const external = item.kind === "reference";
   return (
     <figure className={`relative m-0 overflow-hidden border border-line bg-sage ${box}`}>
-      <a
-        href={item.href}
-        {...(external ? { target: "_blank", rel: "noreferrer" } : {})}
-        className="block h-full"
-        title={external ? "The image and its licence on Wikimedia Commons" : `Open ${item.short}`}
-      >
+      <OpenPhoto slideKey={item.key} label={`See ${item.alt.charAt(0).toLowerCase()}${item.alt.slice(1)} full size`} className="h-full w-full">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={large ? item.url : item.thumbUrl} alt={item.alt} loading={size === "hero" ? "eager" : "lazy"} className="h-full w-full object-cover" />
-      </a>
+        <img src={large ? item.url : item.thumbUrl} alt="" loading={size === "hero" ? "eager" : "lazy"} className="h-full w-full object-cover" />
+      </OpenPhoto>
       {large ? (
         <figcaption
           className={`pointer-events-none absolute max-w-[calc(100%-1.5rem)] truncate rounded-pill bg-[rgba(30,42,28,.82)] font-semibold text-white ${

@@ -9,7 +9,7 @@ import { tileName, type Tile } from "./collection";
 import { referenceUrls, thumbPathFor } from "./photos";
 import { relativesOf, type Relatives } from "./relatives";
 import { compareSpecies, type Naming, type OwnerPhoto, type SpeciesListRow } from "./species-page";
-import { collectionTiles, hasTaggedAt } from "./specimens";
+import { collectionTiles, hasHeroPhoto, hasTaggedAt, photoOrder } from "./specimens";
 
 export type SpeciesView = {
   id: number;
@@ -95,14 +95,16 @@ export function readSpecies(db: DatabaseSync, id: number): SpeciesView | null {
 
   const tiles = collectionTiles(db, id);
   const names = new Map(tiles.map((t) => [t.id, tileName(t)]));
+  // Each with whether it is the photo its plant is known by (#46); the gallery picks one per plant.
   const photos = (
     db
       .prepare(
-        `SELECT p.id, p.path, p.taken_at, p.uploaded_at, p.specimen_id
+        `SELECT p.id, p.path, p.taken_at, p.uploaded_at, p.specimen_id,
+                ${hasHeroPhoto(db) ? "p.id = sp.hero_photo_id" : "0"} AS chosen
            FROM photos p JOIN specimens sp ON sp.id = p.specimen_id
           WHERE sp.species_id = ?`,
       )
-      .all(id) as Array<{ id: number; path: string; taken_at: string | null; uploaded_at: string; specimen_id: number }>
+      .all(id) as Array<{ id: number; path: string; taken_at: string | null; uploaded_at: string; specimen_id: number; chosen: number | null }>
   ).map((p) => ({
     photoId: p.id,
     specimenId: p.specimen_id,
@@ -110,6 +112,7 @@ export function readSpecies(db: DatabaseSync, id: number): SpeciesView | null {
     path: p.path,
     takenAt: p.taken_at,
     uploadedAt: p.uploaded_at,
+    chosen: p.chosen === 1,
   }));
 
   // The confirmation that brought this species in: the earliest one on any of
@@ -169,15 +172,21 @@ export function readSpecies(db: DatabaseSync, id: number): SpeciesView | null {
   };
 }
 
-/** Every species, most owned first, for /species. The thumbnail is an owner photo's when there is one: owner photos outrank the reference everywhere. */
+/**
+ * Every species, most owned first, for /species. The thumbnail is an owner
+ * photo's when there is one (owner photos outrank the reference everywhere):
+ * the photo that leads the species gallery, which is each plant's main photo
+ * (#46), the newest of those.
+ */
 export function speciesList(db: DatabaseSync): SpeciesListRow[] {
   const rows = db
     .prepare(
       `SELECT s.id, s.scientific_name, s.cultivar, s.common_name, s.canonical_name, s.family, s.genus, s.image_path, s.enriched_at,
               (SELECT COUNT(*) FROM specimens sp WHERE sp.species_id = s.id AND sp.status = 'alive') AS n,
-              (SELECT p.path FROM photos p JOIN specimens sp ON sp.id = p.specimen_id
+              (SELECT m.path FROM specimens sp
+                 JOIN photos m ON m.id = (SELECT p.id FROM photos p WHERE p.specimen_id = sp.id ORDER BY ${photoOrder(db)} LIMIT 1)
                 WHERE sp.species_id = s.id
-                ORDER BY COALESCE(p.taken_at, p.uploaded_at) DESC, p.id DESC LIMIT 1) AS hero
+                ORDER BY COALESCE(m.taken_at, m.uploaded_at) DESC, m.id DESC LIMIT 1) AS hero
          FROM species s`,
     )
     .all() as Array<{

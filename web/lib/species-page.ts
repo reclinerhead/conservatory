@@ -43,6 +43,7 @@ export type OwnerPhoto = {
   path: string; // relative to CONSERVATORY_DATA
   takenAt: string | null;
   uploadedAt: string;
+  chosen: boolean; // chosen on its plant's page as the photo the plant is known by (#46)
 };
 
 export type Reference = { url: string; thumbUrl: string; credit: string | null; sourceUrl: string | null };
@@ -60,19 +61,26 @@ export type GalleryItem = {
 
 const when = (p: OwnerPhoto) => p.takenAt ?? p.uploadedAt;
 
+/** Newest first by when the photo was taken (its upload when the EXIF had no date), then the newer id. */
+const newestFirst = (a: OwnerPhoto, b: OwnerPhoto) => (when(a) !== when(b) ? (when(a) < when(b) ? 1 : -1) : b.photoId - a.photoId);
+
 /**
- * The gallery, in order: the newest photo of each specimen of this species,
- * newest first, then the reference image. Owner photos always outrank the
+ * The gallery, in order: each specimen of this species shown by its main
+ * photo (#46: the one chosen on its page, else its newest), newest first by
+ * that photo's date, then the reference image. The same rule as the plant's
+ * page and the species list's thumbnail (photoOrder in lib/specimens.ts), so
+ * a plant looks the same everywhere. Owner photos always outrank the
  * reference, so the reference is the hero only when the household has no
  * photo of this species yet.
  */
 export function speciesGallery(photos: OwnerPhoto[], ref: Reference | null): GalleryItem[] {
-  const newest = [...photos].sort((a, b) => (when(a) !== when(b) ? (when(a) < when(b) ? 1 : -1) : b.photoId - a.photoId));
-  const seen = new Set<number>();
+  const main = new Map<number, OwnerPhoto>();
+  for (const p of [...photos].sort(newestFirst)) {
+    const held = main.get(p.specimenId);
+    if (!held || (p.chosen && !held.chosen)) main.set(p.specimenId, p);
+  }
   const items: GalleryItem[] = [];
-  for (const p of newest) {
-    if (seen.has(p.specimenId)) continue;
-    seen.add(p.specimenId);
+  for (const p of [...main.values()].sort(newestFirst)) {
     items.push({
       kind: "owner",
       key: `photo-${p.photoId}`,

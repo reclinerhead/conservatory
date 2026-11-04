@@ -87,7 +87,8 @@ def _v4_database_with_plants(path, monkeypatch):
 
 def test_v5_rebuilds_specimens_keeping_every_id_and_link(tmp_path, monkeypatch):
     conn = _v4_database_with_plants(tmp_path / "c.db", monkeypatch)
-    assert db.apply_schema(conn) == 5 == db.LATEST_VERSION
+    monkeypatch.setattr(db, "MIGRATIONS", db.MIGRATIONS[:4])  # up to v5
+    assert db.apply_schema(conn) == 5
 
     assert [tuple(r) for r in conn.execute("SELECT id, nickname, location, tagged_at FROM specimens ORDER BY id")] == [
         (1, "Granddaddy", "Shelf 2", None),
@@ -137,3 +138,33 @@ def test_a_rebuild_that_breaks_a_link_rolls_back_with_foreign_keys_on(tmp_path, 
     assert conn.execute("SELECT COUNT(*) FROM specimens").fetchone()[0] == 3
     assert "tagged_at" not in {r["name"] for r in conn.execute("PRAGMA table_info(specimens)")}
     assert conn.execute("PRAGMA foreign_keys").fetchone()[0] == 1
+
+
+def test_v6_adds_hero_photo_id_over_a_v5_database_once(tmp_path, monkeypatch):
+    conn = _v4_database_with_plants(tmp_path / "c.db", monkeypatch)
+    steps = db.MIGRATIONS
+    monkeypatch.setattr(db, "MIGRATIONS", steps[:4])
+    assert db.apply_schema(conn) == 5
+    monkeypatch.setattr(db, "MIGRATIONS", steps[:5])
+    assert db.apply_schema(conn) == 6
+    # Every plant keeps its rows and has no main photo chosen: newest first, as before.
+    assert [tuple(r) for r in conn.execute("SELECT id, nickname, hero_photo_id FROM specimens ORDER BY id")] == [
+        (1, "Granddaddy", None),
+        (2, None, None),
+        (5, "Shelf baby", None),
+    ]
+    # A second apply is a no-op: the ALTER would fail if it ran again.
+    assert db.apply_schema(conn) == 6
+    assert [r["version"] for r in conn.execute("SELECT version FROM schema_version ORDER BY version")] == [1, 2, 3, 4, 5, 6]
+
+
+def test_removing_a_plants_main_photo_puts_it_back_on_its_newest(tmp_path, monkeypatch):
+    conn = _v4_database_with_plants(tmp_path / "c.db", monkeypatch)
+    db.apply_schema(conn)
+    photo = conn.execute("SELECT id FROM photos WHERE specimen_id = 1").fetchone()[0]
+    conn.execute("UPDATE specimens SET hero_photo_id = ? WHERE id = 1", (photo,))
+    conn.commit()
+    conn.execute("DELETE FROM photos WHERE id = ?", (photo,))
+    conn.commit()
+    assert conn.execute("SELECT hero_photo_id FROM specimens WHERE id = 1").fetchone()[0] is None
+    assert conn.execute("PRAGMA foreign_key_check").fetchall() == []

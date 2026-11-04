@@ -12,9 +12,12 @@
 // attached to it and the species if no specimen is left, and the job is back
 // in the strip. Refused (409) once every photo of the job has been removed
 // from the plant's page (#34): the strip would get a job with nothing to show.
+// When one of the photos it unlinks was the plant's main photo (#46), the
+// plant goes back to its newest, so it never points at a photo not its own.
 
 import { openReadWrite } from "@/lib/db";
 import { nextWaitingJob, waitingJobIds } from "@/lib/jobs";
+import { hasHeroPhoto } from "@/lib/specimens";
 
 export const dynamic = "force-dynamic";
 
@@ -180,6 +183,8 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     if (photos === 0) return Response.json({ error: "its photos were removed from the plant's page" }, { status: 409 });
     db.exec("BEGIN IMMEDIATE");
     db.prepare("DELETE FROM confirmations WHERE job_id = ?").run(jobId);
+    if (hasHeroPhoto(db))
+      db.prepare("UPDATE specimens SET hero_photo_id = NULL WHERE id = ? AND hero_photo_id IN (SELECT id FROM photos WHERE job_id = ?)").run(conf.specimen_id, jobId);
     db.prepare("UPDATE photos SET specimen_id = NULL WHERE job_id = ?").run(jobId);
     const left = (db.prepare("SELECT COUNT(*) AS n FROM photos WHERE specimen_id = ?").get(conf.specimen_id) as { n: number }).n;
     let removedSpecimen = false;

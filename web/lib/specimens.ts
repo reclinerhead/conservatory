@@ -17,14 +17,32 @@ type TileRow = {
   hero: string | null;
 };
 
-/** The newest photo of a specimen, by when it was taken (upload time when the EXIF had no date). */
-const HERO = `(SELECT p.path FROM photos p WHERE p.specimen_id = sp.id
-                 ORDER BY COALESCE(p.taken_at, p.uploaded_at) DESC, p.id DESC LIMIT 1)`;
+/**
+ * Whether the specimens table has `hero_photo_id` (schema v6, #46). A database
+ * Fern has not migrated yet has none, which reads as no main photo chosen.
+ */
+export function hasHeroPhoto(db: DatabaseSync): boolean {
+  return db.prepare("SELECT 1 FROM pragma_table_info('specimens') WHERE name = 'hero_photo_id'").get() !== undefined;
+}
+
+/**
+ * A plant's photos in the order every screen shows them, as an ORDER BY over
+ * the photos alias `p`: the main photo first (#46, chosen on the plant's
+ * page), then newest first by when it was taken (upload time when the EXIF
+ * had no date), then id. With nothing chosen, or before v6, it is newest
+ * first. The card, the plant's page, the species gallery and the species
+ * list's thumbnail all read this, so they agree by construction.
+ */
+export function photoOrder(db: DatabaseSync, p = "p"): string {
+  const newest = `COALESCE(${p}.taken_at, ${p}.uploaded_at) DESC, ${p}.id DESC`;
+  return hasHeroPhoto(db) ? `(${p}.id = (SELECT h.hero_photo_id FROM specimens h WHERE h.id = ${p}.specimen_id)) DESC, ${newest}` : newest;
+}
 
 /** Every specimen as a grid tile (or every specimen of one species), in no particular order: the caller groups and sorts. */
 export function collectionTiles(db: DatabaseSync, speciesId?: number): Tile[] {
+  const hero = `(SELECT p.path FROM photos p WHERE p.specimen_id = sp.id ORDER BY ${photoOrder(db)} LIMIT 1)`;
   const sql = `SELECT sp.id, sp.nickname, sp.location, sp.acquired_on, sp.status, sp.created_at,
-                      s.scientific_name, s.cultivar, s.common_name, ${HERO} AS hero
+                      s.scientific_name, s.cultivar, s.common_name, ${hero} AS hero
                  FROM specimens sp JOIN species s ON s.id = sp.species_id`;
   const rows = (
     speciesId === undefined ? db.prepare(sql).all() : db.prepare(`${sql} WHERE sp.species_id = ?`).all(speciesId)
@@ -78,7 +96,7 @@ export type SpecimenView = {
   createdAt: string;
   taggedAt: string | null;
   species: { id: number; scientificName: string; genus: string | null; family: string | null; cultivar: string | null; commonName: string | null };
-  photos: Array<{ id: number; url: string; thumbUrl: string; takenAt: string | null; uploadedAt: string }>;
+  photos: Array<{ id: number; url: string; thumbUrl: string; takenAt: string | null; uploadedAt: string; main: boolean }>; // the main photo first (#46)
   named: { how: "pill" | "typed" | "same"; at: string } | null;
 };
 
@@ -109,12 +127,10 @@ export function readSpecimen(db: DatabaseSync, id: number): SpecimenView | null 
       }
     | undefined;
   if (!row) return null;
-  // Newest first by when the photo was taken; a photo without a date sorts by its upload.
+  // The main photo first, then newest first by when it was taken. The first is
+  // the hero, so it is the main photo whether chosen or simply the newest.
   const photos = db
-    .prepare(
-      `SELECT id, path, taken_at, uploaded_at FROM photos WHERE specimen_id = ?
-        ORDER BY COALESCE(taken_at, uploaded_at) DESC, id DESC`,
-    )
+    .prepare(`SELECT p.id, p.path, p.taken_at, p.uploaded_at FROM photos p WHERE p.specimen_id = ? ORDER BY ${photoOrder(db)}`)
     .all(id) as Array<{ id: number; path: string; taken_at: string | null; uploaded_at: string }>;
   const conf = db
     .prepare("SELECT chosen_rank, typed_name, confirmed_at FROM confirmations WHERE specimen_id = ? ORDER BY confirmed_at LIMIT 1")
@@ -135,12 +151,13 @@ export function readSpecimen(db: DatabaseSync, id: number): SpecimenView | null 
       cultivar: row.cultivar,
       commonName: row.common_name,
     },
-    photos: photos.map((p) => ({
+    photos: photos.map((p, i) => ({
       id: p.id,
       url: `/media/${p.path}`,
       thumbUrl: `/media/${thumbPathFor(p.path)}`,
       takenAt: p.taken_at,
       uploadedAt: p.uploaded_at,
+      main: i === 0,
     })),
     named: conf ? { how: conf.chosen_rank !== null ? "pill" : conf.typed_name ? "typed" : "same", at: conf.confirmed_at } : null,
   };

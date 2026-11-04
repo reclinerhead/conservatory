@@ -51,8 +51,8 @@ describe("speciesCrumbs", () => {
   });
 });
 
-function photo(photoId: number, specimenId: number, takenAt: string | null, uploadedAt = "2026-10-01T00:00:00.000Z"): OwnerPhoto {
-  return { photoId, specimenId, specimenName: `Plant ${specimenId}`, path: `photos/2026/10/p${photoId}.jpg`, takenAt, uploadedAt };
+function photo(photoId: number, specimenId: number, takenAt: string | null, uploadedAt = "2026-10-01T00:00:00.000Z", chosen = false): OwnerPhoto {
+  return { photoId, specimenId, specimenName: `Plant ${specimenId}`, path: `photos/2026/10/p${photoId}.jpg`, takenAt, uploadedAt, chosen };
 }
 
 const REF = { url: "/media/reference/1.jpg?v=x", thumbUrl: "/media/reference/1.thumb.jpg?v=x", credit: "Ficus elastica · Wikipedia", sourceUrl: "https://commons.wikimedia.org/wiki/File:F.jpg" };
@@ -89,6 +89,36 @@ describe("speciesGallery", () => {
     expect(speciesGallery([], REF).map((i) => i.kind)).toEqual(["reference"]);
     expect(speciesGallery([photo(1, 1, null)], REF)[0].kind).toBe("owner");
     expect(speciesGallery([], null)).toEqual([]);
+  });
+
+  it("shows a plant by its chosen main photo even when it has a newer one", () => {
+    const items = speciesGallery(
+      [
+        photo(1, 10, "2026-03-01T00:00:00Z", undefined, true), // chosen as plant 10's main photo
+        photo(2, 10, "2026-07-12T00:00:00Z"), // newer, but not the one plant 10 is known by
+        photo(3, 20, "2026-05-01T00:00:00Z"),
+      ],
+      REF,
+    );
+    expect(items.map((i) => i.key)).toEqual(["photo-3", "photo-1", "reference"]);
+  });
+
+  it("orders the plants by the date of the photo each is shown by, newest first", () => {
+    const items = speciesGallery(
+      [
+        photo(1, 10, "2026-09-01T00:00:00Z", undefined, true),
+        photo(2, 20, "2026-02-01T00:00:00Z", undefined, true),
+        photo(3, 20, "2026-10-01T00:00:00Z"), // plant 20's newest, but it is shown by photo 2
+        photo(4, 30, "2026-06-01T00:00:00Z"), // nothing chosen: its newest
+      ],
+      null,
+    );
+    expect(items.map((i) => i.key)).toEqual(["photo-1", "photo-4", "photo-2"]);
+  });
+
+  it("keeps a plant's newest when none of its photos is chosen, and the reference last", () => {
+    const items = speciesGallery([photo(1, 10, "2026-01-01T00:00:00Z"), photo(2, 10, "2026-02-01T00:00:00Z"), photo(3, 20, "2025-01-01T00:00:00Z", undefined, true)], REF);
+    expect(items.map((i) => i.key)).toEqual(["photo-2", "photo-3", "reference"]);
   });
 
   it("links the reference to its image when Commons gave no page", () => {
