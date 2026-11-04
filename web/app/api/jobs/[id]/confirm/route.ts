@@ -19,6 +19,7 @@
 // plant goes back to its newest, so it never points at a photo not its own.
 
 import { openReadWrite } from "@/lib/db";
+import { isSettled } from "@/lib/job-state";
 import { firstCommonName, nextWaitingJob, waitingJobIds } from "@/lib/jobs";
 import { hasHeroPhoto } from "@/lib/specimens";
 
@@ -59,10 +60,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return Response.json({ error: (err as Error).message }, { status: 503 });
   }
   try {
-    const job = db.prepare("SELECT id, status FROM jobs WHERE id = ?").get(jobId) as { id: number; status: string } | undefined;
+    const job = db.prepare("SELECT id, status, next_attempt_at FROM jobs WHERE id = ?").get(jobId) as
+      | { id: number; status: string; next_attempt_at: string | null }
+      | undefined;
     if (!job) return Response.json({ error: "no such job" }, { status: 404 });
-    if (job.status !== "identified" && job.status !== "rejected")
-      return Response.json({ error: `job is ${job.status}` }, { status: 409 });
+    // Settled: identified, rejected, or failed for good (#61). A job Fern will still retry is not ready yet.
+    if (!isSettled({ status: job.status, nextAttemptAt: job.next_attempt_at }))
+      return Response.json({ error: `job is ${job.status === "failed" ? "waiting for Fern to try again" : job.status}` }, { status: 409 });
     if (db.prepare("SELECT 1 FROM confirmations WHERE job_id = ?").get(jobId))
       return Response.json({ error: "already named" }, { status: 409 });
 

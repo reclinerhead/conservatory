@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import type { JobView } from "@/app/api/jobs/[id]/route";
 import { LeafMark } from "@/components/topbar";
 import { exifTakenAt } from "@/lib/exif";
+import { isSettled } from "@/lib/job-state";
 import { NoRetry, withRetry } from "@/lib/retry";
 import { decodeHeic, shrinkToJpeg } from "@/lib/shrink";
 
@@ -57,10 +58,6 @@ function sendError(status: number | null): string {
 function refuseOrThrow(r: Response) {
   if (r.status >= 400 && r.status < 500 && r.status !== 408 && r.status !== 429) throw new NoRetry(`refused (${r.status})`);
   if (!r.ok) throw new Error(`server ${r.status}`);
-}
-
-function isSettled(job: JobView): boolean {
-  return job.status === "identified" || job.status === "rejected" || job.status === "failed";
 }
 
 function count(n: number, noun: string): string {
@@ -256,7 +253,11 @@ export function Uploader() {
             const job = (await r.json()) as JobView;
             if (stopped) return;
             setPlants((cur) =>
-              cur.map((pl) => (pl.jobId !== id || pl.job?.status === job.status ? pl : { ...pl, job, state: isSettled(job) ? "settled" : "waiting" })),
+              cur.map((pl) =>
+                pl.jobId !== id || (pl.job?.status === job.status && pl.job?.nextAttemptAt === job.nextAttemptAt)
+                  ? pl
+                  : { ...pl, job, state: isSettled(job) ? "settled" : "waiting" },
+              ),
             );
           } catch {
             /* try again next round */
@@ -494,7 +495,11 @@ function SentStrip({
   } else {
     lead = waiting;
     heading = `${count(waiting.length, "plant")} with Fern`;
-    line = waiting.some((pl) => pl.job?.status === "identifying") ? "Fern is looking…" : "In the queue…";
+    line = waiting.some((pl) => pl.job?.status === "identifying")
+      ? "Fern is looking…"
+      : waiting.some((pl) => pl.job?.status === "failed") // failed with a next attempt: Fern will retry (#61)
+        ? "Fern couldn’t reach Pl@ntNet just now and will try again shortly."
+        : "In the queue…";
   }
   if (!action) {
     // The strip's button, invisible (so out of the tab order and unread), keeping its room so a change of state moves nothing.
