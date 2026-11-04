@@ -168,6 +168,23 @@ export function inCollectionLine(tiles: Pick<Tile, "status" | "location">[]): st
   return parts.join(" · ");
 }
 
+/** A plant the species page's "Add a photo" can put photos on, named for the status line and the chooser. */
+export type PhotoTarget = { id: number; label: string };
+
+/**
+ * The plants "Add a photo" on a species page can put a photo on (#55): the
+ * living ones, else, when every one has died or been given away, the rest;
+ * newest first, as In your collection orders them. Every plant of a species
+ * shares the species' name, so each goes by its pot tag number and its place:
+ * "Plant #142 · Kitchen", or "Plant #142" with no place set.
+ */
+export function photoTargets(tiles: Pick<Tile, "id" | "location" | "status" | "createdAt">[]): PhotoTarget[] {
+  const living = tiles.filter((t) => t.status === "alive");
+  return [...(living.length > 0 ? living : tiles)]
+    .sort((a, b) => (a.createdAt !== b.createdAt ? (a.createdAt < b.createdAt ? 1 : -1) : b.id - a.id))
+    .map((t) => ({ id: t.id, label: t.location?.trim() ? `Plant #${t.id} · ${t.location.trim()}` : `Plant #${t.id}` }));
+}
+
 export type Naming = { how: "pill" | "typed" | "same"; score: number | null; at: string } | null;
 
 /** How the species came into the collection, under the taxonomy card. */
