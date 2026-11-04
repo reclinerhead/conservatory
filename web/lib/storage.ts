@@ -1,6 +1,7 @@
 // Writing an uploaded photo to the data directory. Server only; used by
-// POST /api/photos (a new job) and POST /api/jobs/[id]/photos (another photo
-// of the same plant).
+// POST /api/photos (a photo of the plant being sent), POST /api/jobs/[id]/photos
+// (another photo of the same plant) and POST /api/plants/[id]/photos (a photo
+// straight onto a plant).
 
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -29,7 +30,7 @@ export async function storeUpload(file: Blob, now = new Date()): Promise<string>
   return rel;
 }
 
-/** Remove a photo and its thumbnail from disk; missing files are fine. */
+/** Remove a photo and its thumbnail from disk; missing files are fine. Also the discard for a file whose row never went in. */
 export async function removeStored(rel: string): Promise<void> {
   for (const p of [rel, thumbPathFor(rel)]) {
     try {
