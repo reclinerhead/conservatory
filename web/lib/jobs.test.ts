@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nextWaitingJob, photoIdsFrom, planJob } from "./jobs";
+import { firstCommonName, nextWaitingJob, photoIdsFrom, planJob } from "./jobs";
 
 describe("nextWaitingJob", () => {
   it("moves to the next later job, wraps to the first, and stops when alone", () => {
@@ -64,5 +64,24 @@ describe("planJob", () => {
 
   it("checks the gone photo before the plant and the job", () => {
     expect(planJob([1, 2], [{ id: 1, jobId: 7, specimenId: 4 }])).toMatchObject({ status: 404 });
+  });
+});
+
+describe("firstCommonName", () => {
+  it("takes the first non-blank name, trimmed", () => {
+    expect(firstCommonName('["Happy bean"]')).toBe("Happy bean");
+    expect(firstCommonName('["Lipstick", "Lipstick Echeveria"]')).toBe("Lipstick");
+    expect(firstCommonName('["", "  ", " Rubber fig "]')).toBe("Rubber fig");
+  });
+
+  it("is null for none, bad JSON, or anything but an array of strings", () => {
+    expect(firstCommonName("[]")).toBeNull();
+    expect(firstCommonName('["", " "]')).toBeNull();
+    expect(firstCommonName("not json")).toBeNull();
+    expect(firstCommonName('"Happy bean"')).toBeNull();
+    expect(firstCommonName("[3, null]")).toBeNull();
+    expect(firstCommonName("")).toBeNull();
+    expect(firstCommonName(null)).toBeNull();
+    expect(firstCommonName(undefined)).toBeNull();
   });
 });

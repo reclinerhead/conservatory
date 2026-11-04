@@ -5,7 +5,10 @@
 // plus an optional `cultivar` (the name on the nursery tag) for the first two.
 // Creates the species row if new, the specimen, links the job's photos, and
 // writes the confirmations row, in one transaction. Saves at once: there is
-// no batch save.
+// no batch save. A species named from a candidate (a pill, or a typed name
+// that matches one) takes the candidate's first common name, the one the
+// person saw, when it has none yet (#62); Fern's enrichment fills the common
+// name from GBIF only when it is still empty.
 //
 // DELETE /api/jobs/:id/confirm: "Change". Reverses it: removes the
 // confirmation, unlinks the photos, deletes the specimen if nothing else is
@@ -16,7 +19,7 @@
 // plant goes back to its newest, so it never points at a photo not its own.
 
 import { openReadWrite } from "@/lib/db";
-import { nextWaitingJob, waitingJobIds } from "@/lib/jobs";
+import { firstCommonName, nextWaitingJob, waitingJobIds } from "@/lib/jobs";
 import { hasHeroPhoto } from "@/lib/specimens";
 
 export const dynamic = "force-dynamic";
@@ -87,11 +90,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       let genus: string | null = null;
       let family: string | null = null;
       let gbifId: string | null = null;
+      let commonName: string | null = null;
       if (body.kind && body.rank) {
         const c = db
-          .prepare("SELECT scientific_name, genus, family, gbif_id FROM candidates WHERE job_id = ? AND kind = ? AND rank = ?")
+          .prepare("SELECT scientific_name, genus, family, gbif_id, common_names FROM candidates WHERE job_id = ? AND kind = ? AND rank = ?")
           .get(jobId, body.kind, Number(body.rank)) as
-          | { scientific_name: string; genus: string | null; family: string | null; gbif_id: string | null }
+          | { scientific_name: string; genus: string | null; family: string | null; gbif_id: string | null; common_names: string }
           | undefined;
         if (!c) {
           db.exec("ROLLBACK");
@@ -101,6 +105,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         genus = c.genus;
         family = c.family;
         gbifId = body.kind === "species" ? c.gbif_id : null;
+        commonName = firstCommonName(c.common_names);
         chosenRank = Number(body.rank);
       } else {
         const typed = clean(body.typedName);
@@ -114,13 +119,18 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         // candidate's taxonomy, so "Ficus elastica" typed by hand is as
         // complete a species row as the pill would have made.
         const match = db
-          .prepare("SELECT scientific_name, genus, family, gbif_id FROM candidates WHERE job_id = ? AND lower(scientific_name) = lower(?) ORDER BY kind = 'species' DESC, rank LIMIT 1")
-          .get(jobId, typed) as { scientific_name: string; genus: string | null; family: string | null; gbif_id: string | null } | undefined;
+          .prepare(
+            "SELECT scientific_name, genus, family, gbif_id, common_names FROM candidates WHERE job_id = ? AND lower(scientific_name) = lower(?) ORDER BY kind = 'species' DESC, rank LIMIT 1",
+          )
+          .get(jobId, typed) as
+          | { scientific_name: string; genus: string | null; family: string | null; gbif_id: string | null; common_names: string }
+          | undefined;
         if (match) {
           scientificName = match.scientific_name;
           genus = match.genus;
           family = match.family;
           gbifId = match.gbif_id;
+          commonName = firstCommonName(match.common_names);
         }
       }
 
@@ -132,10 +142,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       let speciesId: number;
       if (existing) {
         speciesId = existing.id;
+        if (commonName) db.prepare("UPDATE species SET common_name = ? WHERE id = ? AND common_name IS NULL").run(commonName, speciesId);
       } else {
         const ins = db
-          .prepare("INSERT INTO species (scientific_name, genus, family, gbif_id, cultivar) VALUES (?, ?, ?, ?, ?)")
-          .run(scientificName, genus, family, gbifId, cultivar);
+          .prepare("INSERT INTO species (scientific_name, genus, family, gbif_id, cultivar, common_name) VALUES (?, ?, ?, ?, ?, ?)")
+          .run(scientificName, genus, family, gbifId, cultivar, commonName);
         speciesId = Number(ins.lastInsertRowid);
       }
       const sp = db.prepare("INSERT INTO specimens (species_id) VALUES (?)").run(speciesId);
