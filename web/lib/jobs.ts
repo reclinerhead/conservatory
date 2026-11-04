@@ -168,6 +168,20 @@ export function withReadDb<T>(fn: (db: DatabaseSync) => T, fallback: T): T {
   }
 }
 
+/**
+ * The first common name in a candidate's `common_names` (a JSON array of
+ * strings), trimmed, or null: none, only blanks, or not a JSON array. The
+ * confirm route writes it onto the species the pill names (#62).
+ */
+export function firstCommonName(json: string | null | undefined): string | null {
+  if (!json) return null;
+  for (const name of safeNames(json)) {
+    const t = name.trim();
+    if (t) return t;
+  }
+  return null;
+}
+
 function safeNames(json: string): string[] {
   try {
     const v = JSON.parse(json);

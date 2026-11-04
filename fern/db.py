@@ -128,6 +128,31 @@ MIGRATIONS: list[tuple[int, str] | tuple[int, str, str]] = [
         ALTER TABLE specimens DROP COLUMN nickname;
         """,
     ),
+    # v8 (#62): the confirm route now writes the tapped candidate's first
+    # common name onto a new species; before, it dropped it, and a species
+    # GBIF has no English name for never got one. Data only: fill each
+    # species with no common name, once, from the candidates of the jobs that
+    # named it (the candidate with the species' name, species rows before
+    # genus, earliest confirmation first). Enrichment fills only empty names,
+    # so nothing it wrote is overwritten.
+    (
+        8,
+        """
+        UPDATE species SET common_name = (
+          SELECT trim(json_extract(c.common_names, '$[0]'))
+            FROM confirmations f
+            JOIN specimens sp ON sp.id = f.specimen_id
+            JOIN candidates c ON c.job_id = f.job_id AND lower(c.scientific_name) = lower(species.scientific_name)
+           WHERE sp.species_id = species.id
+             AND json_valid(c.common_names)
+             AND json_type(c.common_names, '$[0]') = 'text'
+             AND trim(json_extract(c.common_names, '$[0]')) <> ''
+           ORDER BY c.kind = 'species' DESC, f.confirmed_at, f.job_id, c.rank
+           LIMIT 1
+        )
+        WHERE common_name IS NULL;
+        """,
+    ),
 ]
 
 LATEST_VERSION = MIGRATIONS[-1][0] if MIGRATIONS else BASELINE_VERSION

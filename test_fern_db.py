@@ -167,7 +167,7 @@ def test_v7_drops_the_nickname_keeping_every_plant(tmp_path, monkeypatch):
     photo = conn.execute("SELECT id FROM photos WHERE specimen_id = 5").fetchone()[0]
     conn.execute("UPDATE specimens SET tagged_at = '2026-10-30T12:00:00Z', hero_photo_id = ?, status = 'gifted' WHERE id = 5", (photo,))
     conn.commit()
-    monkeypatch.setattr(db, "MIGRATIONS", steps)
+    monkeypatch.setattr(db, "MIGRATIONS", steps[:6])  # up to v7
     assert db.apply_schema(conn) == 7
 
     assert "nickname" not in {r["name"] for r in conn.execute("PRAGMA table_info(specimens)")}
@@ -187,7 +187,7 @@ def test_v7_drops_the_nickname_keeping_every_plant(tmp_path, monkeypatch):
 
 def test_a_fresh_database_has_no_nickname(tmp_path):
     conn = db.connect(tmp_path / "c.db")
-    assert db.current_version(conn) == db.LATEST_VERSION == 7
+    assert db.current_version(conn) == db.LATEST_VERSION == 8
     assert "nickname" not in {r["name"] for r in conn.execute("PRAGMA table_info(specimens)")}
 
 
@@ -201,3 +201,60 @@ def test_removing_a_plants_main_photo_puts_it_back_on_its_newest(tmp_path, monke
     conn.commit()
     assert conn.execute("SELECT hero_photo_id FROM specimens WHERE id = 1").fetchone()[0] is None
     assert conn.execute("PRAGMA foreign_key_check").fetchall() == []
+
+
+def test_v8_fills_a_species_common_name_from_the_candidate_that_named_it(tmp_path, monkeypatch):
+    steps = db.MIGRATIONS
+    monkeypatch.setattr(db, "MIGRATIONS", steps[:6])  # up to v7
+    conn = db.connect(tmp_path / "c.db")
+    assert db.current_version(conn) == 7
+    species = [
+        (1, "Peperomia ferreyrae", None),  # named from a pill: takes the pill's name
+        (2, "Ficus elastica", None),  # a typed name that matches a candidate: takes that candidate's
+        (3, "Echeveria agavoides", "Lipstick"),  # GBIF already gave one: kept
+        (4, "Sedum", None),  # a genus pill with no common names: stays empty
+        (5, "Hoya carnosa", None),  # typed, no candidate by that name: stays empty
+        (6, "Aloe vera", None),  # the candidate's common_names is not JSON: stays empty
+        (7, "Pilea peperomioides", None),  # two plants: the earliest confirmation wins
+    ]
+    for sid, name, common in species:
+        conn.execute("INSERT INTO species (id, scientific_name, common_name) VALUES (?, ?, ?)", (sid, name, common))
+    named = [
+        # job, species, chosen_rank, typed_name, confirmed_at, candidates (kind, rank, name, common_names)
+        (10, 1, 1, None, "2026-11-04T10:00:00Z", [("species", 1, "Peperomia ferreyrae", '["Happy bean", "Pincushion peperomia"]'), ("species", 2, "Kleinia barbertonica", '["Lemon Bean"]')]),
+        (11, 2, None, "ficus elastica", "2026-11-04T10:00:00Z", [("species", 2, "Ficus elastica", '["  Rubber fig "]'), ("genus", 1, "Ficus", '["Fig"]')]),
+        (12, 3, 1, None, "2026-11-04T10:00:00Z", [("species", 1, "Echeveria agavoides", '["Molded wax agave"]')]),
+        (13, 4, 1, None, "2026-11-04T10:00:00Z", [("genus", 1, "Sedum", "[]")]),
+        (14, 5, None, "Hoya carnosa", "2026-11-04T10:00:00Z", [("species", 1, "Hoya kerrii", '["Sweetheart plant"]')]),
+        (15, 6, 1, None, "2026-11-04T10:00:00Z", [("species", 1, "Aloe vera", "not json")]),
+        (16, 7, 1, None, "2026-11-04T12:00:00Z", [("species", 1, "Pilea peperomioides", '["Pancake plant"]')]),
+        (17, 7, 1, None, "2026-11-04T09:00:00Z", [("species", 1, "Pilea peperomioides", '["Chinese money plant"]')]),
+    ]
+    for job, sid, rank, typed, when, cands in named:
+        conn.execute("INSERT INTO jobs (id, status) VALUES (?, 'identified')", (job,))
+        conn.execute("INSERT INTO specimens (id, species_id) VALUES (?, ?)", (job, sid))
+        for kind, crank, cname, commons in cands:
+            conn.execute(
+                "INSERT INTO candidates (job_id, kind, rank, scientific_name, score, common_names) VALUES (?, ?, ?, ?, 0.5, ?)",
+                (job, kind, crank, cname, commons),
+            )
+        conn.execute(
+            "INSERT INTO confirmations (job_id, specimen_id, chosen_rank, typed_name, confirmed_at) VALUES (?, ?, ?, ?, ?)",
+            (job, job, rank, typed, when),
+        )
+    conn.commit()
+
+    monkeypatch.setattr(db, "MIGRATIONS", steps)
+    assert db.apply_schema(conn) == 8
+    assert dict(conn.execute("SELECT id, common_name FROM species ORDER BY id").fetchall()) == {
+        1: "Happy bean",
+        2: "Rubber fig",
+        3: "Lipstick",
+        4: None,
+        5: None,
+        6: None,
+        7: "Chinese money plant",
+    }
+    # A second apply is a no-op.
+    assert db.apply_schema(conn) == 8
+    assert [r["version"] for r in conn.execute("SELECT version FROM schema_version ORDER BY version")] == [1, 2, 3, 4, 5, 6, 7, 8]
