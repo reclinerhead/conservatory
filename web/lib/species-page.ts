@@ -18,7 +18,7 @@ export type Crumb = { label: string; href?: string; italic?: boolean; current?: 
  * Collection › Family › Genus › this species. A rank Fern has not filled is
  * skipped, never faked, and the genus is skipped for a species that is
  * itself a genus (an Echeveria with a nursery tag). Family and genus link to
- * the species list searched for them, which is the nearest thing to a page
+ * the collection searched for them, which is the nearest thing to a page
  * for a family until there is one.
  */
 export function speciesCrumbs(s: {
@@ -30,8 +30,8 @@ export function speciesCrumbs(s: {
   cultivar: string | null;
 }): Crumb[] {
   const crumbs: Crumb[] = [{ label: "Collection", href: "/" }];
-  if (s.family) crumbs.push({ label: s.family, href: `/species?q=${encodeURIComponent(s.family)}` });
-  if (s.genus && s.rank !== "genus") crumbs.push({ label: s.genus, href: `/species?q=${encodeURIComponent(s.genus)}`, italic: true });
+  if (s.family) crumbs.push({ label: s.family, href: `/?q=${encodeURIComponent(s.family)}` });
+  if (s.genus && s.rank !== "genus") crumbs.push({ label: s.genus, href: `/?q=${encodeURIComponent(s.genus)}`, italic: true });
   crumbs.push({ label: speciesTitle(s), italic: !displayName(s.commonName), current: true });
   return crumbs;
 }
@@ -189,6 +189,8 @@ export type SpeciesListRow = {
   family: string | null;
   genus: string | null;
   specimens: number; // living
+  places: Array<{ at: string | null; n: number }>; // where the living plants are, with how many in each; null is no location yet
+  gone: number; // plants gifted away or died
   thumbUrl: string | null; // an owner photo's thumbnail first, else the reference's, else none
 };
 
@@ -206,40 +208,4 @@ export function matchesSpecies(r: SpeciesListRow, q: string): boolean {
   return [r.commonName, speciesLabel(r.scientificName, r.cultivar), r.canonicalName, r.genus, r.family].some((v) =>
     (v ?? "").toLowerCase().includes(needle),
   );
-}
-
-export type FamilyChip = { key: string; label: string; n: number };
-
-/**
- * The species list's family filter: "All", then one chip per family A to Z,
- * each counted from the whole list so the row keeps its shape while a person
- * types. A species not placed in a family yet counts under All only.
- */
-export function familyChips(rows: Pick<SpeciesListRow, "family">[]): FamilyChip[] {
-  const counts = new Map<string, number>();
-  for (const r of rows) {
-    const f = (r.family ?? "").trim();
-    if (f) counts.set(f, (counts.get(f) ?? 0) + 1);
-  }
-  const families = [...counts]
-    .sort(([a], [b]) => a.localeCompare(b, "en", { sensitivity: "base" }))
-    .map(([f, n]) => ({ key: f, label: f, n }));
-  return [{ key: "all", label: "All", n: rows.length }, ...families];
-}
-
-/** The chip a `?family=` value selects, matched without regard to case; "all" when it names no family on the list. */
-export function selectedFamily(chips: FamilyChip[], param: string | null): string {
-  const want = (param ?? "").trim().toLowerCase();
-  return chips.find((c) => c.key !== "all" && c.key.toLowerCase() === want)?.key ?? "all";
-}
-
-/** Whether a row is in the selected family. */
-export function inFamily(r: Pick<SpeciesListRow, "family">, family: string): boolean {
-  return family === "all" || (r.family ?? "").trim() === family;
-}
-
-/** "2 species · 2 families" over the list. */
-export function speciesLedger(rows: Pick<SpeciesListRow, "family">[]): string {
-  const families = new Set(rows.map((r) => r.family).filter(Boolean)).size;
-  return `${rows.length} species · ${families === 1 ? "1 family" : `${families} families`}`;
 }

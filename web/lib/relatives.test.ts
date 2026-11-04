@@ -11,6 +11,8 @@ const row = (id: number, scientificName: string, genus: string | null, family: s
   family,
   genus,
   specimens,
+  places: [],
+  gone: 0,
   thumbUrl: null,
 });
 

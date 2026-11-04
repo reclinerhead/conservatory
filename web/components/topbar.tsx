@@ -5,12 +5,12 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
 // The top bar from design/DESIGN.md §5: leaf mark and wordmark, nav pills,
-// the search box, the primary "Add a plant". Collection and Species have
-// pages; the other three are drawn in their places so the bar keeps its
-// shape as phases land, and are plainly not links.
-const NAV: Array<{ label: string; href: string | null; also?: string }> = [
-  { label: "Collection", href: "/", also: "/plants/" },
-  { label: "Species", href: "/species", also: "/species/" },
+// the search box, the primary "Add a plant". Collection has a page, and is
+// lit on the species and plant pages it leads to; the other three are drawn
+// in their places so the bar keeps its shape as phases land, and are plainly
+// not links.
+const NAV: Array<{ label: string; href: string | null; also?: string[] }> = [
+  { label: "Collection", href: "/", also: ["/species/", "/plants/"] },
   { label: "Locations", href: null },
   { label: "Reminders", href: null },
   { label: "Flower Show", href: null },
@@ -39,7 +39,7 @@ export function LeafMark({ size = 30, className = "" }: { size?: number; classNa
 
 export function TopBar() {
   const pathname = usePathname();
-  const isOn = (item: (typeof NAV)[number]) => pathname === item.href || (item.also !== undefined && pathname.startsWith(item.also));
+  const isOn = (item: (typeof NAV)[number]) => pathname === item.href || (item.also ?? []).some((p) => pathname.startsWith(p));
   return (
     <header className="bg-surface border-b border-line">
       <div className="mx-auto flex w-full max-w-page flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3 sm:gap-x-6 sm:px-8">
@@ -87,12 +87,11 @@ export function TopBar() {
 }
 
 /**
- * "Search species". On the collection and on the species list it
- * filters as you type, through the URL (?q=) with the native history API, so
- * no request leaves the phone. On a species page Enter goes to the species
- * list with the search applied; anywhere else, to the collection.
+ * "Search species". On the collection it filters as you type, through the
+ * URL (?q=) with the native history API, so no request leaves the phone.
+ * Anywhere else, Enter goes to the collection with the search applied.
  */
-const LIVE_SEARCH = new Set(["/", "/species"]);
+const LIVE_SEARCH = new Set(["/"]);
 function SearchBox({ live }: { live: boolean }) {
   return live ? <LiveSearchBox /> : <SearchForm value="" />;
 }
@@ -111,7 +110,6 @@ function LiveSearchBox() {
     setValue(urlQ);
   }
   const live = LIVE_SEARCH.has(pathname);
-  const target = pathname.startsWith("/species") ? "/species" : "/";
   return (
     <SearchForm
       value={value}
@@ -125,7 +123,7 @@ function LiveSearchBox() {
         }
       }}
       onSubmit={() => {
-        if (!live) router.push(value.trim() ? `${target}?q=${encodeURIComponent(value.trim())}` : target);
+        if (!live) router.push(value.trim() ? `/?q=${encodeURIComponent(value.trim())}` : "/");
       }}
     />
   );
