@@ -2,6 +2,7 @@
 
 import type { DatabaseSync } from "node:sqlite";
 import { openReadOnly } from "./db";
+import { SETTLED_JOB_SQL } from "./job-state";
 import { thumbPathFor } from "./photos";
 
 export type JobCandidate = {
@@ -19,6 +20,7 @@ export type JobView = {
   id: number;
   status: "queued" | "identifying" | "identified" | "rejected" | "failed";
   error: string | null;
+  nextAttemptAt: string | null; // set while Fern will retry a failed job (#61); see isSettled in lib/job-state.ts
   quotaRemaining: number | null;
   photos: Array<{ id: number; url: string; thumbUrl: string; organ: string; takenAt: string | null }>;
   candidates: JobCandidate[];
@@ -29,8 +31,8 @@ export type JobView = {
 const SPECIMEN_NAME = `s.scientific_name || CASE WHEN s.cultivar IS NOT NULL THEN ' ''' || s.cultivar || '''' ELSE '' END`;
 
 export function readJob(db: DatabaseSync, jobId: number): JobView | null {
-  const job = db.prepare("SELECT id, status, error, quota_remaining FROM jobs WHERE id = ?").get(jobId) as
-    | { id: number; status: JobView["status"]; error: string | null; quota_remaining: number | null }
+  const job = db.prepare("SELECT id, status, error, next_attempt_at, quota_remaining FROM jobs WHERE id = ?").get(jobId) as
+    | { id: number; status: JobView["status"]; error: string | null; next_attempt_at: string | null; quota_remaining: number | null }
     | undefined;
   if (!job) return null;
   const photos = db
@@ -65,6 +67,7 @@ export function readJob(db: DatabaseSync, jobId: number): JobView | null {
     id: job.id,
     status: job.status,
     error: job.error,
+    nextAttemptAt: job.next_attempt_at,
     quotaRemaining: job.quota_remaining,
     photos: photos.map((p) => ({
       id: p.id,
@@ -123,12 +126,12 @@ export function planJob(ids: number[], rows: PhotoLink[]): JobPlan {
   return { kind: "make" };
 }
 
-/** Ids of jobs waiting for a name, oldest first. A job the person has not yet confirmed, identified or rejected. */
+/** Ids of jobs waiting for a name, oldest first: settled (identified, rejected, or failed for good) and not yet confirmed. */
 export function waitingJobIds(db: DatabaseSync): number[] {
   const rows = db
     .prepare(
       `SELECT j.id FROM jobs j
-        WHERE j.status IN ('identified', 'rejected')
+        WHERE ${SETTLED_JOB_SQL}
           AND NOT EXISTS (SELECT 1 FROM confirmations c WHERE c.job_id = j.id)
         ORDER BY j.created_at, j.id`,
     )
