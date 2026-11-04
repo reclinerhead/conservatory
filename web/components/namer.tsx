@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { SpeciesHit } from "@/app/api/species/route";
 import { Term } from "@/components/term";
+import { isSettled } from "@/lib/job-state";
 import type { JobView } from "@/lib/jobs";
 import { percent, planPills, type Pill } from "@/lib/pills";
 import { shrinkToJpeg } from "@/lib/shrink";
@@ -41,7 +42,7 @@ export function Namer({ initialJob, waiting, position, nextJobId: initialNext, l
   const [photoIndex, setPhotoIndex] = useState(0);
   const addRef = useRef<HTMLInputElement>(null);
 
-  const settled = job.status === "identified" || job.status === "rejected" || job.status === "failed";
+  const settled = isSettled(job); // a failed job Fern will retry keeps polling (#61)
   const plan = planPills(job.candidates);
   const nextJobId = named?.nextJobId ?? initialNext;
 
@@ -264,8 +265,17 @@ export function Namer({ initialJob, waiting, position, nextJobId: initialNext, l
             </>
           ) : !settled ? (
             <>
-              <p className="text-lead font-bold">Fern is looking…</p>
-              <p className="text-meta text-ink-2">Usually a few seconds. The suggestions appear here.</p>
+              {job.status === "failed" ? (
+                <>
+                  <p className="text-lead font-bold">Fern will try again shortly</p>
+                  <p className="text-meta text-ink-2">It couldn’t reach Pl@ntNet just now. The suggestions appear here when it does.</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-lead font-bold">Fern is looking…</p>
+                  <p className="text-meta text-ink-2">Usually a few seconds. The suggestions appear here.</p>
+                </>
+              )}
               <div className="flex flex-col gap-2" aria-hidden>
                 {[0, 1, 2].map((i) => (
                   <div key={i} className="h-14 rounded-pill border border-line bg-ground" />
@@ -274,7 +284,11 @@ export function Namer({ initialJob, waiting, position, nextJobId: initialNext, l
             </>
           ) : (
             <>
-              {plan.lowConfidence ? (
+              {job.status === "failed" ? (
+                <p className="text-body text-ink-2">
+                  Fern couldn’t look at this one{job.error ? ` (${job.error})` : ""}. Type the name if you know it.
+                </p>
+              ) : plan.lowConfidence ? (
                 <p className="text-body text-ink-2">
                   {plan.pills.length === 0 ? "Fern could not place this one. " : "Fern is not sure about this one. "}
                   Type the name if you know it{plan.pills.length > 0 ? ", or pick a guess below" : ""}.

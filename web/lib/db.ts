@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { SETTLED_JOB_SQL } from "./job-state";
 
 // The Conservatory's database is created and migrated by Fern (fern/db.py);
 // the web app opens it, read-only for pages and read-write for the routes
@@ -42,7 +43,7 @@ export type CollectionCounts = {
   specimens: number;
   species: number;
   places: number;
-  waiting: number; // jobs identified or rejected and not yet confirmed
+  waiting: number; // jobs settled (identified, rejected, or failed for good) and not yet confirmed
 };
 
 export const EMPTY_COUNTS: CollectionCounts = { specimens: 0, species: 0, places: 0, waiting: 0 };
@@ -56,7 +57,7 @@ export function waitingThumbs(limit = 3): string[] {
       .prepare(
         `SELECT p.path FROM jobs j
            JOIN photos p ON p.job_id = j.id
-          WHERE j.status IN ('identified', 'rejected')
+          WHERE ${SETTLED_JOB_SQL}
             AND NOT EXISTS (SELECT 1 FROM confirmations c WHERE c.job_id = j.id)
           ORDER BY j.finished_at DESC, p.id
           LIMIT ?`,
@@ -79,7 +80,7 @@ export function collectionCounts(): CollectionCounts {
            (SELECT COUNT(DISTINCT species_id) FROM specimens WHERE status = 'alive') AS species,
            (SELECT COUNT(DISTINCT location) FROM specimens WHERE status = 'alive' AND location IS NOT NULL) AS places,
            (SELECT COUNT(*) FROM jobs j
-              WHERE j.status IN ('identified', 'rejected')
+              WHERE ${SETTLED_JOB_SQL}
                 AND NOT EXISTS (SELECT 1 FROM confirmations c WHERE c.job_id = j.id)) AS waiting`,
       )
       .get() as Record<keyof CollectionCounts, number>;
