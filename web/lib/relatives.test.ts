@@ -14,6 +14,7 @@ const row = (id: number, scientificName: string, genus: string | null, family: s
   places: [],
   gone: 0,
   latest: null,
+  addedAt: "2026-01-01T00:00:00.000Z",
   thumbUrl: null,
 });
 

@@ -209,6 +209,7 @@ export type SpeciesListRow = {
   places: Array<{ at: string | null; n: number }>; // where the living plants are, with how many in each; null is no location yet
   gone: number; // plants gifted away or died
   latest: string | null; // when the species' newest plant was added, any status; ISO datetime
+  addedAt: string; // when the species joined the collection, its name first confirmed (species.created_at); ISO datetime
   thumbUrl: string | null; // an owner photo's thumbnail first, else the reference's, else none
 };
 

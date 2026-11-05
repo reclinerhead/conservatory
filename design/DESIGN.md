@@ -180,6 +180,10 @@ cards, which are species tiles, not specimen cards), top to bottom:
      the species page; "Showing 9 of 42 species".
    - Side panels in order: New species added recently · Collection at a glance ·
      Blooming now · Flower Show (ribbons).
+   - New species added recently: the four species that joined last (a new pot
+     of one already owned doesn't count), as side-panel rows, always four rows
+     tall. No "All N species" foot link: the grid is beside it.
+   - Collection at a glance: specimens · species · families · locations.
 
 **Species page** (`mockups/species.html`):
 1. Breadcrumb.
