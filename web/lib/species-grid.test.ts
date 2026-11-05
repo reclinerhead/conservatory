@@ -17,6 +17,7 @@ function row(id: number, over: Partial<SpeciesListRow> = {}): SpeciesListRow {
     places,
     gone: 0,
     latest: null,
+    addedAt: "2026-01-01T00:00:00.000Z",
     thumbUrl: null,
     ...over,
   };

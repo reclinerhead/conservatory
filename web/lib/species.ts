@@ -183,7 +183,7 @@ export function readSpecies(db: DatabaseSync, id: number): SpeciesView | null {
 export function speciesList(db: DatabaseSync): SpeciesListRow[] {
   const rows = db
     .prepare(
-      `SELECT s.id, s.scientific_name, s.cultivar, s.common_name, s.canonical_name, s.family, s.genus, s.image_path, s.enriched_at,
+      `SELECT s.id, s.scientific_name, s.cultivar, s.common_name, s.canonical_name, s.family, s.genus, s.image_path, s.enriched_at, s.created_at,
               (SELECT COUNT(*) FROM specimens sp WHERE sp.species_id = s.id AND sp.status = 'alive') AS n,
               (SELECT COUNT(*) FROM specimens sp WHERE sp.species_id = s.id AND sp.status <> 'alive') AS gone,
               (SELECT MAX(sp.created_at) FROM specimens sp WHERE sp.species_id = s.id) AS latest,
@@ -209,6 +209,7 @@ export function speciesList(db: DatabaseSync): SpeciesListRow[] {
     n: number;
     gone: number;
     latest: string | null;
+    created_at: string;
     places: string; // JSON
     hero: string | null;
   }>;
@@ -225,6 +226,7 @@ export function speciesList(db: DatabaseSync): SpeciesListRow[] {
       places: JSON.parse(r.places) as Array<{ at: string | null; n: number }>,
       gone: r.gone,
       latest: r.latest,
+      addedAt: r.created_at,
       thumbUrl: r.hero ? `/media/${thumbPathFor(r.hero)}` : (referenceUrls(r.image_path, r.enriched_at)?.thumbUrl ?? null),
     }))
     .sort(compareSpecies);

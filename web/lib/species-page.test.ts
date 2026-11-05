@@ -220,7 +220,7 @@ describe("namingLine", () => {
 });
 
 function row(id: number, specimens: number, over: Partial<SpeciesListRow> = {}): SpeciesListRow {
-  return { id, scientificName: `Genus sp${id}`, cultivar: null, commonName: null, canonicalName: null, family: null, genus: null, specimens, places: [], gone: 0, latest: null, thumbUrl: null, ...over };
+  return { id, scientificName: `Genus sp${id}`, cultivar: null, commonName: null, canonicalName: null, family: null, genus: null, specimens, places: [], gone: 0, latest: null, addedAt: "2026-01-01T00:00:00.000Z", thumbUrl: null, ...over };
 }
 
 describe("the species list", () => {

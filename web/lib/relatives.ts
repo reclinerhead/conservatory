@@ -11,7 +11,14 @@ export type Relatives =
   | { placed: false }
   | { placed: true; genus: string; family: string; sameGenus: SpeciesListRow[]; sameFamily: SpeciesListRow[] };
 
-const same = (a: string | null, b: string) => (a ?? "").trim().toLowerCase() === b.trim().toLowerCase();
+/**
+ * A genus or family as the household's taxa are matched: case and stray
+ * spaces ignored, since the confirm route writes Pl@ntNet's spelling before
+ * Fern writes GBIF's. Empty when there is none.
+ */
+export const taxonKey = (name: string | null): string => (name ?? "").trim().toLowerCase();
+
+const same = (a: string | null, b: string) => taxonKey(a) === taxonKey(b);
 
 /**
  * This species' relatives among `rows`. Same genus first, then same family
