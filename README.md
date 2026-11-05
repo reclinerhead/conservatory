@@ -2,13 +2,24 @@
 
 **A living inventory of the plants in a household, built from photos taken on a phone.**
 
-The Conservatory is where a plant collection gets catalogued, named, and looked after. Point a phone at a succulent on a basement shelf or a lily in a flower bed, and the Conservatory identifies it, adds it to the collection, pulls together what is known about the species, and starts keeping its record: where it lives, when it was repotted, when it bloomed, what it was propagated from. Over time the collection becomes a dashboard a person actually wants to open, and the pots get tags that can be scanned.
+The Conservatory is where a plant collection gets catalogued, named, and looked after. Point a phone at a succulent on a basement shelf or a lily in a flower bed, and the Conservatory identifies it, adds it to the collection, pulls together what is known about the species, and starts keeping its record: where it lives, when it arrived, what it looks like over time. Over time the collection becomes a dashboard a person actually wants to open, and the pots get tags that can be scanned.
 
 It is being built for three gardeners in one family. One raises around 150 succulents and cacti under a grow light all year. Two keep large outdoor flower beds and have done so for decades. All three tried, at some point, to keep an index of what they own on paper, and all three gave up. The Conservatory is the version that does not get overwhelming.
 
 It also teaches. All three have grown plants for years without ever being told what a genus is or why a nursery tag says 'Black Prince' instead of a species. Every horticultural term the app shows carries a small info mark that explains it in plain language, with an example from the person's own collection when there is one. Nobody should have to leave the app to understand the app.
 
-> **Status:** Phase 1 in progress. This README is the design brief; the state of what is built lives in the [technical guide](docs/guide/README.md), and the look of every screen is defined in [`design/DESIGN.md`](design/DESIGN.md).
+> **Status:** Phases 0, 1 and 2 are built, and Phase 3 has started: plants are added from photos, named, kept, given a species page with a care sheet, and tagged with a printed QR code. Next are the care log and the reminders ([#39](https://github.com/reclinerhead/conservatory/issues/39)). It runs at the house, on orchid, for phones on the home Wi-Fi. This README is the design brief; the state of what is built lives in the [technical guide](docs/guide/README.md), and the look of every screen is defined in [`design/DESIGN.md`](design/DESIGN.md).
+
+## What it looks like
+
+### Dashboard
+<img width="1387" height="1290" alt="The dashboard" src="https://github.com/user-attachments/assets/8b11fce9-9a80-4cdd-9d88-7c2a0c090c97" />
+
+### Species page
+<img width="1394" height="1215" alt="A species page: the title block, the gallery and About this species" src="https://github.com/user-attachments/assets/1ef0b4a6-19fa-445b-bb80-ae1ac944aee6" />
+
+### Species page: care sheet and relatives
+<img width="1043" height="1310" alt="A species page's care sheet and Relatives you already have" src="https://github.com/user-attachments/assets/7522d587-2175-44da-b6ea-02df0a92c165" />
 
 ## Lineage
 
@@ -18,79 +29,99 @@ The Conservatory is the fourth app in a family of home-scale projects, and it bo
 - **[Hearth](https://github.com/reclinerhead/hearth)** contributes the uploader: a phone-first capture flow where a photo becomes a structured record, with browser-side compression so uploads survive a weak connection.
 - **Échoes**, a private family archive, contributes the identification step. Its photo wizard shows suggestion pills with confidence, lets the person type a name instead, saves every confirmation immediately, and makes every mis-tap reversible. Those rules were learned with older family members as the users, and they carry over unchanged.
 
-## What it will do
+## What it does
 
-- **Add a plant from a photo.** Upload one photo or ten. Each becomes an identification job, and Fern, the worker on the household's station, sends it to a plant classifier. The result is a short list of candidates with confidence, which the owner confirms, corrects, or replaces with the name on the nursery tag.
-- **Keep the collection.** Every confirmed plant is a *specimen*, known by its species' name, with a location (a shelf, a room, a bed), the date it arrived, a photo timeline, and a log of events: watered, fertilized, repotted, bloomed, propagated, gifted, died. Propagation links a cutting to its parent, so a collection grown from cuttings gets a family tree for free.
-- **Know the species.** Each species has its own page: the Wikipedia summary and reference image, its taxonomy, a care sheet (light, water, soil, hardiness, fertilizing cadence, dormancy), every specimen of that species in the household, and its relatives in the collection, meaning other plants in the same genus or family.
-- **Tag the pots.** Every specimen gets a QR code that opens its page. Print them on label sheets, stick them on the pots, and scan one with the phone camera to find out what a plant is and when it was last watered. This is the pen-and-pencil index, done the cheap way.
-- **Remind the gardener.** Care reminders derived from the species care sheet, the season, and the household's hardiness zone: fertilize the cacti now that they are growing again, stop watering the Echeverias for the winter, bring the tender things in before the first frost. Reminders start as a strip on the dashboard. Push comes later, if at all.
-- **Explain itself.** Genus, species, cultivar, hybrid, family, confidence score, hardiness zone, dormancy: each one is a word with an info mark beside it, and the explanation uses the reader's own plants as the example.
-- **Hold a flower show.** Each household publishes a digest, and a hub at the house gathers them into a family view with ribbons: most species, most families, bloom of the week, longest-lived plant. Two sisters with competing flower beds are the reason this feature exists.
+- **Add a plant from photos.** One plant at a time, up to five photos of it: the flower, a leaf, the whole plant. Each plant becomes one identification job, and Fern, the worker on the household's station, sends all of its photos to a plant classifier together. The result is a short list of candidates with confidence, which the owner confirms, corrects, or replaces with the name on the nursery tag.
+- **Keep the collection.** Every confirmed plant is a *specimen*, known by its species' name, with a location (a shelf, a room, a bed), the date it arrived, whether it is still alive or was gifted or died, and a timeline of its photos. One photo is the plant's main photo, the one it is known by everywhere, and any photo opens full size. More photos go straight onto a plant from its own page, without naming it again.
+- **Show the collection.** The dashboard is a grid of species, one tile per species, narrowed by place ("Shelf 2", "No location yet", "No longer here"), searched by any name, genus or family from the top bar, and sorted by name or by what was added last. Beside it: the species that joined most recently, the collection at a glance, the families grown most, and one species a day to get to know. A strip at the top says how many plants are waiting for a name.
+- **Know the species.** Each species has its own page: the Wikipedia summary and reference image (the owner's own photos lead once there are any), its taxonomy from kingdom to species, a care sheet (light, water, soil, hardiness, fertilizing, dormancy) with the figures behind every line, every specimen of that species in the household, and its relatives in the collection, meaning other plants in the same genus or family.
+- **Tag the pots.** Every specimen gets a QR code that opens its page. Choose the plants, start at the first free label on a part-used sheet, and print onto standard 30-up address labels (the Avery 5160 layout, in weatherproof stock for outdoors). Each label also carries the plant's name, species, place and number, so it means something without a phone. A tag's address never changes, and a plant's number is never reused, so a label printed today still opens the right plant in ten years.
+- **Explain itself.** Genus, species, cultivar, family, specimen, confidence score, hardiness zone, dormancy: each one is a word with an info mark beside it, and the explanation uses the reader's own plants as the example where it can.
+
+### Still to come
+
+- **The care log** ([#40](https://github.com/reclinerhead/conservatory/issues/40)): watered, fertilized, repotted, bloomed, logged on a plant's page in a tap.
+- **The care rhythm** ([#41](https://github.com/reclinerhead/conservatory/issues/41)): how often each species wants water and feeding, read from its care sheet and overridable per species.
+- **Reminders** ([#42](https://github.com/reclinerhead/conservatory/issues/42)): worked out from the rhythm, the log and the season, grouped by location so a shelf of 40 succulents is one card ("Water Shelf 2 · 14 plants"), not 40. They appear as "Today's care" on the dashboard and on a Reminders page. Frost warnings for the beds come after.
+- **Lineage** ([#3](https://github.com/reclinerhead/conservatory/issues/3)): a cutting linked to the plant it came from, so a collection grown from cuttings gets a family tree for free.
+- **An info mark on every term** ([#10](https://github.com/reclinerhead/conservatory/issues/10)): the confirm screen, the plant pages, the species page and the care sheet have theirs; the rest of the app follows.
+- **The Flower Show** (Phase 4): each household publishes a digest, and a hub at the house gathers them into a family view with ribbons: most species, most families, bloom of the week, longest-lived plant. Two sisters with competing flower beds are the reason this feature exists.
 
 ## How identification works
 
-Identification uses **[Pl@ntNet](https://plantnet.org/)**, a classifier trained on tens of millions of labeled plant photos, through its REST API. It is the BirdNET of plants: purpose-built, accurate at the species level for wild and common garden plants, and free for non-commercial use up to 500 identifications a day. A query carries one to five photos of the same plant, each tagged with the organ it shows (leaf, flower, fruit, bark), and returns ranked species candidates with scores and a GBIF taxon ID. The Conservatory is a hobby project that will never be commercial, so the free tier is the whole budget.
+Identification uses **[Pl@ntNet](https://plantnet.org/)**, a classifier trained on tens of millions of labeled plant photos, through its REST API. It is the BirdNET of plants: purpose-built, accurate at the species level for wild and common garden plants, and free for non-commercial use up to 500 identifications a day. A query carries one to five photos of the same plant and returns ranked species candidates with scores, a GBIF taxon ID, and scores rolled up by genus and family. The Conservatory is a hobby project that will never be commercial, so the free tier is the whole budget.
 
 A general vision language model was considered and rejected. A local model through Ollama only runs at one house and is weak at species level. A cloud model costs per photo forever and is still worse than a classifier trained for the job. The language model's place is enrichment, where it runs once per species rather than once per photo.
 
-**The owner always confirms.** Plants hold still, and the person photographing one usually already knows what it is. So identification is a suggestion, not a verdict: the top three candidates as pills, a name field with autocomplete against the species already in the collection, and the options to skip for now or mark the photo as not a plant. Confirming saves at once. A "Change" link reverses it and cleans up after the mistake. There is no false-positive problem to solve, because nothing enters the collection without a tap.
+**The owner always confirms.** Plants hold still, and the person photographing one usually already knows what it is. So identification is a suggestion, not a verdict: the top candidates as pills, each with its score, a name field with autocomplete against the species already in the collection, a field for the nursery tag's name, and the options to skip for now, call it the same plant as the last one, or mark the photo as not a plant. Confirming saves at once. A "Change" link reverses it and cleans up after the mistake. There is no false-positive problem to solve, because nothing enters the collection without a tap.
 
-**What the classifier cannot do.** Most of what sits on a succulent shelf is not a species. It is a nursery cultivar or hybrid, often a cross between genera, and its name exists only on the tag it came with. Succulents in one genus also look alike, and the visible differences come from light and water rather than genetics. The realistic result is a confident genus and a shaky species guess. Garden beds have the same property in a milder form: hostas, daylilies, roses, and coleus are all cultivars. Three design consequences:
+**What the classifier cannot do.** Most of what sits on a succulent shelf is not a species. It is a nursery cultivar or hybrid, often a cross between genera, and its name exists only on the tag it came with. Succulents in one genus also look alike, and the visible differences come from light and water rather than genetics. The realistic result is a confident genus and a shaky species guess. Garden beds have the same property in a milder form: hostas, daylilies, roses, and coleus are all cultivars.
 
-- A species record carries a user-supplied cultivar or variety alongside the classifier's taxon.
-- Care sheets key on the genus, which is how plant care works anyway.
-- The first thing built is a spike that measures genus-level and species-level accuracy separately on real photos from both kinds of collection.
+The Phase 0 spike ([#1](https://github.com/reclinerhead/conservatory/issues/1)) measured this on thirteen photos from the succulent shelf before any interface existed. Nothing was rejected, houseplants came back at 0.72 to 0.91, and in 11 of 13 the top genus was right even where the species score was low: one Echeveria came back as three Echeveria species at 0.03 each, which is the classifier saying "Echeveria, species unknown" without being able to say it. What that shaped:
+
+- **A genus pill.** When the top candidates agree on a genus and no species is confident, the confirm screen leads with "Echeveria · species unsure".
+- **A low-confidence state.** When the best score is very low and the genera disagree, the name field comes first and the pills follow.
+- **Cultivars are the owner's.** A species record carries the name from the nursery tag alongside the classifier's taxon.
+- **Care keys on the genus** for a genus or a hybrid, which is how plant care works anyway.
+
+The flower-bed half of the spike has not been run yet. Garden ornamentals are closer to what the classifier was trained on, so it is expected to be the easier set.
 
 ## Two ways to add a plant, one queue
 
 The two gardeners outdoors have ordinary home Wi-Fi that does not reach the far bed, and no interest in installing anything on their phones. The one indoors is three steps from the router. Both are served by the same pipeline. The only difference is whether the person waits for the answer.
 
-**From the camera roll, later.** Take photos in the garden with the normal camera app, which needs no signal: the flower if there is one, a leaf, the whole plant. Back inside, open the Conservatory on the house Wi-Fi and send them one plant at a time: choose that plant's photos (up to five), send it, and go on to the next without leaving the page. Each plant, with all its photos, becomes one queued job, so the classifier sees the flower and the leaf together. Come back whenever: the dashboard reserves a strip that reads "7 plants waiting for a name", and tapping it walks through them one plant per screen, with large pills and a "same plant as the last one" button that merges two photos into one specimen. The camera roll is the offline mode. No service worker, no browser-side queue, nothing to break on an old phone.
+**From the camera roll, later.** Take photos in the garden with the normal camera app, which needs no signal: the flower if there is one, a leaf, the whole plant. Back inside, open the Conservatory on the house Wi-Fi and send them one plant at a time: choose that plant's photos (up to five), send it, and go on to the next without leaving the page. Each plant, with all its photos, becomes one queued job, so the classifier sees the flower and the leaf together. Come back whenever: the dashboard reserves a strip that reads "7 plants waiting for a name", and tapping it walks through them one plant per screen, with large pills and a "same plant as the last one" button that adds a plant's photos to the specimen just named. The camera roll is the offline mode. No service worker, no browser-side queue, nothing to break on an old phone.
 
-**On the spot.** Take the photos in the app. Sending the plant creates the same job, the page waits on it, and the answer appears a few seconds later with the way to the confirm screen. An "add another photo of this plant" button there sends one more for a better answer. Walk away mid-way and the job simply waits in the strip.
+**On the spot.** Take the photos in the app. Sending the plant creates the same job, the page follows it, and Fern's answer appears a few seconds later with the way to the confirm screen. An "add another photo of this plant" button there sends one more for a better answer. Walk away mid-way and the job simply waits in the strip.
 
-**The queue is the resilience.** Jobs live in SQLite on the station and survive a restart. A worker drains them one at a time, which keeps the classifier calls well under the daily and concurrent caps and makes a dropped connection or a flaky DNS lookup a retry rather than a loss. Photos are resized in the browser to about 1280 px on the long side before upload, each sent as its own request with retry, so a drop on the third photo keeps the first two, and a plant's job is made only once all of its photos are in.
+**The queue is the resilience.** Jobs live in SQLite on the station and survive a restart. A worker drains them one at a time, which keeps the classifier calls well under the daily and concurrent caps and makes a dropped connection or a flaky DNS lookup a retry rather than a loss. Photos are resized in the browser to about 1280 px on the long side before upload, each sent as its own request with retry, so a drop on the third photo keeps the first two, and a plant's job is made only once all of its photos are in. iPhone photos arrive as HEIC, which most desktop browsers cannot draw, so the page decodes them itself before the resize.
 
 Access from outside the house is not part of the first version. The station is reachable on its own LAN through the same public front door the Aviary uses, and that covers every flow above. The one thing a gardener might want from elsewhere, a look at their own collection, is what the flower show hub shows anyway.
 
 ## Enrichment
 
-The enrichment pass runs once per species, the first time a species is confirmed anywhere in the household, and mirrors the Aviary's:
+When the queue is idle, Fern fills in each species once, the first time it is confirmed anywhere in the household, and mirrors the Aviary's pass:
 
 - **Wikipedia** supplies the summary and the reference image, with the owner's own photo as the hero once there is one.
-- **GBIF** supplies the taxonomy. Family and genus are what power the relatives block, which is a join, not a model call.
-- **A language model** writes the care sheet once, from the taxonomy and the household's hardiness zone, and stores it. Sixty species for a 150-plant collection is a one-time cost of pennies. Every figure the sheet uses is kept so it can be checked.
+- **GBIF** supplies the taxonomy. Family and genus are what power the relatives block and the dashboard's families, which are joins, not model calls.
+- **A language model** writes the care sheet once, from the taxonomy, the first lines of the Wikipedia summary and the household's hardiness zone, and stores it. It is Claude Sonnet, called through the Vercel AI Gateway. A genus, or a hybrid, gets a sheet written for the genus as a whole. Every figure the sheet uses is kept with what it rests on, so it can be checked. A sheet costs a few cents, so a whole shelf of species is a one-time cost of a couple of dollars. Rewrite on the species page asks for a fresh one.
+
+The web app only reads what Fern wrote. A page never waits on Wikipedia, GBIF or a model.
 
 ## Where it runs
 
-On the same small boxes that run the Aviary, one per household, alongside it. The Aviary leaves those machines nearly idle. Each station has its own database and dashboard and never depends on the house. Deploys follow the Aviary's pattern: git-driven autodeploy with a promotion channel for the field stations, a Caddy front door, Tailscale between stations for the hub to pull digests. The code is a separate repository on purpose. Patterns are copied rather than shared until a second caller justifies a shared package.
+On the same small boxes that run the Aviary, one per household, alongside it. The Aviary leaves those machines nearly idle. Each station has its own database and dashboard and never depends on the house.
 
-## Tech stack (planned)
+Today that is one box, **orchid**, at the house, serving `https://conservatory.lan` to phones on the home Wi-Fi. Three systemd units run there: the web app, Fern, and a deploy watcher, so merging a pull request is the deploy. Caddy is the front door. The data lives outside the checkout, where a deploy cannot reach it. The field stations at the other households, and Tailscale between them for the hub to pull digests, come with Phase 4.
+
+The code is a separate repository from the Aviary on purpose. Patterns are copied rather than shared until a second caller justifies a shared package. How to run, deploy, back up and roll back is in the guide's [ops spoke](docs/guide/ops.md).
+
+## Tech stack
 
 | Layer | Built with |
 | --- | --- |
 | Identification | Pl@ntNet API, with the owner confirming every result |
-| Queue and storage | Python worker, SQLite |
-| Web app | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, pnpm |
-| Enrichment | Wikipedia and GBIF APIs; a language model for care sheets, once per species |
-| Tags | QR codes rendered to printable label sheets |
-| Stations and ops | systemd, Caddy, Tailscale, git-driven autodeploy |
+| Worker and storage | Fern: Python 3.13 (uv), SQLite in WAL mode, Pillow with pillow-heif |
+| Web app | Next.js 16 (App Router), React 19 with the React Compiler, TypeScript, Tailwind CSS 4, `node:sqlite`, pnpm |
+| Enrichment | Wikipedia (Action API) and GBIF; care sheets by Claude Sonnet through the Vercel AI Gateway, once per species |
+| Photos | Resized in the browser; HEIC decoded in the page with heic-to; full-size viewing with yet-another-react-lightbox |
+| Tags | QR codes drawn on the server with `qrcode`, printed on letter-size label sheets from the browser |
+| Station and ops | systemd, Caddy, git-driven autodeploy |
 | Tests | pytest and Vitest on every pull request |
 
 ## Plan
 
-- **Phase 0, the spike.** A throwaway script runs twenty basement succulents and twenty flower-bed photos through Pl@ntNet and reports top-3 accuracy at the genus and species level. This decides the identifier before any interface exists.
-- **Phase 1, one household.** Capture from the camera roll and on the spot, the job queue, the confirmation strip, and a dashboard of specimens. Runs at the house first.
-- **Phase 2, the species.** Enrichment pass, species pages, care sheets, relatives.
-- **Phase 3, the pots.** QR tags and label printing, the event log, the first care reminders.
-- **Phase 4, the flower show.** Digests from each household, the hub, ribbons.
+- **Phase 0, the spike.** Done ([#1](https://github.com/reclinerhead/conservatory/issues/1)). A throwaway script ran the succulent shelf through Pl@ntNet and scored it at the genus and species level. Pl@ntNet stayed the identifier.
+- **Phase 1, one household.** Done ([#4](https://github.com/reclinerhead/conservatory/issues/4)). Capture from the camera roll and on the spot, the job queue, the confirm screen, the collection and the plant pages, running on orchid.
+- **Phase 2, the species.** Done ([#19](https://github.com/reclinerhead/conservatory/issues/19)). The enrichment pass, species pages, care sheets, relatives.
+- **Phase 3, the pots.** In progress ([#39](https://github.com/reclinerhead/conservatory/issues/39)). Pot tags and label printing are built; the care log, the care rhythm and the reminders are next.
+- **Phase 4, the flower show.** To come. Digests from each household, the hub, ribbons.
 
 ## Open questions
 
-- Whether the Conservatory becomes the second mission on the family's shared mission platform or stays a sibling of the Aviary with copied patterns. Not needed before Phase 0.
+- Whether the Conservatory becomes the second mission on the family's shared mission platform or stays a sibling of the Aviary with copied patterns.
 - The community hub is provisionally **the Flower Show**. The identification worker is settled: **Fern**, in the tradition of the Aviary's Earl and Willard.
-- Whether reminders ever leave the dashboard for push or email.
+- Reminders stay in the app for now: the dashboard strip, the Reminders page and a count on the nav pill ([#39](https://github.com/reclinerhead/conservatory/issues/39)). If they ever need to leave it, the candidate is a morning email from Fern; web push was ruled out because it needs an app installed to the home screen.
 
 ## Credits
 
@@ -99,16 +130,3 @@ Plant identification by [Pl@ntNet](https://plantnet.org/). Species summaries fro
 ## License
 
 MIT.
-
-## Dashboard
-<img width="1387" height="1290" alt="image" src="https://github.com/user-attachments/assets/8b11fce9-9a80-4cdd-9d88-7c2a0c090c97" />
-
-## Species Page 
-<img width="1394" height="1215" alt="image" src="https://github.com/user-attachments/assets/1ef0b4a6-19fa-445b-bb80-ae1ac944aee6" />
-
-## Species Page Care & Related Plants
-<img width="1043" height="1310" alt="image" src="https://github.com/user-attachments/assets/7522d587-2175-44da-b6ea-02df0a92c165" />
-
-
-
-
