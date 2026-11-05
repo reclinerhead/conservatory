@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { familyCount, recentSpecies } from "./dashboard";
+import { barTwelfths, familyTally, generaShown, localDay, recentSpecies, spotlightPick } from "./dashboard";
 import type { SpeciesListRow } from "./species-page";
 
 function row(id: number, over: Partial<SpeciesListRow> = {}): SpeciesListRow {
@@ -16,6 +16,7 @@ function row(id: number, over: Partial<SpeciesListRow> = {}): SpeciesListRow {
     gone: 0,
     latest: null,
     addedAt: "2026-01-01T00:00:00.000Z",
+    hasSummary: false,
     thumbUrl: null,
     ...over,
   };
@@ -66,26 +67,131 @@ describe("recentSpecies", () => {
   });
 });
 
-describe("familyCount", () => {
-  it("counts each family once", () => {
-    const rows = [row(1, { family: "Crassulaceae" }), row(2, { family: "Crassulaceae" }), row(3, { family: "Cactaceae" })];
-    expect(familyCount(rows)).toBe(2);
+describe("familyTally", () => {
+  it("counts species with a living plant in each family, most first, then by name", () => {
+    const rows = [
+      row(1, { family: "Cactaceae", genus: "Rhipsalis" }),
+      row(2, { family: "Crassulaceae", genus: "Echeveria" }),
+      row(3, { family: "Crassulaceae", genus: "Aeonium" }),
+      row(4, { family: "Araceae", genus: "Monstera" }),
+      row(5, { family: "Moraceae", genus: "Ficus", specimens: 0, gone: 1 }),
+    ];
+    expect(familyTally(rows).families.map((f) => [f.name, f.species])).toEqual([
+      ["Crassulaceae", 2],
+      ["Araceae", 1],
+      ["Cactaceae", 1],
+    ]);
   });
 
-  it("counts case and stray-space variants of one family once", () => {
-    const rows = [row(1, { family: "Crassulaceae" }), row(2, { family: "crassulaceae " }), row(3, { family: " CRASSULACEAE" })];
-    expect(familyCount(rows)).toBe(1);
+  it("counts case and space variants of one family together", () => {
+    const rows = [row(1, { family: "Crassulaceae" }), row(2, { family: " crassulaceae" }), row(3, { family: "CRASSULACEAE " })];
+    expect(familyTally(rows).families).toHaveLength(1);
+    expect(familyTally(rows).families[0].species).toBe(3);
   });
 
-  it("adds nothing for a species with no family, or a blank one", () => {
-    expect(familyCount([row(1, { family: null }), row(2, { family: "  " }), row(3, { family: "Moraceae" })])).toBe(1);
+  it("shows the spelling most of a family's species carry", () => {
+    const rows = [
+      row(1, { commonName: "Aloe", family: "crassulaceae" }),
+      row(2, { commonName: "Bear-paws", family: "Crassulaceae" }),
+      row(3, { commonName: "Lipstick", family: "Crassulaceae" }),
+    ];
+    expect(familyTally(rows).families[0].name).toBe("Crassulaceae");
   });
 
-  it("adds nothing for a species with no living plant", () => {
-    expect(familyCount([row(1, { family: "Moraceae", specimens: 0, gone: 2 }), row(2, { family: "Araceae" })])).toBe(1);
+  it("breaks a tie between spellings by the first species A to Z", () => {
+    const rows = [row(1, { commonName: "Zebra plant", family: "Crassulaceae" }), row(2, { commonName: "Aloe", family: "crassulaceae " })];
+    expect(familyTally(rows).families[0].name).toBe("crassulaceae");
   });
 
-  it("is zero for no species", () => {
-    expect(familyCount([])).toBe(0);
+  it("lists each family's genera once, A to Z, whatever their spelling", () => {
+    const rows = [
+      row(1, { family: "Crassulaceae", genus: "Echeveria" }),
+      row(2, { family: "Crassulaceae", genus: "Aeonium" }),
+      row(3, { family: "Crassulaceae", genus: "echeveria " }),
+      row(4, { family: "Crassulaceae", genus: null }),
+      row(5, { family: "Crassulaceae", genus: "Dudleya" }),
+    ];
+    expect(familyTally(rows).families[0].genera).toEqual(["Aeonium", "Dudleya", "Echeveria"]);
+  });
+
+  it("counts the living species with no family as unplaced", () => {
+    const rows = [row(1, { family: null }), row(2, { family: " " }), row(3, { family: null, specimens: 0, gone: 1 }), row(4, { family: "Araceae" })];
+    expect(familyTally(rows)).toEqual({ families: [{ name: "Araceae", species: 1, genera: [] }], unplaced: 2 });
+  });
+
+  it("is empty for no species", () => {
+    expect(familyTally([])).toEqual({ families: [], unplaced: 0 });
+  });
+});
+
+describe("generaShown", () => {
+  it("names up to three genera, then how many more", () => {
+    expect(generaShown(["Aeonium", "Dudleya", "Echeveria", "Graptopetalum", "Sedum"])).toEqual({ names: ["Aeonium", "Dudleya", "Echeveria"], more: 2 });
+    expect(generaShown(["Aeonium", "Dudleya", "Echeveria"])).toEqual({ names: ["Aeonium", "Dudleya", "Echeveria"], more: 0 });
+    expect(generaShown([])).toEqual({ names: [], more: 0 });
+  });
+});
+
+describe("barTwelfths", () => {
+  it("measures a family against the top one, in twelfths", () => {
+    expect(barTwelfths(12, 12)).toBe(12);
+    expect(barTwelfths(6, 12)).toBe(6);
+    expect(barTwelfths(2, 3)).toBe(8);
+  });
+
+  it("never draws less than one twelfth, or more than the whole", () => {
+    expect(barTwelfths(1, 40)).toBe(1);
+    expect(barTwelfths(5, 4)).toBe(12);
+  });
+
+  it("draws nothing when there is no top family", () => {
+    expect(barTwelfths(0, 0)).toBe(0);
+  });
+});
+
+describe("spotlightPick", () => {
+  const eligible = [1, 2, 3, 4, 5].map((id) => row(id, { hasSummary: true }));
+  const day = (d: number, h = 12) => new Date(2026, 10, d, h, 0);
+
+  it("keeps the same species all day, from just after midnight to just before the next", () => {
+    const morning = spotlightPick(eligible, new Date(2026, 10, 4, 0, 1));
+    const night = spotlightPick(eligible, new Date(2026, 10, 4, 23, 59));
+    expect(morning?.id).toBe(night?.id);
+  });
+
+  it("moves on the next day", () => {
+    expect(spotlightPick(eligible, day(5))?.id).not.toBe(spotlightPick(eligible, day(4))?.id);
+  });
+
+  it("shows every eligible species once over as many days as there are of them", () => {
+    const ids = [4, 5, 6, 7, 8].map((d) => spotlightPick(eligible, day(d))?.id);
+    expect([...ids].sort()).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it("does not walk the species in the order they were added", () => {
+    const ids = Array.from({ length: 5 }, (_, i) => spotlightPick(eligible, day(4 + i))!.id);
+    const rotations = [0, 1, 2, 3, 4].map((k) => [1, 2, 3, 4, 5].map((_, i) => ((k + i) % 5) + 1));
+    expect(rotations).not.toContainEqual(ids);
+  });
+
+  it("picks the same species whatever order the rows arrive in", () => {
+    expect(spotlightPick([...eligible].reverse(), day(4))?.id).toBe(spotlightPick(eligible, day(4))?.id);
+  });
+
+  it("leaves out a species with no summary, or no living plant", () => {
+    const rows = [row(1, { hasSummary: false }), row(2, { hasSummary: true, specimens: 0, gone: 1 }), row(3, { hasSummary: true })];
+    for (const d of [4, 5, 6]) expect(spotlightPick(rows, day(d))?.id).toBe(3);
+  });
+
+  it("is null when no species is eligible", () => {
+    expect(spotlightPick([row(1)], day(4))).toBeNull();
+    expect(spotlightPick([], day(4))).toBeNull();
+  });
+});
+
+describe("localDay", () => {
+  it("turns at local midnight", () => {
+    expect(localDay(new Date(2026, 10, 4, 23, 59))).toBe(localDay(new Date(2026, 10, 4, 0, 0)));
+    expect(localDay(new Date(2026, 10, 5, 0, 0))).toBe(localDay(new Date(2026, 10, 4, 0, 0)) + 1);
   });
 });

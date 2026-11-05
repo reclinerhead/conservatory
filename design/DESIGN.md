@@ -179,11 +179,20 @@ cards, which are species tiles, not specimen cards), top to bottom:
      name, italic binomial, a meta line for the chip on screen), each opening
      the species page; "Showing 9 of 42 species".
    - Side panels in order: New species added recently · Collection at a glance ·
-     Blooming now · Flower Show (ribbons).
+     What you grow most · Blooming now · Flower Show (ribbons) · Get to know.
+     The timely panels sit above the one that is always there.
    - New species added recently: the four species that joined last (a new pot
      of one already owned doesn't count), as side-panel rows, always four rows
      tall. No "All N species" foot link: the grid is beside it.
    - Collection at a glance: specimens · species · families · locations.
+   - What you grow most: families by their living species, always five rows
+     (the family, its count, a moss bar against the top family on a sage
+     track, the genera owned in it), each opening the grid searched for the
+     family; a foot line, "6 families in all", with any species not placed yet.
+   - Get to know: one species a day, from those with a stored Wikipedia
+     summary: its photo, names and meta line, the summary's first paragraph
+     clamped to four lines, the care sheet's Light and Water headlines as tags,
+     a link to its page. Every part keeps its height, empty included.
 
 **Species page** (`mockups/species.html`):
 1. Breadcrumb.

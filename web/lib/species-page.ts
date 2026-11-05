@@ -210,6 +210,7 @@ export type SpeciesListRow = {
   gone: number; // plants gifted away or died
   latest: string | null; // when the species' newest plant was added, any status; ISO datetime
   addedAt: string; // when the species joined the collection, its name first confirmed (species.created_at); ISO datetime
+  hasSummary: boolean; // Fern has stored a Wikipedia summary for it
   thumbUrl: string | null; // an owner photo's thumbnail first, else the reference's, else none
 };
 
