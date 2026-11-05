@@ -14,8 +14,8 @@ import { aboutState, latinRuns, speciesTitle } from "@/lib/species-page";
 
 // The dashboard from design/DESIGN.md §5, Phase 1 subset: the pending strip,
 // the life list as a grid of species tiles with its place filters, and the
-// side column's "New species added recently", "at a glance", "What you grow
-// most" and "Get to know" cards. The greeting, Today's care, the other
+// side column's "New species added recently", "Get to know", "at a glance"
+// and "What you grow most" cards. The greeting, Today's care, the other
 // filters, Blooming now and the Flower Show arrive with the phases that have
 // data for them; their space is not faked.
 // The counts come from the database on every request, never from the build.
@@ -185,87 +185,6 @@ export default function Home() {
             </ul>
           </section>
 
-          <section className="card p-5" aria-labelledby="glance-h">
-            <h3 id="glance-h" className="mb-3 text-h3">
-              Your collection at a glance
-            </h3>
-            <div className="grid grid-cols-2 gap-2.5">
-              {(
-                [
-                  [counts.specimens, "specimens", "specimen"],
-                  [counts.species, "species", "species"],
-                  [families, "families", "family"],
-                  [counts.places, "locations", null],
-                ] as const
-              ).map(([n, label, term]) => (
-                <div key={label} className="rounded-tile bg-sage px-3.5 py-3">
-                  <p className="font-display text-[28px] leading-none tabular-nums">{n}</p>
-                  <p className="mt-1 text-meta text-ink-2">{term ? <Term k={term}>{label}</Term> : label}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* What you grow most: always five rows tall. Families by their
-              living species, each opening the grid searched for it. */}
-          <section className="card px-5 pb-4 pt-5" aria-labelledby="grow-h">
-            <h3 id="grow-h" className="text-h3">
-              What you grow most
-            </h3>
-            <p className="mt-1 text-meta text-ink-2">
-              Species in each <Term k="family">family</Term>
-            </p>
-            <ul className="mt-2">
-              {Array.from({ length: FAMILY_ROWS }, (_, i) => {
-                const f = tally.families[i];
-                const rowClass = "border-t border-sage first:border-t-0";
-                if (!f) {
-                  return i === 0 ? (
-                    <li key={i} className={rowClass}>
-                      <div className="flex h-20 flex-col justify-center gap-0.5">
-                        <p className="truncate font-bold">No families yet</p>
-                        <p className="text-meta text-ink-2">Families show here once Fern has placed your plants.</p>
-                      </div>
-                    </li>
-                  ) : (
-                    <li key={i} aria-hidden className={rowClass}>
-                      <div className="flex h-20 flex-col justify-center gap-2">
-                        <span className="block h-3 w-2/5 rounded-pill bg-sage" />
-                        <span className="block h-1.5 w-full rounded-pill bg-sage" />
-                        <span className="block h-2.5 w-3/5 rounded-pill bg-sage" />
-                      </div>
-                    </li>
-                  );
-                }
-                const { names, more } = generaShown(f.genera);
-                return (
-                  <li key={f.name} className={rowClass}>
-                    <Link
-                      href={`/?q=${encodeURIComponent(f.name)}`}
-                      className="group flex h-20 flex-col justify-center gap-1.5 text-ink hover:text-ink hover:no-underline"
-                    >
-                      <span className="flex items-baseline justify-between gap-3">
-                        <span className="truncate font-bold group-hover:underline">{f.name}</span>
-                        <span className="flex-none text-meta text-ink-2 tabular-nums">{count(f.species, "species", "species")}</span>
-                      </span>
-                      <span aria-hidden className="block h-1.5 w-full rounded-pill bg-sage">
-                        <span className={`block h-full rounded-pill bg-moss ${BAR_WIDTHS[barTwelfths(f.species, topFamily)]}`} />
-                      </span>
-                      <span className="truncate text-meta text-ink-2">
-                        {names.length > 0 ? <span className="sp">{names.join(", ")}</span> : " "}
-                        {more > 0 ? ` +${more} more` : null}
-                      </span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-            <p className="mt-1 truncate text-meta text-ink-2 tabular-nums">
-              {count(families, "family", "families")} in all
-              {tally.unplaced > 0 ? ` · ${count(tally.unplaced, "species", "species")} not placed yet` : null}
-            </p>
-          </section>
-
           {/* Get to know: one of the household's species a day. Every part
               keeps its height whichever species it is, or none. */}
           <section className="card p-5" aria-labelledby="know-h">
@@ -369,6 +288,87 @@ export default function Home() {
                 </div>
               </>
             )}
+          </section>
+
+          <section className="card p-5" aria-labelledby="glance-h">
+            <h3 id="glance-h" className="mb-3 text-h3">
+              Your collection at a glance
+            </h3>
+            <div className="grid grid-cols-2 gap-2.5">
+              {(
+                [
+                  [counts.specimens, "specimens", "specimen"],
+                  [counts.species, "species", "species"],
+                  [families, "families", "family"],
+                  [counts.places, "locations", null],
+                ] as const
+              ).map(([n, label, term]) => (
+                <div key={label} className="rounded-tile bg-sage px-3.5 py-3">
+                  <p className="font-display text-[28px] leading-none tabular-nums">{n}</p>
+                  <p className="mt-1 text-meta text-ink-2">{term ? <Term k={term}>{label}</Term> : label}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* What you grow most: always five rows tall. Families by their
+              living species, each opening the grid searched for it. */}
+          <section className="card px-5 pb-4 pt-5" aria-labelledby="grow-h">
+            <h3 id="grow-h" className="text-h3">
+              What you grow most
+            </h3>
+            <p className="mt-1 text-meta text-ink-2">
+              Species in each <Term k="family">family</Term>
+            </p>
+            <ul className="mt-2">
+              {Array.from({ length: FAMILY_ROWS }, (_, i) => {
+                const f = tally.families[i];
+                const rowClass = "border-t border-sage first:border-t-0";
+                if (!f) {
+                  return i === 0 ? (
+                    <li key={i} className={rowClass}>
+                      <div className="flex h-20 flex-col justify-center gap-0.5">
+                        <p className="truncate font-bold">No families yet</p>
+                        <p className="text-meta text-ink-2">Families show here once Fern has placed your plants.</p>
+                      </div>
+                    </li>
+                  ) : (
+                    <li key={i} aria-hidden className={rowClass}>
+                      <div className="flex h-20 flex-col justify-center gap-2">
+                        <span className="block h-3 w-2/5 rounded-pill bg-sage" />
+                        <span className="block h-1.5 w-full rounded-pill bg-sage" />
+                        <span className="block h-2.5 w-3/5 rounded-pill bg-sage" />
+                      </div>
+                    </li>
+                  );
+                }
+                const { names, more } = generaShown(f.genera);
+                return (
+                  <li key={f.name} className={rowClass}>
+                    <Link
+                      href={`/?q=${encodeURIComponent(f.name)}`}
+                      className="group flex h-20 flex-col justify-center gap-1.5 text-ink hover:text-ink hover:no-underline"
+                    >
+                      <span className="flex items-baseline justify-between gap-3">
+                        <span className="truncate font-bold group-hover:underline">{f.name}</span>
+                        <span className="flex-none text-meta text-ink-2 tabular-nums">{count(f.species, "species", "species")}</span>
+                      </span>
+                      <span aria-hidden className="block h-1.5 w-full rounded-pill bg-sage">
+                        <span className={`block h-full rounded-pill bg-moss ${BAR_WIDTHS[barTwelfths(f.species, topFamily)]}`} />
+                      </span>
+                      <span className="truncate text-meta text-ink-2">
+                        {names.length > 0 ? <span className="sp">{names.join(", ")}</span> : " "}
+                        {more > 0 ? ` +${more} more` : null}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="mt-1 truncate text-meta text-ink-2 tabular-nums">
+              {count(families, "family", "families")} in all
+              {tally.unplaced > 0 ? ` · ${count(tally.unplaced, "species", "species")} not placed yet` : null}
+            </p>
           </section>
         </aside>
       </div>
