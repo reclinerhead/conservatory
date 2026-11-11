@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import type { JobView } from "@/app/api/jobs/[id]/route";
 import { LeafMark } from "@/components/topbar";
 import { exifTakenAt } from "@/lib/exif";
@@ -16,7 +16,8 @@ import { decodeHeic, shrinkToJpeg } from "@/lib/shrink";
 // one request each, then POST /api/jobs makes the job from their ids, so Fern
 // never starts on half a plant. No organ chips: every photo goes as `auto`,
 // which Pl@ntNet's docs say is fine; the tips aside says what helps instead.
-// A HEIC the browser cannot draw is decoded in the page (#60).
+// A HEIC the browser cannot draw is decoded in the page (#60). On a computer,
+// photos can be dragged onto the page as well as chosen (#73).
 
 type Photo = {
   key: string;
@@ -43,6 +44,16 @@ const ATTEMPTS = 4; // waits of 0.8, 1.6 and 3.2 s between them, as the plant pa
 const BASE_MS = 800;
 const SEND_TIMEOUT_MS = 60_000; // a request the Wi-Fi dropped mid-way must not hang the plant
 const POLL_MS = 1500;
+const FULL = "This plant has five photos, the most Fern can send. Send it, or remove one first.";
+
+/** A dropped file the page can send: an image by type, or a HEIC by name (Windows gives some no type). */
+function isPhoto(f: File): boolean {
+  return f.type.startsWith("image/") || /\.hei[cf]$/i.test(f.name);
+}
+
+function carriesFiles(e: DragEvent): boolean {
+  return e.dataTransfer?.types.includes("Files") ?? false;
+}
 
 /** Why a plant did not go, in words; status is null when the Conservatory was never reached. */
 function sendError(status: number | null): string {
@@ -68,6 +79,7 @@ export function Uploader() {
   const [current, setCurrent] = useState<Photo[]>([]);
   const [plants, setPlants] = useState<Plant[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false); // photos are being dragged over the page
   const cameraRef = useRef<HTMLInputElement>(null);
   const rollRef = useRef<HTMLInputElement>(null);
   const nextKey = useRef(0); // a counter, not crypto.randomUUID, which a phone on the house's plain-http LAN does not have
@@ -77,23 +89,82 @@ export function Uploader() {
   const line = useRef<Promise<void>>(Promise.resolve()); // plants send one after another
 
   function pick(input: HTMLInputElement | null) {
-    if (current.length >= MAX_PHOTOS) setNotice("This plant has five photos, the most Fern can send. Send it, or remove one first.");
+    if (current.length >= MAX_PHOTOS) setNotice(FULL);
     else input?.click();
   }
 
-  function add(files: FileList | null) {
-    if (!files || files.length === 0) return;
-    const picked = Array.from(files);
-    const next = picked.slice(0, MAX_PHOTOS - current.length).map<Photo>((file) => ({
+  // notPhotos: dropped files already left out because they aren't photos. A
+  // picker's `accept` keeps those out of a choice; nothing filters a drop.
+  function add(files: File[], notPhotos = 0) {
+    if (files.length === 0 && notPhotos === 0) return;
+    const next = files.slice(0, MAX_PHOTOS - current.length).map<Photo>((file) => ({
       key: String(++nextKey.current),
       file,
       preview: URL.createObjectURL(file),
       look: "photo",
     }));
-    const left = picked.length - next.length;
+    const left = files.length - next.length;
     setCurrent((cur) => [...cur, ...next]);
-    setNotice(left > 0 ? `${count(left, "photo")} ${left === 1 ? "wasn't" : "weren't"} added: Fern can send five of one plant at most.` : null);
+    const said: string[] = [];
+    if (left > 0) said.push(next.length === 0 ? FULL : `${count(left, "photo")} ${left === 1 ? "wasn't" : "weren't"} added: Fern can send five of one plant at most.`);
+    if (notPhotos > 0) said.push(`${count(notPhotos, "file")} ${notPhotos === 1 ? "isn't a photo and wasn't" : "aren't photos and weren't"} added.`);
+    setNotice(said.length > 0 ? said.join(" ") : null);
   }
+
+  // Photos dragged in from the computer. The whole page takes the drop, so one
+  // that misses the card still lands on the plant: left to itself the browser
+  // would open the photo in place of the page, and lose the plants not yet
+  // sent. While files are over the page the card lifts and its empty slots
+  // show where they go. Enter and leave fire for every element crossed, so a
+  // count of them, not a flag, says when the drag has left the window. No
+  // mouse event fires during a drag, so a mouse move means it is over, and
+  // clears a lift whose last leave never came.
+  const dropped = useEffectEvent((files: File[]) => {
+    const photos = files.filter(isPhoto);
+    add(photos, files.length - photos.length);
+  });
+  useEffect(() => {
+    let depth = 0;
+    const enter = (e: DragEvent) => {
+      if (!carriesFiles(e)) return;
+      depth += 1;
+      setDragging(true);
+    };
+    const leave = (e: DragEvent) => {
+      if (!carriesFiles(e)) return;
+      depth = Math.max(0, depth - 1);
+      if (depth === 0) setDragging(false);
+    };
+    const over = (e: DragEvent) => {
+      if (!carriesFiles(e)) return;
+      e.preventDefault(); // the page accepts the drop
+      e.dataTransfer!.dropEffect = "copy";
+    };
+    const drop = (e: DragEvent) => {
+      if (!carriesFiles(e)) return;
+      e.preventDefault(); // and the browser doesn't open the photo
+      depth = 0;
+      setDragging(false);
+      dropped(Array.from(e.dataTransfer!.files));
+    };
+    const moved = () => {
+      if (depth === 0) return;
+      depth = 0;
+      setDragging(false);
+    };
+    window.addEventListener("dragenter", enter);
+    window.addEventListener("dragleave", leave);
+    window.addEventListener("dragover", over);
+    window.addEventListener("drop", drop);
+    window.addEventListener("mousemove", moved);
+    return () => {
+      window.removeEventListener("dragenter", enter);
+      window.removeEventListener("dragleave", leave);
+      window.removeEventListener("dragover", over);
+      window.removeEventListener("drop", drop);
+      window.removeEventListener("mousemove", moved);
+    };
+  }, []);
 
   function removePhoto(key: string) {
     const p = current.find((x) => x.key === key);
@@ -277,7 +348,8 @@ export function Uploader() {
   const failed = plants.filter((pl) => pl.state === "error").length;
 
   let summary: string;
-  if (notice) summary = notice;
+  if (dragging && current.length < MAX_PHOTOS) summary = "Let go to add them to this plant.";
+  else if (notice) summary = notice;
   else if (current.length === 0) summary = plants.length === 0 ? "Take or choose the photos of one plant." : "Ready for the next plant.";
   else summary = `${count(current.length, "photo")} of this plant, ready to send.${current.length === MAX_PHOTOS ? " That's the most Fern can send." : ""}`;
 
@@ -296,7 +368,10 @@ export function Uploader() {
         />
       ) : null}
 
-      <section aria-labelledby="plant-h" className="card flex flex-col gap-5 p-5 sm:px-8 sm:py-7">
+      <section
+        aria-labelledby="plant-h"
+        className={`card flex flex-col gap-5 p-5 transition-[border-color,box-shadow] duration-[120ms] sm:px-8 sm:py-7 ${dragging ? "border-line-strong shadow-hover" : ""}`}
+      >
         <h2 id="plant-h" className="text-section leading-tight">
           {plants.length === 0 ? "This plant" : "The next plant"}
         </h2>
@@ -309,6 +384,8 @@ export function Uploader() {
             <RollIcon />
             Choose from the camera roll
           </button>
+          {/* Said only where there is a mouse to drag with. */}
+          <p className="hidden self-center text-body text-ink-2 pointer-fine:block">or drop photos here</p>
           <input
             ref={cameraRef}
             type="file"
@@ -316,7 +393,7 @@ export function Uploader() {
             capture="environment"
             className="hidden"
             onChange={(e) => {
-              add(e.target.files);
+              add(Array.from(e.target.files ?? []));
               e.target.value = "";
             }}
           />
@@ -327,7 +404,7 @@ export function Uploader() {
             multiple
             className="hidden"
             onChange={(e) => {
-              add(e.target.files);
+              add(Array.from(e.target.files ?? []));
               e.target.value = "";
             }}
           />
@@ -346,8 +423,10 @@ export function Uploader() {
               </li>
             ) : (
               <li key={`slot-${i}`} aria-hidden className="flex flex-col gap-2">
-                <div className="flex aspect-square w-full items-center justify-center rounded-thumb border-2 border-dashed border-line-2 bg-ground">
-                  <span className="font-display text-[22px] text-line-strong">{i + 1}</span>
+                <div
+                  className={`flex aspect-square w-full items-center justify-center rounded-thumb border-2 border-dashed transition-colors duration-[120ms] ${dragging ? "border-moss bg-sage" : "border-line-2 bg-ground"}`}
+                >
+                  <span className={`font-display text-[22px] ${dragging ? "text-moss" : "text-line-strong"}`}>{i + 1}</span>
                 </div>
                 <div className="h-10" />
               </li>
@@ -409,8 +488,9 @@ function Thumb({ photo, onNoPreview, className }: { photo: Photo; onNoPreview: (
           <span className="text-meta text-ink-2">{photo.look === "reading" ? "Reading the photo…" : "No preview"}</span>
         </div>
       ) : (
+        // Not draggable: a preview dragged about the page must never be taken for a photo dropped in.
         // eslint-disable-next-line @next/next/no-img-element -- a local blob: URL, nothing for next/image to optimise
-        <img src={photo.preview} alt="" onError={onNoPreview} className="size-full object-cover" />
+        <img src={photo.preview} alt="" draggable={false} onError={onNoPreview} className="size-full object-cover" />
       )}
     </div>
   );
@@ -532,7 +612,7 @@ function SentStrip({
             <span key={pl.key} className={`thumb overflow-hidden border-2 border-sage bg-tile-2 ${i < 2 ? "-mr-2.5" : ""}`}>
               {p.look === "photo" ? (
                 // eslint-disable-next-line @next/next/no-img-element -- a local blob: URL, nothing for next/image to optimise
-                <img src={p.preview} alt="" onError={() => onNoPreview(p)} className="size-full object-cover" />
+                <img src={p.preview} alt="" draggable={false} onError={() => onNoPreview(p)} className="size-full object-cover" />
               ) : (
                 <LeafMark size={26} className="text-moss" />
               )}
