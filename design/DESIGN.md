@@ -176,15 +176,24 @@ tag ("Looks healthy", "Keep an eye on it", "Can't tell from these" in the
 default sage; "Needs attention" in `warn`, the one status that is
 time-sensitive), the date, the model's one sentence in body text (four lines
 on a phone, three from 640 px), then 40 px thumbs of the photos sent. The row
-is one button with a chevron at the right ("Findings and remedies" beside it
-from 640 px) and opens on tap, never hover: findings as `ground` cells (what
-was seen in bold, a "Likely cause" or "Possible cause" tag with the photo,
-the remedy), how sure the reading is, the photos to take next, and who read
-it. A question the owner asked sits under the summary in a `ground` note,
-"You asked" over "The reply", without opening anything, its reply's place
-held so the answer lands without moving the page. Waiting is the same row
-with a "Checking" tag, the leaf pulsing, and "Fern is looking…"; a failure is
-the same row with "Didn't finish" and the reason in a sentence. With no check
+is one button with a chevron at the right ("Findings and remedies", or
+"Close", beside it from 640 px) and opens and closes on tap, never hover:
+findings as `ground` cells (what was seen in bold, a "Likely cause" or
+"Possible cause" tag with the photo, the remedy), how sure the reading is,
+the photos to take next, and who read it. The latest check arrives open;
+earlier ones arrive closed. A question the owner asked sits under the summary
+as a conversation, without opening anything: their words in a moss bubble at
+the right (white text, 18 px corners, the one nearest the speaker 6 px), the
+reply in a `ground` bubble with a `line` border at the left, each at most 85%
+of the width and under a 12 px bold `ink-2` label ("You asked", "Fern's
+reply"). The moss bubble is the one place the action colour is not an
+action: it marks the owner's own words. Waiting is the same row with a
+"Checking" tag and, in the sentence's place, a 44 px sage disc holding a
+swaying leaf with a magnifying glass drifting over it, beside a bold phrase
+that changes every few seconds ("Looking more closely…", "Checking for
+visitors…") over one meta line; the reply's bubble holds three typing dots.
+Reduced motion stills them. A failure is the same row with "Didn't finish"
+and the reason in a sentence. With no check
 yet the row says so at the same height. Under a hairline, "Earlier checks":
 the same rows, newest first, five and then "Show all" (ghost, compact). A
 last hairline and one meta line: "A model's reading of your photos, not a

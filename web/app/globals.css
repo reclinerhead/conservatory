@@ -375,6 +375,60 @@
   }
 }
 
+/* The wait for a health check's answer (#93): a leaf that sways, a magnifying
+   glass that drifts over it, a phrase that fades in when it changes, and the
+   typing dots in the reply's bubble. Movement only; the colours come from the
+   utilities on the elements. Reduced motion stills all four. */
+@layer components {
+  .fern-sway {
+    transform-origin: 50% 90%;
+    animation: fern-sway 3.2s ease-in-out infinite;
+  }
+  .fern-scan {
+    animation: fern-scan 4.2s ease-in-out infinite;
+  }
+  .fern-phrase {
+    animation: fern-phrase 360ms ease-out;
+  }
+  .fern-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: var(--radius-pill);
+    background: var(--color-ink-3);
+    animation: fern-dot 1.1s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fern-sway,
+    .fern-scan,
+    .fern-phrase,
+    .fern-dot {
+      animation: none;
+    }
+    .fern-scan {
+      translate: -30% -30%;
+    }
+  }
+}
+@keyframes fern-sway {
+  0%, 100% { rotate: -5deg; }
+  50% { rotate: 5deg; }
+}
+/* The glass's centre wanders round the leaf: out to a tip, down the midrib, back. */
+@keyframes fern-scan {
+  0%, 100% { translate: -85% -80%; }
+  25% { translate: -10% -75%; }
+  50% { translate: -30% -15%; }
+  75% { translate: -80% -25%; }
+}
+@keyframes fern-phrase {
+  from { opacity: 0; translate: 0 4px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@keyframes fern-dot {
+  0%, 60%, 100% { translate: 0 0; opacity: 0.45; }
+  30% { translate: 0 -4px; opacity: 1; }
+}
+
 /* App-only base rules. In the base layer on purpose: an unlayered rule would
    outrank the component recipes above (a link styled `btn-primary` would keep
    the link colour and vanish into its own fill). */
