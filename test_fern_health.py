@@ -80,7 +80,6 @@ def test_parse_answer_keeps_the_reply_when_a_question_was_asked():
         (_answer(findings=[_finding(remedy=...)]), False, "finding 1 remedy is not text"),
         (_answer(findings=[_finding(remedy="Water it.")]), False, "finding 1 remedy is too short"),
         (_answer(findings=[_finding(likelihood="certain")]), False, "finding 1 likelihood"),
-        (_answer(findings=[_finding(photo=4)]), False, "finding 1 photo is 4"),
         (_answer(confidence="high"), False, "confidence is not an object"),
         (_answer(confidence={"level": "sure", "why": "It is clear."}), False, "confidence level"),
         (_answer(next_photos=["a", "b", "c", "d"]), False, "next_photos must be a list of at most 3"),
@@ -104,10 +103,17 @@ def test_a_summary_a_little_over_the_prompts_140_characters_is_kept():
     assert f"{health.SUMMARY_TARGET} characters" in care.load_prompt(health.PROMPT_PATH)[1]
 
 
-def test_a_finding_may_name_no_photo_and_photo_numbers_follow_the_photos_sent():
-    assert health.parse_answer(_answer(findings=[_finding(photo=None)]), asked=False)["findings"][0]["photo"] is None
-    with pytest.raises(health.InvalidAnswer, match="from 1 to 1"):
-        health.parse_answer(_answer(findings=[_finding(photo=2)]), asked=False, photo_count=1)
+@pytest.mark.parametrize(
+    "given, count, photo",
+    [(1, 2, 1), (2, 2, 2), ("1", 2, 1), (" 2 ", 2, 2), ("Photo 2", 2, 2), ("photo 1", 3, 1), (1.0, 2, 1),
+     (None, 2, None), (3, 2, None), (0, 2, None), ("3", 2, None), ("1 and 2", 2, None), ("the first", 2, None),
+     (1.5, 2, None), (True, 2, None), ([1], 2, None), (2, 1, None)],
+)
+def test_a_findings_photo_is_read_leniently_and_never_fails_the_check(given, count, photo):
+    # Live, a check with two photos came back with "1" as text and was thrown away.
+    assert health.photo_number(given, count) == photo
+    answer = health.parse_answer(_answer(findings=[_finding(photo=given)]), asked=False, photo_count=count)
+    assert answer["findings"][0]["photo"] == photo and answer["findings"][0]["seen"]  # the finding itself is kept
 
 
 # --- the prompt --------------------------------------------------------------
