@@ -174,7 +174,9 @@ and the page is where it was.
 always drawn. The latest check is a summary row at a fixed height: a status
 tag ("Looks healthy", "Keep an eye on it", "Can't tell from these" in the
 default sage; "Needs attention" in `warn`, the one status that is
-time-sensitive), the date, the model's one sentence in body text (four lines
+time-sensitive), the date, the model's one sentence as the row's lead (Fraunces 17, 19 from
+640 px, `ink`; a waiting, failed or empty row's words stay 15 body in
+`ink-2` inside the same box) (four lines
 on a phone, three from 640 px), then 40 px thumbs of the photos sent. The row
 is one button with a chevron at the right ("Findings and remedies", or
 "Close", beside it from 640 px) and opens and closes on tap, never hover:
@@ -204,7 +206,8 @@ which has nothing to open. Two taps: the first makes it the soft button
 saying "Yes, delete"; it puts itself back after five seconds.
 
 **Health check card** (plant page, first in the side column, living plants
-only) — the title with its info mark, one meta line, the plant's photos
+only) — the title with its info mark, a meta line that also suggests a photo
+showing the soil, the plant's photos
 newest first as the tags page's row without its text (a 44 px checkbox
 target and the 56 px thumb, wrapping), "2 of 3 chosen", a labelled text box
 for a problem or a question (14 px radius, four lines, a character count at

@@ -92,7 +92,7 @@ export function HealthCheckCard({
   return (
     <section id="health-check" className="card scroll-mt-4 p-5" aria-labelledby="health-check-h">
       {heading}
-      <p className="text-meta text-ink-2">Choose up to three photos for Fern to read.</p>
+      <p className="text-meta text-ink-2">Choose up to three photos for Fern to read. Include one that shows the soil if you can: it often settles what the leaves alone can&rsquo;t.</p>
 
       <fieldset className="mt-3">
         <legend className="sr-only">Photos to send</legend>
@@ -273,7 +273,11 @@ export function HealthPanel({ plantId, checks, canCheck }: { plantId: number; ch
 /**
  * The summary row's box, the same in every closed state: one line for the
  * tag and date, the sentence at a fixed height (four lines on a phone, three
- * from 640 px; an opened row shows it whole), and the thumbs' 40 px. The
+ * from 640 px; an opened row shows it whole), and the thumbs' 40 px. A
+ * finished check's sentence is the reading, so it is set in the display face
+ * a size up (#101) and leads the row over the question's bubbles; what a
+ * waiting, failed or empty row says instead (`muted`) stays body text in the
+ * same box. The
  * latest check opens by itself when its answer lands (#93), so that is where
  * the card grows.
  */
@@ -293,7 +297,10 @@ function RowShell({
   return (
     <span className="flex flex-col gap-2 text-left">
       <span className="flex h-7 items-center gap-x-2.5 whitespace-nowrap">{top}</span>
-      <span className={`block text-body leading-snug ${muted ? "text-ink-2" : "text-ink"} ${open ? "min-h-[4lh] sm:min-h-[3lh]" : "line-clamp-4 h-[4lh] sm:line-clamp-3 sm:h-[3lh]"}`}>{body}</span>
+      {/* The box is measured in the reading's own lines (#101), whatever it holds, so every state is one height. */}
+      <span className={`block font-display text-lead font-medium leading-snug tracking-[-0.01em] text-ink sm:text-h3 ${open ? "min-h-[4lh] sm:min-h-[3lh]" : "line-clamp-4 h-[4lh] sm:line-clamp-3 sm:h-[3lh]"}`}>
+        {muted ? <span className="block font-sans text-body font-normal leading-snug tracking-normal text-ink-2">{body}</span> : body}
+      </span>
       <span className="flex h-10 min-w-0 items-center gap-1.5">{foot}</span>
     </span>
   );
