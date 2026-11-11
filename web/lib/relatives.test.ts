@@ -17,6 +17,7 @@ const row = (id: number, scientificName: string, genus: string | null, family: s
   addedAt: "2026-01-01T00:00:00.000Z",
   hasSummary: false,
   thumbUrl: null,
+  imageUrl: null,
 });
 
 const rows = [

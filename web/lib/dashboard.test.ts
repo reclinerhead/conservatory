@@ -18,6 +18,7 @@ function row(id: number, over: Partial<SpeciesListRow> = {}): SpeciesListRow {
     addedAt: "2026-01-01T00:00:00.000Z",
     hasSummary: false,
     thumbUrl: null,
+    imageUrl: null,
     ...over,
   };
 }
