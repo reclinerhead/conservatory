@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { BlankTile, SortSelect, SpeciesGrid } from "@/components/species-grid";
+import { Suspense } from "react";
+import { BlankTile, GridSearch, SortSelect, SpeciesGrid } from "@/components/species-grid";
 import { Term } from "@/components/term";
 import { LeafMark } from "@/components/topbar";
 import { dayLabel, displayName, speciesLabel, TILE_TINTS } from "@/lib/collection";
@@ -46,33 +47,34 @@ export default function Home() {
   const spotCommon = pick ? displayName(pick.commonName) : null;
 
   return (
-    <main className="mx-auto flex w-full max-w-page flex-1 flex-col gap-7 px-4 pb-14 pt-6 sm:px-8 sm:pt-8">
+    <main className="mx-auto flex w-full max-w-page flex-1 flex-col gap-4 px-4 pb-14 pt-4 sm:gap-7 sm:px-8 sm:pt-8">
       {/* Pending identifications strip: a sage card, three overlapping thumbs,
-          the headline, one primary button. Same height in every state. */}
-      <section aria-label="Plants waiting for a name" className="card flex flex-wrap items-center gap-x-6 gap-y-4 border-line-2 bg-sage px-5 py-4">
-        <div className="flex">
+          the headline, one primary button. On a phone it is one line: one
+          thumb, the headline, a small button. Same height in every state. */}
+      <section aria-label="Plants waiting for a name" className="card flex items-center gap-x-2.5 border-line-2 bg-sage px-2.5 py-2 sm:flex-wrap sm:gap-x-6 sm:gap-y-4 sm:px-5 sm:py-4">
+        <div className="flex flex-none">
           {[0, 1, 2].map((i) => {
             const path = thumbs[i];
             const tint = ["bg-tile-2", "bg-[#BFD6B6]", "bg-[#A9C9A0]"][i];
             return path ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img key={i} src={`/media/${thumbPathFor(path)}`} alt="" className={`thumb border-2 border-sage ${i < 2 ? "-mr-2.5" : ""}`} />
+              <img key={i} src={`/media/${thumbPathFor(path)}`} alt="" className={`thumb border-2 border-sage max-sm:size-9 ${i > 0 ? "max-sm:hidden" : ""} ${i < 2 ? "sm:-mr-2.5" : ""}`} />
             ) : (
-              <div key={i} aria-hidden className={`thumb border-2 border-sage ${tint} ${i < 2 ? "-mr-2.5" : ""}`}>
-                <LeafMark size={26} className={i === 2 ? "text-moss-deep" : "text-moss"} />
+              <div key={i} aria-hidden className={`thumb border-2 border-sage max-sm:size-9 ${tint} ${i > 0 ? "max-sm:hidden" : ""} ${i < 2 ? "sm:-mr-2.5" : ""}`}>
+                <LeafMark size={26} className={`max-sm:size-5 ${i === 2 ? "text-moss-deep" : "text-moss"}`} />
               </div>
             );
           })}
         </div>
-        <div className="flex-[1_1_300px]">
-          <p className={`text-lead font-bold ${waiting > 0 ? "text-ink" : "text-ink-2"}`}>{waitingLabel(waiting)}</p>
-          <p className="mt-0.5 text-meta text-ink-2">{waitingDetail(waiting)}</p>
+        <div className="min-w-0 flex-1 sm:flex-[1_1_300px]">
+          <p className={`font-bold max-sm:truncate sm:text-lead ${waiting > 0 ? "text-ink" : "text-ink-2"}`}>{waitingLabel(waiting)}</p>
+          <p className="mt-0.5 text-meta text-ink-2 max-sm:hidden">{waitingDetail(waiting)}</p>
         </div>
         <Link
           href="/name"
           aria-hidden={waiting === 0}
           tabIndex={waiting === 0 ? -1 : 0}
-          className={`btn btn-primary text-white hover:text-white hover:no-underline ${waiting === 0 ? "invisible" : ""}`}
+          className={`btn btn-primary flex-none text-white hover:text-white hover:no-underline max-sm:min-h-9 max-sm:px-3 max-sm:py-1 max-sm:text-meta ${waiting === 0 ? "invisible max-sm:hidden" : ""}`}
         >
           Name them
         </Link>
@@ -80,15 +82,21 @@ export default function Home() {
 
       <div className="flex flex-wrap items-start gap-7">
         {/* Life list */}
-        <section aria-labelledby="list-h" className="flex min-w-0 flex-[999_1_560px] flex-col gap-4">
-          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <section aria-labelledby="list-h" className="flex min-w-0 flex-[999_1_560px] flex-col gap-3 sm:gap-4">
+          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2.5 sm:gap-y-3">
             <div>
               <h2 id="list-h" className="text-h2 leading-tight">
                 Life list
               </h2>
               <p className="mt-1 text-meta text-ink-2 tabular-nums">{ledger.join(" · ")}</p>
             </div>
-            <SortSelect />
+            {/* The search reads the URL, so it sits behind a Suspense boundary. */}
+            <div className="flex w-full items-center gap-2 sm:w-auto sm:gap-4">
+              <Suspense>
+                <GridSearch />
+              </Suspense>
+              <SortSelect />
+            </div>
           </div>
 
           {rows.length === 0 ? (

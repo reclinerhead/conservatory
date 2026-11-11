@@ -2,18 +2,18 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { LeafMark } from "@/components/topbar";
 import { displayName, speciesLabel, TILE_TINTS } from "@/lib/collection";
 import { gridRows, placeChips, readSort, selectedPlace, showingSpecies, SORTS, tileLine, type Sort } from "@/lib/species-grid";
 import { speciesTitle, type SpeciesListRow } from "@/lib/species-page";
 
 // The home page's species grid: one tile per species, each opening its
-// species page, filtered by a row of place chips and the top bar's search.
+// species page, filtered by a row of place chips and the life list's search.
 // Every row is on the page already (sixty species is a few kilobytes), so
 // both filter here, on the phone, with no request. Both live in the URL
 // (?q= and ?at=), written with the native history API so the back button
-// returns to the same view and the top bar's box and this grid agree.
+// returns to the same view and the search box and this grid agree.
 function setGridParams(next: { q?: string; at?: string }) {
   const url = new URL(window.location.href);
   for (const [k, v] of Object.entries(next)) {
@@ -69,6 +69,44 @@ function useSort(): Sort {
 }
 
 /**
+ * "Search species" in the life list's header, the only search box in the
+ * app. It filters as you type, through the URL (?q=), so no request leaves
+ * the phone; a link that lands on /?q= shows its query here.
+ */
+export function GridSearch() {
+  const urlQ = useSearchParams().get("q") ?? "";
+  // Typed text is local; when the URL's q changes under us (back button, a
+  // link), the box follows it. Adjusting state during render, per React.
+  const [seen, setSeen] = useState(urlQ);
+  const [value, setValue] = useState(urlQ);
+  if (seen !== urlQ) {
+    setSeen(urlQ);
+    setValue(urlQ);
+  }
+  return (
+    <form role="search" className="relative flex min-w-0 flex-1 items-center sm:w-[260px] sm:flex-none" onSubmit={(e) => e.preventDefault()}>
+      <svg aria-hidden className="pointer-events-none absolute left-3.5" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <circle cx="11" cy="11" r="7" />
+        <path d="M20 20l-3.5-3.5" />
+      </svg>
+      <input
+        type="search"
+        name="q"
+        value={value}
+        onChange={(e) => {
+          setValue(e.target.value);
+          setGridParams({ q: e.target.value.trim() ? e.target.value : "" });
+        }}
+        placeholder="Search species"
+        aria-label="Search the collection"
+        autoComplete="off"
+        className="field w-full pl-10 max-sm:min-h-9 sm:min-h-10"
+      />
+    </form>
+  );
+}
+
+/**
  * "Sort by" in the life list's header, the Quarry's select: a native
  * <select> with a drawn chevron. Every label sits invisible in the same grid
  * cell, so the control is as wide as the longest and choosing moves nothing.
@@ -77,16 +115,17 @@ export function SortSelect() {
   const sort = useSort();
   return (
     <div className="flex items-center gap-2.5">
-      <label htmlFor="sort" className="text-meta font-bold text-ink-2">
+      {/* On a phone the select sits beside the search and speaks for itself. */}
+      <label htmlFor="sort" className="text-meta font-bold text-ink-2 max-sm:sr-only">
         Sort by
       </label>
       <div className="relative grid">
         {SORTS.map((s) => (
-          <span key={s.key} aria-hidden className="select invisible col-start-1 row-start-1 h-0 min-h-0 border-y-0">
+          <span key={s.key} aria-hidden className="select invisible col-start-1 row-start-1 h-0 min-h-0 border-y-0 max-sm:pl-3 max-sm:pr-9 max-sm:text-meta">
             {s.label}
           </span>
         ))}
-        <select id="sort" value={sort} onChange={(e) => chooseSort(readSort(e.target.value))} className="select col-start-1 row-start-1">
+        <select id="sort" value={sort} onChange={(e) => chooseSort(readSort(e.target.value))} className="select col-start-1 row-start-1 max-sm:min-h-9 max-sm:pl-3 max-sm:pr-9 max-sm:text-meta">
           {SORTS.map((s) => (
             <option key={s.key} value={s.key}>
               {s.label}
@@ -103,7 +142,7 @@ export function SortSelect() {
           strokeWidth="2.4"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="pointer-events-none absolute right-3.5 top-3 text-ink-2"
+          className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-2 max-sm:right-3"
         >
           <path d="M6 9l6 6 6-6" />
         </svg>
@@ -122,16 +161,17 @@ export function SpeciesGrid({ rows }: { rows: SpeciesListRow[] }) {
   const total = chips.find((c) => c.key === at)?.n ?? 0;
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Filter row: chips wrap, never scroll sideways; counts are from the whole list. */}
-      <div role="group" aria-label="Filter by place" className="flex flex-wrap gap-2">
+    <div className="flex flex-col gap-3 sm:gap-4">
+      {/* Filter row: chips wrap, never scroll sideways; counts are from the whole list.
+          On a phone they are 36 px and tighter, so the first photo is on the first screen. */}
+      <div role="group" aria-label="Filter by place" className="flex flex-wrap gap-1.5 sm:gap-2">
         {chips.map((c) => (
           <button
             key={c.key}
             type="button"
             aria-pressed={at === c.key}
             onClick={() => setGridParams({ at: c.key })}
-            className={`chip chip-compact ${at === c.key ? "chip-on" : ""}`}
+            className={`chip chip-compact max-sm:min-h-9 max-sm:gap-1.5 max-sm:px-3 max-sm:text-meta ${at === c.key ? "chip-on" : ""}`}
           >
             {c.label}
             <span className="font-normal opacity-80 tabular-nums">{c.n}</span>

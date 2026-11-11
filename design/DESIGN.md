@@ -154,12 +154,14 @@ generated per specimen and link to its page.
 
 ## 5. Page anatomy
 
-**Top bar** (both pages, white, hairline bottom border): leaf mark + "The
-Conservatory" in Fraunces 24 · nav pills (Collection, Tags, Locations,
-Reminders, Flower Show; active = `sage-2` fill; Collection is lit on the
-species and plant pages it leads to) · search (pill, leading icon,
-"Search species") · primary "Add a plant" with camera icon. Wraps
-to two rows on narrow screens.
+**Top bar** (every page, white, hairline bottom border): leaf mark + "The
+Conservatory" in Fraunces 24 · a nav pill for each page that exists
+(Collection, Tags; active = `sage-2` fill; Collection is lit on the species
+and plant pages it leads to) · primary "Add a plant" with camera icon on the
+right. One row at every width, never wrapping: on a phone the wordmark is
+the leaf alone and the button says "Add". The mockups still draw the search
+and three later pills in the bar; the search is the life list's, and a pill
+is drawn when its page exists.
 
 **Dashboard** (`mockups/dashboard.html` for everything but the life list's
 cards, which are species tiles, not specimen cards), top to bottom:
@@ -169,12 +171,16 @@ cards, which are species tiles, not specimen cards), top to bottom:
 3. Pending identifications strip.
 4. Two columns, 28 px gap: **Life list** (`flex: 999 1 560px`) and a **side
    column** (`flex: 1 1 300px; max-width: 360px`) that drops below on phones.
-   - Life list header: title, counts line, and Sort by (Name, A to Z or
-     Latest added) on the right. Pot tags are printed from the Tags nav pill.
+   - Life list header: title, counts line, and on the right "Search species"
+     (pill, leading icon; the app's only search box) and Sort by (Name, A to Z
+     or Latest added). On a phone the search and the select share one row
+     under the title, the select without its label. Pot tags are printed from the Tags nav pill.
    - Filter chips by place: All · each place A to Z · No location yet · No
      longer here, each with its count. The mockup's other chips and selects
      (Houseplants, Blooming now, Family, Arrived) are not drawn; a family is
-     found by typing it in the search.
+     found by typing it in the search. On a phone these chips, the select
+     and the search are 36 px tall with 13 px text, the one exception to the
+     40 px compact minimum, so the first photo is on the first screen.
    - 3-across species tiles (the specimen card's shape: 168 px photo, common
      name, italic binomial, a meta line for the chip on screen), each opening
      the species page; "Showing 9 of 42 species".
