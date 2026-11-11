@@ -170,6 +170,36 @@ its licence on Wikimedia Commons") and, before it on a plant's photo, "Use as
 species photo" ("Species photo" on the one that leads). Escape, Close or the backdrop closes it,
 and the page is where it was.
 
+**Health card** (plant page, main column, above "About this specimen") —
+always drawn. The latest check is a summary row at a fixed height: a status
+tag ("Looks healthy", "Keep an eye on it", "Can't tell from these" in the
+default sage; "Needs attention" in `warn`, the one status that is
+time-sensitive), the date, the model's one sentence in body text (four lines
+on a phone, three from 640 px), then 40 px thumbs of the photos sent. The row
+is one button with a chevron at the right ("Findings and remedies" beside it
+from 640 px) and opens on tap, never hover: findings as `ground` cells (what
+was seen in bold, a "Likely cause" or "Possible cause" tag with the photo,
+the remedy), how sure the reading is, the photos to take next, and who read
+it. A question the owner asked sits under the summary in a `ground` note,
+"You asked" over "The reply", without opening anything, its reply's place
+held so the answer lands without moving the page. Waiting is the same row
+with a "Checking" tag, the leaf pulsing, and "Fern is looking…"; a failure is
+the same row with "Didn't finish" and the reason in a sentence. With no check
+yet the row says so at the same height. Under a hairline, "Earlier checks":
+the same rows, newest first, five and then "Show all" (ghost, compact). A
+last hairline and one meta line: "A model's reading of your photos, not a
+diagnosis." The heading carries the health check info mark.
+
+**Health check card** (plant page, first in the side column, living plants
+only) — the title with its info mark, one meta line, the plant's photos
+newest first as the tags page's row without its text (a 44 px checkbox
+target and the 56 px thumb, wrapping), "2 of 3 chosen", a labelled text box
+for a problem or a question (14 px radius, four lines, a character count at
+the label's right), then the card's one primary button, "Check health", full
+width with a pulse-line icon, and two reserved meta lines for what happened.
+Unchosen photos fade once three are chosen. With no model key the card is
+its title and two lines saying health checks are off.
+
 **QR pot tag** — a 7 × 7 module placeholder in the mockup; real tags are
 generated per specimen and link to its page.
 

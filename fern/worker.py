@@ -5,10 +5,11 @@ and the identify function as arguments so the tests can drive it without the
 network. The thumbnail is written for every processed job, rejected ones
 included, because the confirm screen shows the photo either way.
 
-When the queue is idle the loop hands the tick to the thumbnail sweep
-(`sweep_once`, #26), then the enrichment pass (`enrich.run_once`, #20) and,
-when that has nothing to do, the care pass (`care.run_once`, #23), so one
-unit and one journal cover all of them.
+When the queue is idle the loop hands the tick to a queued health check
+(`health.run_once`, #87), then the thumbnail sweep (`sweep_once`, #26), then
+the enrichment pass (`enrich.run_once`, #20) and, when that has nothing to
+do, the care pass (`care.run_once`, #23), so one unit and one journal cover
+all of them.
 """
 
 from __future__ import annotations
@@ -20,7 +21,7 @@ from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import care, enrich, llm, plantnet, queue
+from . import care, enrich, health, llm, plantnet, queue
 
 log = logging.getLogger("fern")
 
@@ -103,13 +104,17 @@ def idle_tick(
     now: datetime,
     care_cfg: llm.Config | None = None,
     zone: str | None = None,
+    health_cfg: llm.Config | None = None,
 ) -> bool:
-    """The queue is idle: one thumbnail for a photo added to a plant (#26), else
-    one species enriched (#20), else one care sheet written (#23). The sweep
-    goes first because its photo is already on a page someone is looking at.
-    Returns whether any of them had work."""
+    """The queue is idle: one queued health check (#87), else one thumbnail
+    for a photo added to a plant (#26), else one species enriched (#20), else
+    one care sheet written (#23). The health check goes first because someone
+    pressed a button and is waiting on the page; the sweep next because its
+    photo is already on a page someone is looking at. Returns whether any of
+    them had work."""
     return (
-        sweep_once(conn, data_dir, now)
+        health.run_once(conn, data_dir, health_cfg, zone, now)
+        or sweep_once(conn, data_dir, now)
         or enrich.run_once(conn, data_dir, now)
         or care.run_once(conn, care_cfg, zone, now)
     )
@@ -122,6 +127,7 @@ def run_forever(
     should_run: Callable[[], bool],
     care_cfg: llm.Config | None = None,
     zone: str | None = None,
+    health_cfg: llm.Config | None = None,
 ) -> None:
     paused_until: datetime | None = None
     while should_run():
@@ -134,7 +140,7 @@ def run_forever(
         if outcome is None:
             # The queue is idle: one small piece of other work per tick, so an
             # upload never waits behind Wikipedia or more than one model call.
-            busy = idle_tick(conn, data_dir, now, care_cfg, zone)
+            busy = idle_tick(conn, data_dir, now, care_cfg, zone, health_cfg)
             time.sleep(1 if busy else 2)
         elif outcome.status == "quota":
             paused_until = outcome.resume_at

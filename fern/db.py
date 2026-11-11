@@ -163,6 +163,38 @@ MIGRATIONS: list[tuple[int, str] | tuple[int, str, str]] = [
         ALTER TABLE species ADD COLUMN hero_photo_id INTEGER REFERENCES photos(id) ON DELETE SET NULL;
         """,
     ),
+    # v10 (#87): a plant's health checks. The web app inserts a row in state
+    # queued when the owner presses "Check health"; Fern takes the oldest one
+    # per idle tick, asks a vision model once, and writes the result or the
+    # reason it failed on the same row (fern/health.py). Checks are kept, so
+    # the page shows the latest and the history. They go with their plant.
+    # photo_ids keeps the ids as they were sent: a photo removed later leaves
+    # the check, and the page shows the thumbs that still exist.
+    (
+        10,
+        """
+        CREATE TABLE health_checks (
+          id             INTEGER PRIMARY KEY AUTOINCREMENT,
+          specimen_id    INTEGER NOT NULL REFERENCES specimens(id) ON DELETE CASCADE,
+          state          TEXT    NOT NULL DEFAULT 'queued'
+                                 CHECK (state IN ('queued', 'running', 'done', 'failed')),
+          photo_ids      TEXT    NOT NULL,   -- JSON array of photos.id, one to three, in the order sent
+          question       TEXT,               -- what the owner asked, else NULL
+          status         TEXT,               -- healthy | watch | needs_attention | cannot_tell, once done
+          summary        TEXT,               -- the one-sentence reading, once done
+          answer         TEXT,               -- JSON: the validated answer, once done
+          model          TEXT,               -- the gateway model slug that was asked
+          prompt_version INTEGER,            -- fern/prompts/health_check.md's version
+          input_tokens   INTEGER,
+          output_tokens  INTEGER,
+          error          TEXT,               -- why it failed, else NULL
+          created_at     TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+          finished_at    TEXT
+        );
+        CREATE INDEX health_checks_specimen ON health_checks (specimen_id, id);
+        CREATE INDEX health_checks_state ON health_checks (state, id);
+        """,
+    ),
 ]
 
 LATEST_VERSION = MIGRATIONS[-1][0] if MIGRATIONS else BASELINE_VERSION

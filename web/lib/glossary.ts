@@ -114,6 +114,10 @@ export const GLOSSARY = {
     term: "specimen",
     text: "One actual plant in one pot or one spot in a bed, as opposed to the species it belongs to. Three jade plants on a shelf are three specimens of one species, and each gets its own page, photos and history.",
   },
+  "health-check": {
+    term: "health check",
+    text: "A reading of your plant from the photos you choose: what can be seen, the likeliest cause, and what to do about it. It is a model's reading, not a diagnosis, since a photo cannot show the roots or the soil. Sharp, close photos of the part that worries you, and one of the whole plant, give the best reading.",
+  },
 } as const satisfies Record<string, GlossaryEntry>;
 
 export type GlossaryKey = keyof typeof GLOSSARY;

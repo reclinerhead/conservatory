@@ -1,9 +1,10 @@
 """Run Fern: `python -m fern`.
 
 Opens the database, applies the schema, and drains the identification queue
-against Pl@ntNet until stopped; when the queue is idle, enriches one species
-per tick from GBIF and Wikipedia (#20), and when there is nothing to enrich
-either, writes one care sheet (#23).
+against Pl@ntNet until stopped; when the queue is idle, answers one queued
+health check (#87), else enriches one species per tick from GBIF and
+Wikipedia (#20), and when there is nothing to enrich either, writes one care
+sheet (#23).
 
     python -m fern                 the worker
     python -m fern --enrich 1      re-enrich species 1 by hand, then exit
@@ -14,9 +15,13 @@ Environment:
     CONSERVATORY_DATA   directory for photos and reference images (default data/)
     PLANTNET_API_KEY    the Pl@ntNet key; Fern refuses to start without it
                         (not needed for --enrich or --care, which never call Pl@ntNet)
-    AI_GATEWAY_API_KEY  the Vercel AI Gateway key for the care sheets; unset,
-                        the care pass is off (one line at start says so)
-    CONSERVATORY_LLM    the gateway model slug (default anthropic/claude-sonnet-5.5)
+    AI_GATEWAY_API_KEY  the Vercel AI Gateway key for the care sheets and the
+                        health checks; unset, both are off (one line each at
+                        start says so)
+    CONSERVATORY_LLM    the gateway model slug for care sheets (default
+                        anthropic/claude-sonnet-5.5)
+    CONSERVATORY_HEALTH_LLM  the gateway model slug for health checks (same
+                        default), on its own so another can be tried there
     CONSERVATORY_ZONE   the household's USDA hardiness zone, e.g. 6a
 """
 
@@ -29,7 +34,7 @@ import signal
 import sys
 from pathlib import Path
 
-from . import care, db, enrich, llm, worker
+from . import care, db, enrich, health, llm, worker
 
 log = logging.getLogger("fern")
 
@@ -46,6 +51,16 @@ def care_settings() -> tuple[llm.Config | None, str | None]:
     else:
         log.info("care sheets: on, %s, zone %s", cfg.model, zone or "not set")
     return cfg, zone
+
+
+def health_settings() -> llm.Config | None:
+    """The health check model from the environment, with one line saying what Fern will do."""
+    cfg = llm.config(model_var=health.MODEL_VAR)
+    if cfg is None:
+        log.info("health checks: off (AI_GATEWAY_API_KEY is not set)")
+    else:
+        log.info("health checks: on, %s, effort %s", cfg.model, health.EFFORT)
+    return cfg
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -93,6 +108,8 @@ def main(argv: list[str] | None = None) -> int:
     conn = db.connect(db_path)
     log.info("up: db=%s schema=v%d queued=%d", db_path, db.current_version(conn), db.queued_jobs(conn))
     care_cfg, zone = care_settings()
+    health_cfg = health_settings()
+    health.fail_interrupted(conn)
 
     running = True
 
@@ -104,7 +121,7 @@ def main(argv: list[str] | None = None) -> int:
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
 
-    worker.run_forever(conn, data_dir, api_key, lambda: running, care_cfg, zone)
+    worker.run_forever(conn, data_dir, api_key, lambda: running, care_cfg, zone, health_cfg)
     conn.close()
     return 0
 

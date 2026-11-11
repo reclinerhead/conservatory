@@ -86,6 +86,8 @@ When the queue is idle, Fern fills in each species once, the first time it is co
 - **GBIF** supplies the taxonomy. Family and genus are what power the relatives block and the dashboard's families, which are joins, not model calls.
 - **A language model** writes the care sheet once, from the taxonomy, the first lines of the Wikipedia summary and the household's hardiness zone, and stores it. It is Claude Sonnet, called through the Vercel AI Gateway. A genus, or a hybrid, gets a sheet written for the genus as a whole. Every figure the sheet uses is kept with what it rests on, so it can be checked. A sheet costs a few cents, so a whole shelf of species is a one-time cost of a couple of dollars. Rewrite on the species page asks for a fresh one.
 
+Fern also reads a plant's health when its owner asks ([#87](https://github.com/reclinerhead/conservatory/issues/87)): on the plant's page they choose up to three of its photos, say what they have noticed if they like, and Fern sends the photos to a vision model (Claude Sonnet, through the same gateway) with the species, its care sheet's headlines and how long the plant has been in their care. The answer is a status, one sentence, what was seen with the likeliest cause and a remedy, how sure the reading is, and which photos would settle it; a question gets a direct reply. Checks are kept, so a plant's page shows the latest and the earlier ones. A check is only ever started by a person, is tried once, costs a few cents, and the household has a daily cap. It is a model's reading of photos, not a diagnosis.
+
 The web app only reads what Fern wrote. A page never waits on Wikipedia, GBIF or a model.
 
 ## Where it runs
