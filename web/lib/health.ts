@@ -161,9 +161,9 @@ export function failureWords(error: string | null): string {
   const e = (error ?? "").trim();
   const rest = e.replace(/^[A-Za-z]+:\s*/, "");
   if (e.startsWith("LlmError:")) return `Fern couldn't get an answer from the model: ${rest}.`;
-  if (e.startsWith("InvalidAnswer:")) return "The model answered, but not in a form Fern could use. Nothing was saved; you can check again.";
+  if (e.startsWith("InvalidAnswer:")) return `The model answered, but not in a form Fern could use (${rest}), so nothing was saved.`;
   if (e.startsWith("LookupError:")) return "The photos chosen for this check were removed before Fern could look at them.";
-  if (e.startsWith("Interrupted:")) return "Fern was restarted while it was looking. You can check again.";
+  if (e.startsWith("Interrupted:")) return "Fern was restarted while it was looking.";
   if (e.startsWith("Off:")) return "Health checks are off on this box: Fern has no model key.";
   return e ? `Something went wrong before Fern could finish: ${rest || e}.` : "Something went wrong before Fern could finish.";
 }

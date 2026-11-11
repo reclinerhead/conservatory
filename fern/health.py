@@ -44,7 +44,13 @@ MAX_PHOTOS = 3
 STATUSES = ("healthy", "watch", "needs_attention", "cannot_tell")
 LIKELIHOODS = ("likely", "possible")
 LEVELS = ("high", "medium", "low")
-MAX_SUMMARY = 140
+# The prompt asks for a summary of at most 140 characters. A model cannot
+# count characters exactly, and the first live checks came back at 144 and
+# 156, so the validator allows some slack before it throws a paid answer
+# away. The page holds the sentence in a fixed box and shows it whole when
+# the row is opened.
+SUMMARY_TARGET = 140
+MAX_SUMMARY = 200
 MAX_FINDINGS = 4
 MAX_NEXT_PHOTOS = 3
 # A photo is sent as it is stored. The web app shrinks uploads to a 1280 px
@@ -203,7 +209,8 @@ def _one_of(v: object, field: str, allowed: tuple[str, ...]) -> str:
 def parse_answer(text: str, asked: bool, photo_count: int = MAX_PHOTOS) -> dict:
     """The model's answer -> the check as the page will show it, or InvalidAnswer.
 
-    A status from the four, a summary of at most 140 characters, none to four
+    A status from the four, a summary of at most 200 characters (the prompt
+    asks for 140; see MAX_SUMMARY), none to four
     findings each with what was seen, the photo, a likelihood and a remedy,
     a confidence with its reason, and none to three photos to take next. A
     reply is required when the owner asked something and refused when they

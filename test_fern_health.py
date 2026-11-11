@@ -75,7 +75,7 @@ def test_parse_answer_keeps_the_reply_when_a_question_was_asked():
     [
         (_answer(status="dying"), False, "status is 'dying'"),
         (_answer(status=...), False, "status is None"),
-        (_answer(summary="x" * 141), False, "summary runs long"),
+        (_answer(summary="x" * 201), False, r"summary runs long \(201 characters\)"),
         (_answer(findings=[_finding()] * 5), False, "findings must be a list of at most 4"),
         (_answer(findings=[_finding(remedy=...)]), False, "finding 1 remedy is not text"),
         (_answer(findings=[_finding(remedy="Water it.")]), False, "finding 1 remedy is too short"),
@@ -93,6 +93,15 @@ def test_parse_answer_keeps_the_reply_when_a_question_was_asked():
 def test_parse_answer_rejects_what_it_will_not_store(answer, asked, words):
     with pytest.raises(health.InvalidAnswer, match=words):
         health.parse_answer(answer, asked=asked)
+
+
+def test_a_summary_a_little_over_the_prompts_140_characters_is_kept():
+    # The first live checks failed on summaries of 144 and 156 characters: a
+    # model cannot count characters, and the answer was otherwise good.
+    assert health.SUMMARY_TARGET == 140 < health.MAX_SUMMARY
+    for n in (140, 144, 156, health.MAX_SUMMARY):
+        assert len(health.parse_answer(_answer(summary="x" * n), asked=False)["summary"]) == n
+    assert f"{health.SUMMARY_TARGET} characters" in care.load_prompt(health.PROMPT_PATH)[1]
 
 
 def test_a_finding_may_name_no_photo_and_photo_numbers_follow_the_photos_sent():
