@@ -229,9 +229,10 @@ cards, which are species tiles, not specimen cards), top to bottom:
 3. Photo gallery.
 4. Two columns, same split as the dashboard.
    - Main: **About this species** (Wikipedia summary, source line with fetch
-     date, article link, Refresh) · **Care sheet** (6 cells: Light, Water,
-     Soil, Hardiness, Fertilizing, Dormancy; zone-aware; one info mark shown
-     open) · **In your collection** (specimen cards + Lineage tree) ·
+     date, article link, Refresh) · **In your collection** (specimen cards +
+     Lineage tree; the household's own plants come before the reference
+     material) · **Care sheet** (6 cells: Light, Water, Soil, Hardiness,
+     Fertilizing, Dormancy; zone-aware; one info mark shown open) ·
      **Relatives you already have** (Same genus, then Same family; honest
      empty-ish state when there's only one).
    - Side: Taxonomy (GBIF ranks + the owner's cultivar, with the Pl@ntNet
