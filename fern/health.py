@@ -11,15 +11,16 @@ when the owner said (#99), how long it has been in the household's care, the dat
 headlines, the previous check and the owner's question, and writes the
 validated answer on the row.
 
-One attempt per check. A call that fails, or an answer the validator will not
-store, is one loud line and a row in state `failed` with the reason; nothing
+One attempt per check. A call that fails, or an answer with nothing usable in
+it, is one loud line and a row in state `failed` with the reason; nothing
 retries it, and the owner can start another. No check is ever started by Fern
 itself: no schedule, no automatic checks. The model is CONSERVATORY_HEALTH_LLM,
 apart from the care sheets' CONSERVATORY_LLM, at effort medium. Each check's
 model and tokens are on its row and in the journal.
 
 Everything that decides something is pure and tested (`time_in_care`,
-`care_headlines`, `build_prompt`, `parse_answer`, `media_type`, `worklist`);
+`care_headlines`, `build_prompt`, `parse_answer`, `photo_number`, `media_type`,
+`worklist`);
 the model call is a parameter the tests replace.
 """
 
@@ -202,34 +203,69 @@ def build_prompt(
     return "\n".join(lines)
 
 
-def _text(v: object, field: str, lo: int, hi: int) -> str:
+def _clean(v: object) -> str | None:
+    """Text with its whitespace collapsed, or None for anything that is not text or is empty."""
     if not isinstance(v, str):
-        raise InvalidAnswer(f"{field} is not text")
-    t = re.sub(r"\s+", " ", v).strip()
-    if len(t) < lo:
-        raise InvalidAnswer(f"{field} is too short ({len(t)} characters)")
-    if len(t) > hi:
-        raise InvalidAnswer(f"{field} runs long ({len(t)} characters)")
-    return t
+        return None
+    return re.sub(r"\s+", " ", v).strip() or None
 
 
-def _one_of(v: object, field: str, allowed: tuple[str, ...]) -> str:
-    if not isinstance(v, str) or v.strip().lower() not in allowed:
-        raise InvalidAnswer(f"{field} is {v!r}, not one of {', '.join(allowed)}")
-    return v.strip().lower()
+def _clip(t: str, hi: int) -> str:
+    """`t` within `hi` characters: whole when it fits, else cut after its last
+    full sentence when that keeps at least half, else at a word with an ellipsis."""
+    if len(t) <= hi:
+        return t
+    head = t[: hi - 1]
+    stops = [m.end() for m in re.finditer(r"[.!?](?=\s)", head)]
+    if stops and stops[-1] >= hi // 2:
+        return head[: stops[-1]]
+    return head[: head.rfind(" ")].rstrip(" ,;:") + "…" if " " in head else head + "…"
 
 
-def parse_answer(text: str, asked: bool, photo_count: int = MAX_PHOTOS) -> dict:
+def _pick(v: object, allowed: tuple[str, ...]) -> str | None:
+    """One of `allowed` however the model spelled it ("Needs attention", "needs-attention"), or None."""
+    if not isinstance(v, str):
+        return None
+    t = re.sub(r"[\s-]+", "_", v.strip().lower())
+    return t if t in allowed else None
+
+
+def photo_number(v: object, photo_count: int) -> int | None:
+    """Which photo a finding points at, read leniently: 1, 1.0, "1" and
+    "Photo 1" are all photo 1. Anything else, or a number that is not among
+    the photos sent, is None: the finding is kept without a photo. Never a
+    reason to fail a check. The first live check with two photos came back
+    with "1" as text, and a good paid answer was thrown away over the least
+    important field in it."""
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, float) and v.is_integer():
+        v = int(v)
+    if isinstance(v, str):
+        digits = re.findall(r"\d+", v)
+        v = int(digits[0]) if len(digits) == 1 else None
+    return v if isinstance(v, int) and 1 <= v <= photo_count else None
+
+
+def parse_answer(text: str, asked: bool, photo_count: int = MAX_PHOTOS, notes: list[str] | None = None) -> dict:
     """The model's answer -> the check as the page will show it, or InvalidAnswer.
 
-    A status from the four, a summary of at most 200 characters (the prompt
-    asks for 140; see MAX_SUMMARY), none to four
-    findings each with what was seen, the photo, a likelihood and a remedy,
-    a confidence with its reason, and none to three photos to take next. A
-    reply is required when the owner asked something and refused when they
-    did not, so the page never shows an answer to a question nobody asked. A
-    stray code fence or a sentence around the object is forgiven; keys beyond
-    these are dropped."""
+    An answer is paid for, so the validator keeps what is usable and adjusts
+    the rest (#97); each adjustment is appended to `notes` for the journal.
+    It rejects only what leaves nothing to show: no JSON object, no status
+    from the four (never guessed: the status is the reading), no summary.
+
+    Adjusted: a summary over 200 characters is clipped (the prompt asks for
+    140; see MAX_SUMMARY); findings beyond four are dropped, as is a finding
+    with nothing seen or no remedy; a likelihood outside the list is
+    `possible`, the weaker claim; a photo is read leniently (`photo_number`);
+    a confidence with no usable level is stored as None, not guessed; next
+    photos beyond three are dropped; long text is clipped at a sentence or a
+    word. With a question and no reply the check is kept without one, and the
+    page says so; a reply nobody asked for is dropped, so the page never
+    shows an answer to a question nobody asked. A stray code fence or a
+    sentence around the object is forgiven; keys beyond these are dropped."""
+    notes = notes if notes is not None else []
     s = text.strip()
     start, end = s.find("{"), s.rfind("}")
     if start < 0 or end <= start:
@@ -241,50 +277,67 @@ def parse_answer(text: str, asked: bool, photo_count: int = MAX_PHOTOS) -> dict:
     if not isinstance(body, dict):
         raise InvalidAnswer("the answer is not a JSON object")
 
-    out: dict = {
-        "status": _one_of(body.get("status"), "status", STATUSES),
-        "summary": _text(body.get("summary"), "summary", 1, MAX_SUMMARY),
-    }
+    def clipped(t: str, hi: int, what: str) -> str:
+        if len(t) > hi:
+            notes.append(f"{what} clipped from {len(t)} characters")
+        return _clip(t, hi)
 
-    reply = body.get("reply")
+    status = _pick(body.get("status"), STATUSES)
+    if status is None:
+        raise InvalidAnswer(f"status is {body.get('status')!r}, not one of {', '.join(STATUSES)}")
+    summary = _clean(body.get("summary"))
+    if summary is None:
+        raise InvalidAnswer("there is no summary")
+    out: dict = {"status": status, "summary": clipped(summary, MAX_SUMMARY, "summary")}
+
+    reply = _clean(body.get("reply"))
     if asked:
-        if reply is None:
-            raise InvalidAnswer("a question was asked but there is no reply")
-        out["reply"] = _text(reply, "reply", 20, 1200)
-    elif reply is not None:
-        raise InvalidAnswer("a reply was given but no question was asked")
+        if reply:
+            out["reply"] = clipped(reply, 1200, "reply")
+        else:
+            notes.append("no reply to the owner's question")
+    elif reply:
+        notes.append("a reply to no question dropped")
 
     findings = body.get("findings", [])
-    if not isinstance(findings, list) or len(findings) > MAX_FINDINGS:
-        raise InvalidAnswer(f"findings must be a list of at most {MAX_FINDINGS}")
+    if not isinstance(findings, list):
+        notes.append("findings was not a list")
+        findings = []
     out["findings"] = []
     for i, f in enumerate(findings, 1):
-        if not isinstance(f, dict):
-            raise InvalidAnswer(f"finding {i} is not an object")
-        photo = f.get("photo")
-        if photo is not None and (isinstance(photo, bool) or not isinstance(photo, int) or not 1 <= photo <= photo_count):
-            raise InvalidAnswer(f"finding {i} photo is {photo!r}, not a photo number from 1 to {photo_count}")
+        seen = _clean(f.get("seen")) if isinstance(f, dict) else None
+        remedy = _clean(f.get("remedy")) if isinstance(f, dict) else None
+        if not seen or not remedy:
+            notes.append(f"finding {i} dropped ({'not an object' if not isinstance(f, dict) else 'nothing seen' if not seen else 'no remedy'})")
+            continue
+        if len(out["findings"]) == MAX_FINDINGS:
+            notes.append(f"finding {i} dropped (more than {MAX_FINDINGS})")
+            continue
+        likelihood = _pick(f.get("likelihood"), LIKELIHOODS)
+        if likelihood is None:
+            notes.append(f"finding {i} likelihood {f.get('likelihood')!r} read as possible")
         out["findings"].append(
             {
-                "seen": _text(f.get("seen"), f"finding {i} seen", 1, 300),
-                "photo": photo,
-                "likelihood": _one_of(f.get("likelihood"), f"finding {i} likelihood", LIKELIHOODS),
-                "remedy": _text(f.get("remedy"), f"finding {i} remedy", 20, 700),
+                "seen": clipped(seen, 300, f"finding {i} seen"),
+                "photo": photo_number(f.get("photo"), photo_count),
+                "likelihood": likelihood or "possible",
+                "remedy": clipped(remedy, 700, f"finding {i} remedy"),
             }
         )
 
     conf = body.get("confidence")
-    if not isinstance(conf, dict):
-        raise InvalidAnswer("confidence is not an object")
-    out["confidence"] = {
-        "level": _one_of(conf.get("level"), "confidence level", LEVELS),
-        "why": _text(conf.get("why"), "confidence why", 1, 300),
-    }
+    level = _pick(conf.get("level"), LEVELS) if isinstance(conf, dict) else None
+    if level is None:
+        notes.append("no usable confidence")
+        out["confidence"] = None
+    else:
+        out["confidence"] = {"level": level, "why": clipped(_clean(conf.get("why")) or "", 300, "confidence why")}
 
     nxt = body.get("next_photos", [])
-    if not isinstance(nxt, list) or len(nxt) > MAX_NEXT_PHOTOS:
-        raise InvalidAnswer(f"next_photos must be a list of at most {MAX_NEXT_PHOTOS}")
-    out["next_photos"] = [_text(p, f"next photo {i}", 1, 160) for i, p in enumerate(nxt, 1)]
+    wanted = [t for t in (_clean(p) for p in nxt) if t] if isinstance(nxt, list) else []
+    if len(wanted) > MAX_NEXT_PHOTOS:
+        notes.append(f"{len(wanted) - MAX_NEXT_PHOTOS} next photo{'s' if len(wanted) - MAX_NEXT_PHOTOS != 1 else ''} dropped (more than {MAX_NEXT_PHOTOS})")
+    out["next_photos"] = [clipped(t, 160, f"next photo {i}") for i, t in enumerate(wanted[:MAX_NEXT_PHOTOS], 1)]
     return out
 
 
@@ -375,7 +428,8 @@ def run_check(
     version, system = care.load_prompt(prompt_path)
     prompt = build_prompt(plant, len(images), question, previous, zone, now.astimezone().date(), check["setting"], check["light"])
     reply = complete(cfg, system, prompt, images=images, effort=EFFORT)
-    answer = parse_answer(reply.text, asked=question is not None, photo_count=len(images))
+    adjusted: list[str] = []
+    answer = parse_answer(reply.text, asked=question is not None, photo_count=len(images), notes=adjusted)
     with conn:
         conn.execute(
             """
@@ -403,6 +457,7 @@ def run_check(
         f"{'a question' if question else 'no question'}, by {cfg.model} at effort {EFFORT}, "
         f"{reply.input_tokens if reply.input_tokens is not None else '?'} tokens in, "
         f"{reply.output_tokens if reply.output_tokens is not None else '?'} out"
+        + (f", adjusted: {'; '.join(adjusted)}" if adjusted else "")
     )
 
 

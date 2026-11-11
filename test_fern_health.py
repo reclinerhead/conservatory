@@ -71,28 +71,85 @@ def test_parse_answer_keeps_the_reply_when_a_question_was_asked():
 
 
 @pytest.mark.parametrize(
-    "answer, asked, words",
+    "answer, words",
     [
-        (_answer(status="dying"), False, "status is 'dying'"),
-        (_answer(status=...), False, "status is None"),
-        (_answer(summary="x" * 201), False, r"summary runs long \(201 characters\)"),
-        (_answer(findings=[_finding()] * 5), False, "findings must be a list of at most 4"),
-        (_answer(findings=[_finding(remedy=...)]), False, "finding 1 remedy is not text"),
-        (_answer(findings=[_finding(remedy="Water it.")]), False, "finding 1 remedy is too short"),
-        (_answer(findings=[_finding(likelihood="certain")]), False, "finding 1 likelihood"),
-        (_answer(findings=[_finding(photo=4)]), False, "finding 1 photo is 4"),
-        (_answer(confidence="high"), False, "confidence is not an object"),
-        (_answer(confidence={"level": "sure", "why": "It is clear."}), False, "confidence level"),
-        (_answer(next_photos=["a", "b", "c", "d"]), False, "next_photos must be a list of at most 3"),
-        (_answer(), True, "a question was asked but there is no reply"),
-        (_answer(reply=REPLY), False, "a reply was given but no question was asked"),
-        ("I cannot help with that.", False, "no JSON object"),
-        ("{" + _answer()[1:-1] + ",}", False, "not valid JSON"),
+        (_answer(status="dying"), "status is 'dying'"),
+        (_answer(status=...), "status is None"),
+        (_answer(summary=...), "there is no summary"),
+        (_answer(summary="   "), "there is no summary"),
+        ("I cannot help with that.", "no JSON object"),
+        ("{" + _answer()[1:-1] + ",}", "not valid JSON"),
     ],
 )
-def test_parse_answer_rejects_what_it_will_not_store(answer, asked, words):
+def test_parse_answer_rejects_only_what_leaves_nothing_to_show(answer, words):
     with pytest.raises(health.InvalidAnswer, match=words):
-        health.parse_answer(answer, asked=asked)
+        health.parse_answer(answer, asked=False)
+
+
+def _adjusted(asked=False, **over):
+    notes = []
+    return health.parse_answer(_answer(**over), asked=asked, notes=notes), notes
+
+
+def test_a_clean_answer_is_adjusted_in_nothing():
+    assert _adjusted()[1] == [] and _adjusted(asked=True, reply=REPLY)[1] == []
+
+
+def test_a_status_is_read_however_it_is_spelled_but_never_guessed():
+    for spelled in ("Needs attention", "needs-attention", " NEEDS_ATTENTION "):
+        assert _adjusted(status=spelled) == (health.parse_answer(_answer(), asked=False), [])
+
+
+def test_a_long_summary_is_clipped_at_a_word_not_thrown_away():
+    long = "The lower leaves are yellowing and soft " * 6  # 240 characters
+    a, notes = _adjusted(summary=long)
+    assert len(a["summary"]) <= health.MAX_SUMMARY and a["summary"].endswith("…") and not a["summary"].endswith(" …")
+    assert long.startswith(a["summary"][:-1])
+    assert notes == ["summary clipped from 239 characters"]
+
+
+def test_long_text_is_cut_after_its_last_full_sentence_when_that_keeps_enough():
+    remedy = ("Water only when the top inch of soil is dry. " * 20).strip()  # 899 characters
+    a, notes = _adjusted(findings=[_finding(remedy=remedy)])
+    assert len(a["findings"][0]["remedy"]) <= 700 and a["findings"][0]["remedy"].endswith("soil is dry.")
+    assert notes == ["finding 1 remedy clipped from 899 characters"]
+
+
+def test_findings_beyond_four_are_dropped_and_a_broken_one_does_not_cost_the_rest():
+    a, notes = _adjusted(findings=[_finding(seen=f"Spot {n}.") for n in range(1, 7)])
+    assert [f["seen"] for f in a["findings"]] == ["Spot 1.", "Spot 2.", "Spot 3.", "Spot 4."]  # the most important first
+    assert notes == ["finding 5 dropped (more than 4)", "finding 6 dropped (more than 4)"]
+    a, notes = _adjusted(findings=[_finding(remedy=...), "nope", _finding(seen="  "), _finding(remedy="Water it.")])
+    assert [f["remedy"] for f in a["findings"]] == ["Water it."]  # a short remedy is still a remedy
+    assert notes == ["finding 1 dropped (no remedy)", "finding 2 dropped (not an object)", "finding 3 dropped (nothing seen)"]
+    assert _adjusted(findings="none") == ({**health.parse_answer(_answer(), asked=False), "findings": []}, ["findings was not a list"])
+
+
+def test_an_unknown_likelihood_is_the_weaker_claim():
+    a, notes = _adjusted(findings=[_finding(likelihood="certain"), _finding(likelihood="Likely")])
+    assert [f["likelihood"] for f in a["findings"]] == ["possible", "likely"]
+    assert notes == ["finding 1 likelihood 'certain' read as possible"]
+
+
+def test_a_confidence_with_no_usable_level_is_none_not_a_guess():
+    for conf in ("high", {"level": "sure", "why": "It is clear."}, ...):
+        a, notes = _adjusted(confidence=conf)
+        assert a["confidence"] is None and notes == ["no usable confidence"]
+    a, notes = _adjusted(confidence={"level": "High"})
+    assert a["confidence"] == {"level": "high", "why": ""} and notes == []
+
+
+def test_next_photos_beyond_three_are_dropped_with_anything_that_is_not_text():
+    a, notes = _adjusted(next_photos=["a", 7, "b", " ", "c", "d", "e"])
+    assert a["next_photos"] == ["a", "b", "c"] and notes == ["2 next photos dropped (more than 3)"]
+    assert _adjusted(next_photos="the soil")[0]["next_photos"] == []
+
+
+def test_a_missing_reply_keeps_the_check_and_an_unasked_one_is_dropped():
+    a, notes = _adjusted(asked=True)
+    assert "reply" not in a and a["findings"] and notes == ["no reply to the owner's question"]
+    a, notes = _adjusted(asked=False, reply=REPLY)
+    assert "reply" not in a and notes == ["a reply to no question dropped"]
 
 
 def test_a_summary_a_little_over_the_prompts_140_characters_is_kept():
@@ -104,10 +161,17 @@ def test_a_summary_a_little_over_the_prompts_140_characters_is_kept():
     assert f"{health.SUMMARY_TARGET} characters" in care.load_prompt(health.PROMPT_PATH)[1]
 
 
-def test_a_finding_may_name_no_photo_and_photo_numbers_follow_the_photos_sent():
-    assert health.parse_answer(_answer(findings=[_finding(photo=None)]), asked=False)["findings"][0]["photo"] is None
-    with pytest.raises(health.InvalidAnswer, match="from 1 to 1"):
-        health.parse_answer(_answer(findings=[_finding(photo=2)]), asked=False, photo_count=1)
+@pytest.mark.parametrize(
+    "given, count, photo",
+    [(1, 2, 1), (2, 2, 2), ("1", 2, 1), (" 2 ", 2, 2), ("Photo 2", 2, 2), ("photo 1", 3, 1), (1.0, 2, 1),
+     (None, 2, None), (3, 2, None), (0, 2, None), ("3", 2, None), ("1 and 2", 2, None), ("the first", 2, None),
+     (1.5, 2, None), (True, 2, None), ([1], 2, None), (2, 1, None)],
+)
+def test_a_findings_photo_is_read_leniently_and_never_fails_the_check(given, count, photo):
+    # Live, a check with two photos came back with "1" as text and was thrown away.
+    assert health.photo_number(given, count) == photo
+    answer = health.parse_answer(_answer(findings=[_finding(photo=given)]), asked=False, photo_count=count)
+    assert answer["findings"][0]["photo"] == photo and answer["findings"][0]["seen"]  # the finding itself is kept
 
 
 # --- the prompt --------------------------------------------------------------
@@ -401,12 +465,28 @@ def test_a_failed_call_is_one_loud_line_and_a_failed_row_that_is_never_retried(t
     assert conn.execute("SELECT state FROM health_checks WHERE id = ?", (again,)).fetchone()[0] == "done"
 
 
-def test_an_invalid_answer_fails_the_check_with_the_validators_words(tmp_path):
+def test_an_answer_with_nothing_usable_fails_the_check_with_the_validators_words(tmp_path):
+    conn, data, ids = _collection(tmp_path)
+    check = _queue(conn, ids)
+    assert health.run_once(conn, data, CFG, "6a", NOW, _fake(_answer(summary=...), [])) is True
+    row = conn.execute("SELECT state, error FROM health_checks WHERE id = ?", (check,)).fetchone()
+    assert tuple(row) == ("failed", "InvalidAnswer: there is no summary")
+
+
+def test_an_adjusted_answer_is_stored_and_the_journal_line_says_what_was_adjusted(tmp_path, caplog):
     conn, data, ids = _collection(tmp_path)
     check = _queue(conn, ids, QUESTION)
-    assert health.run_once(conn, data, CFG, "6a", NOW, _fake(_answer(), [])) is True  # a question, and no reply
-    row = conn.execute("SELECT state, error FROM health_checks WHERE id = ?", (check,)).fetchone()
-    assert tuple(row) == ("failed", "InvalidAnswer: a question was asked but there is no reply")
+    flawed = _answer(findings=[_finding()] * 5, confidence="high")  # a question and no reply, five findings, no confidence
+    with caplog.at_level(logging.INFO, logger="fern"):
+        assert health.run_once(conn, data, CFG, "6a", NOW, _fake(flawed, [])) is True
+    row = conn.execute("SELECT state, status, answer, error FROM health_checks WHERE id = ?", (check,)).fetchone()
+    assert (row["state"], row["status"], row["error"]) == ("done", "needs_attention", None)
+    stored = json.loads(row["answer"])
+    assert len(stored["findings"]) == 4 and stored["confidence"] is None and "reply" not in stored
+    assert [r.levelname for r in caplog.records] == ["INFO"]
+    assert caplog.records[0].getMessage().endswith(
+        "5810 tokens in, 2950 out, adjusted: no reply to the owner's question; finding 5 dropped (more than 4); no usable confidence"
+    )
 
 
 def test_a_check_without_a_care_sheet_or_a_question_and_with_a_photo_since_removed(tmp_path):
