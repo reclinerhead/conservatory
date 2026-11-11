@@ -12,7 +12,7 @@ import type { PlantCheck } from "@/lib/specimens";
 // A plant's health check (#87), both cards. HealthCheckCard, first in the
 // side column, is where one is started: the plant's photos as checkable
 // thumbs, an optional question, "Check health". HealthPanel, in the main
-// column, shows the latest check and the earlier ones. Pressing the button
+// column, shows the latest check, open, and the earlier ones, closed. Pressing the button
 // only queues a row (POST /api/plants/[id]/health); Fern asks the model, and
 // the panel refreshes the page every few seconds until the answer is there.
 // A finished check, done or failed, can be deleted from its row (#91).
@@ -188,7 +188,7 @@ export function HealthPanel({ plantId, checks, canCheck }: { plantId: number; ch
   const shown = showAll ? earlier : earlier.slice(0, EARLIER_SHOWN);
   return (
     <section id="health" aria-labelledby="health-h" className="card flex scroll-mt-4 flex-col gap-4 p-5 sm:px-8 sm:py-7">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+      <div>
         <h2 id="health-h" className="text-section leading-tight">
           Health{" "}
           <span className="font-sans text-body">
@@ -197,11 +197,6 @@ export function HealthPanel({ plantId, checks, canCheck }: { plantId: number; ch
             </Term>
           </span>
         </h2>
-        {canCheck ? (
-          <a href="#health-check" className="font-semibold">
-            New health check
-          </a>
-        ) : null}
       </div>
 
       {latest ? (
@@ -242,10 +237,11 @@ export function HealthPanel({ plantId, checks, canCheck }: { plantId: number; ch
 }
 
 /**
- * The summary row's box, the same in every state so nothing moves when a
- * check lands or fails: one line for the tag and date, the sentence at
- * a fixed height (four lines on a phone, three from 640 px; one opened row
- * shows it whole), and the thumbs' 40 px.
+ * The summary row's box, the same in every closed state: one line for the
+ * tag and date, the sentence at a fixed height (four lines on a phone, three
+ * from 640 px; an opened row shows it whole), and the thumbs' 40 px. The
+ * latest check opens by itself when its answer lands (#93), so that is where
+ * the card grows.
  */
 function RowShell({
   top,
@@ -369,7 +365,8 @@ function DeleteCheck({ plantId, checkId, day }: { plantId: number; checkId: numb
 }
 
 function CheckRow({ plantId, check, lead = false, stalled = false }: { plantId: number; check: PlantCheck; lead?: boolean; stalled?: boolean }) {
-  const [open, setOpen] = useState(false);
+  // The latest check arrives open (#93): its findings and remedies are what the page is opened for. Earlier ones start closed.
+  const [open, setOpen] = useState(lead);
   const id = useId();
   const day = dayLabel(check.finishedAt ?? check.createdAt);
   const date = day ? <span className="text-meta text-ink-2">{day}</span> : null;
@@ -383,10 +380,7 @@ function CheckRow({ plantId, check, lead = false, stalled = false }: { plantId: 
           top={
             <>
               {waiting ? (
-                <span className="tag">
-                  <LeafMark size={12} className={stalled ? "" : "animate-pulse motion-reduce:animate-none"} />
-                  Checking
-                </span>
+                <span className="tag">Checking</span>
               ) : (
                 <span className="tag">Didn&rsquo;t finish</span>
               )}
@@ -394,13 +388,15 @@ function CheckRow({ plantId, check, lead = false, stalled = false }: { plantId: 
             </>
           }
           body={
-            <span role="status">
-              {waiting
-                ? stalled
+            waiting && !stalled ? (
+              <Looking seed={check.id} />
+            ) : (
+              <span role="status">
+                {waiting
                   ? "Fern hasn't answered yet. If Fern is running, the answer will be here when you reload the page."
-                  : "Fern is looking…"
-                : `${check.why} This check won't be tried again; you can start a new one.`}
-            </span>
+                  : `${check.why} This check won't be tried again; you can start a new one.`}
+              </span>
+            )
           }
           // A failed check has no opened row, so its Delete ends its summary row. One still with Fern has none.
           foot={
@@ -411,7 +407,7 @@ function CheckRow({ plantId, check, lead = false, stalled = false }: { plantId: 
           }
           muted
         />
-        {lead && check.question ? <Asked question={check.question} reply={null} waiting={waiting} /> : null}
+        {lead && check.question ? <Asked question={check.question} reply={null} waiting={waiting && !stalled} /> : null}
       </div>
     );
   }
@@ -510,20 +506,90 @@ function CheckRow({ plantId, check, lead = false, stalled = false }: { plantId: 
 }
 
 /**
- * The owner's question with the reply under it. The reply's place is held
- * in every state at eight lines on a phone and five from 640 px (the prompt
- * asks for two to five sentences), so a reply of ordinary length lands
- * without moving the page; a longer one is shown whole and takes its room.
+ * The owner's question and the reply as a conversation (#93): their words in
+ * a moss bubble at the right, the reply in a pale one at the left, each under
+ * a small label, so the two never read alike. While Fern is looking the
+ * reply's bubble holds a text message's typing dots; when the check failed it
+ * says there is no reply.
  */
 function Asked({ question, reply, waiting }: { question: string; reply: string | null; waiting: boolean }) {
   return (
-    <div className="rounded-tile bg-ground p-4">
-      <p className="text-meta font-semibold text-ink-2">You asked</p>
-      <p className="mt-0.5 text-body">{question}</p>
-      <p className="mt-3 text-meta font-semibold text-ink-2">The reply</p>
-      <p className={`mt-0.5 min-h-[8lh] text-body sm:min-h-[5lh] ${reply ? "" : "text-ink-2"}`}>
-        {reply ?? (waiting ? "Fern is looking…" : "There is no reply: the check didn't finish.")}
-      </p>
+    <div className="flex flex-col gap-3">
+      <div className="flex max-w-[85%] flex-col items-end gap-1 self-end">
+        <span className="text-tag font-bold text-ink-2">You asked</span>
+        <p className="rounded-[18px] rounded-br-[6px] bg-moss px-4 py-2.5 text-body text-white">{question}</p>
+      </div>
+      <div className="flex max-w-[85%] flex-col items-start gap-1 self-start">
+        <span className="text-tag font-bold text-ink-2">Fern&rsquo;s reply</span>
+        <p className={`rounded-[18px] rounded-bl-[6px] border border-line bg-ground px-4 py-2.5 text-body ${reply ? "text-ink" : "text-ink-2"}`}>
+          {reply ??
+            (waiting ? (
+              <span className="flex h-[1lh] items-center gap-1.5" aria-hidden>
+                <span className="fern-dot" />
+                <span className="fern-dot [animation-delay:160ms]" />
+                <span className="fern-dot [animation-delay:320ms]" />
+              </span>
+            ) : (
+              "No reply: the check didn’t finish."
+            ))}
+        </p>
+      </div>
     </div>
+  );
+}
+
+// What Fern is "doing" while the model has the photos (#93). They pass the
+// time; none of them reports a real step.
+const PHRASES = [
+  "Looking at the leaves…",
+  "Looking more closely…",
+  "Checking the leaf edges…",
+  "Turning a leaf over…",
+  "Checking for visitors…",
+  "Following a stem down…",
+  "Peering at the soil line…",
+  "Comparing with its care sheet…",
+  "Counting the new growth…",
+  "Squinting at a spot…",
+  "Asking the potting bench…",
+  "Writing up what it saw…",
+];
+const PHRASE_MS = 2800;
+
+/**
+ * The wait, in the summary row's sentence box: a leaf with a magnifying glass
+ * drifting over it, and a phrase that changes every few seconds. It starts
+ * from the check's id, so the server and the browser draw the same first
+ * phrase and two checks do not open alike. A screen reader hears "Fern is
+ * looking" once; the phrases are for the eye. Under reduced motion the glass
+ * and the leaf are still and the phrase changes without its fade.
+ */
+function Looking({ seed }: { seed: number }) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setN((v) => v + 1), PHRASE_MS);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <span className="flex items-center gap-3">
+      <span aria-hidden className="relative flex h-11 w-11 flex-none items-center justify-center rounded-full bg-sage">
+        <LeafMark size={26} className="fern-sway text-moss" />
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="fern-scan absolute left-1/2 top-1/2 text-ink">
+          <circle cx="10" cy="10" r="6" fill="rgb(255 255 255 / 0.55)" />
+          <path d="M14.5 14.5L21 21" />
+        </svg>
+      </span>
+      <span className="flex min-w-0 flex-col">
+        <span role="status" className="sr-only">
+          Fern is looking
+        </span>
+        <span aria-hidden key={n} className="fern-phrase truncate font-semibold text-ink">
+          {PHRASES[(seed + n) % PHRASES.length]}
+        </span>
+        <span aria-hidden className="text-meta text-ink-2">
+          Fern is reading your photos. It can take a minute.
+        </span>
+      </span>
+    </span>
   );
 }
