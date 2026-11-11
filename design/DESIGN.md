@@ -18,7 +18,8 @@ Organic, light, unhurried. A homeowner's garden notebook, not a SaaS dashboard.
 - A serif for the things that matter to a plant person — the common name, the
   Latin binomial, the big counts — and a friendly humanist sans for the rest.
 - One action colour (moss green). Pink exists only to mean "bloom". Amber only
-  means "time-sensitive" (frost, bring it in). Blue only means "water". Never
+  means "time-sensitive" (frost, bring it in) or "waiting on you" (the To do
+  card while anything is pending). Blue only means "water". Never
   use these for decoration.
 - No gradients, no emoji, no icon-only mystery buttons, no left-border cards.
   Icons are 1.8–2 px stroke line icons, inline SVG.
@@ -127,7 +128,9 @@ README requirement: every horticultural term gets one.
 
 **Reminder card** — card with a status tag on top, bold one-line task, meta
 line, Done + Snooze at the bottom. The time-sensitive one (frost) gets the
-`warn-bg` fill and `warn-line` border so it reads first.
+`warn-bg` fill and `warn-line` border so it reads first. The dashboard's To
+do card wears the same fill and border while any to-do is pending, with `warn`
+row dividers.
 
 **Pending strip** — full-width sage card: three overlapping 48 px thumbs,
 "N plants waiting for a name", one primary button.
@@ -276,9 +279,11 @@ cards, which are species tiles, not specimen cards), top to bottom:
      Collection at a glance · What you grow most · Blooming now · Flower Show
      (ribbons).
    - To do: the heading with "All (N)" at its right, then the three newest
-     to-dos still to do as side-panel rows (the plant's thumb and name, one
-     line of the remedy), each opening the To-do page; as tall as its rows,
-     with no blank rows below, and one row saying so when none are pending.
+     to-dos still to do as side-panel rows (the plant's thumb at the top of
+     the row, its name on one line, the remedy wrapped to at most five lines),
+     each opening the To-do page; as tall as its rows, with no blank rows
+     below. While any are pending it is the highlighted card (`warn-bg`,
+     `warn-line`); with none it is a plain card with one row saying so.
    - New species added recently: the four species that joined last (a new pot
      of one already owned doesn't count), as side-panel rows, always four rows
      tall. No "All N species" foot link: the grid is beside it.

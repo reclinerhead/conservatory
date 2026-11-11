@@ -132,8 +132,10 @@ export default function Home() {
         <aside className="flex w-full flex-[1_1_300px] flex-col gap-5 lg:max-w-sidebar">
           {/* To do (#103): the three newest still to do, each opening the
               To-do page, where they are ticked off. As tall as its rows, one
-              to three: no blank rows; with none pending, one row says so. */}
-          <section className="card px-5 pb-3 pt-5" aria-labelledby="todo-h">
+              to three: no blank rows; with none pending, one row says so.
+              While any are pending it is the highlighted card (#109), and
+              each remedy wraps to five lines: the height is the nudge. */}
+          <section className={`card px-5 pb-3 pt-5 ${todoRows.length > 0 ? "border-warn-line bg-warn-bg" : ""}`} aria-labelledby="todo-h">
             <div className="mb-2 flex items-baseline justify-between gap-3">
               <h3 id="todo-h" className="text-h3">
                 To do
@@ -159,8 +161,8 @@ export default function Home() {
               {todoRows.map((t, i) => {
                 const tint = TILE_TINTS[i % TILE_TINTS.length];
                 return (
-                  <li key={t.id} className="border-t border-sage first:border-t-0">
-                    <Link href="/todo" className="group flex min-h-[68px] items-center gap-3 py-2.5 text-ink hover:text-ink hover:no-underline">
+                  <li key={t.id} className="border-t border-warn first:border-t-0">
+                    <Link href="/todo" className="group flex min-h-[68px] items-start gap-3 py-2.5 text-ink hover:text-ink hover:no-underline">
                       {t.plant.thumbUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={t.plant.thumbUrl} alt="" width={48} height={48} className="thumb" />
@@ -171,7 +173,7 @@ export default function Home() {
                       )}
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-bold group-hover:underline">{cardNames(t.plant).name}</p>
-                        <p className="truncate text-meta text-ink-2">{t.remedy}</p>
+                        <p className="line-clamp-5 text-meta text-ink-2">{t.remedy}</p>
                       </div>
                     </Link>
                   </li>
