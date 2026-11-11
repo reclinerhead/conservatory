@@ -193,7 +193,9 @@ describe("a check's row", () => {
   });
 
   it("puts each kind of failure in its own words", () => {
-    expect(failureWords("InvalidAnswer: summary runs long (188 characters)")).toMatch(/not in a form Fern could use/);
+    expect(failureWords("InvalidAnswer: finding 1 remedy is too short (9 characters)")).toBe(
+      "The model answered, but not in a form Fern could use (finding 1 remedy is too short (9 characters)), so nothing was saved.",
+    );
     expect(failureWords("LookupError: none of the chosen photos can be read any more")).toMatch(/were removed/);
     expect(failureWords("Interrupted: Fern stopped while this check was running")).toMatch(/restarted/);
     expect(failureWords("Off: Fern has no AI_GATEWAY_API_KEY, so health checks are off")).toMatch(/off on this box/);
