@@ -292,7 +292,7 @@ function CareBlock({ s }: { s: SpeciesView }) {
           const cell = sheet?.cells[d.key];
           const example = d.key === "hardiness" && sheet?.zone ? `Your household is in zone ${sheet.zone}; this sheet says ${cell?.headline}.` : undefined;
           return (
-            <li key={d.key} className="flex min-h-[16rem] flex-col gap-1 rounded-tile bg-ground px-4 py-3.5">
+            <li key={d.key} className="flex flex-col gap-1 rounded-tile bg-ground px-4 py-3.5 sm:min-h-[16rem]">
               <p className="text-[12px] font-bold uppercase tracking-[.04em] text-ink-2">
                 <Term k={d.term} example={example}>
                   {d.label}
@@ -422,7 +422,7 @@ function RelativeGroup({ heading, rows, none }: { heading: React.ReactNode; rows
       <h3 className="font-sans text-[15px] font-bold text-ink-2">{heading}</h3>
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {rows.length === 0 ? (
-          <li className="col-span-2 flex min-h-[120px] flex-col justify-center gap-1 rounded-[16px] border border-dashed border-line-2 px-4 py-3 sm:col-span-1">
+          <li className="col-span-2 flex flex-col justify-center gap-1 rounded-[16px] border border-dashed border-line-2 px-4 py-3 sm:col-span-1 sm:min-h-[120px]">
             <p className="font-bold text-ink-2">{none}</p>
             <p className="text-meta text-ink-2">The next one you name lands here.</p>
           </li>
