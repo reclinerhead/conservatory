@@ -217,8 +217,6 @@ export default async function SpeciesPage({ params }: { params: Promise<{ id: st
             </div>
           </section>
 
-          <CareBlock s={s} />
-
           {/* In your collection: every specimen of this species, grouped like the collection. */}
           <section aria-labelledby="coll-h" className="card flex flex-col gap-4 p-5 sm:px-8 sm:py-7">
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -243,6 +241,8 @@ export default async function SpeciesPage({ params }: { params: Promise<{ id: st
               </div>
             ))}
           </section>
+
+          <CareBlock s={s} />
 
           <RelativesBlock s={s} />
         </div>
