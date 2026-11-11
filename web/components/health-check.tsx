@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { Term } from "@/components/term";
@@ -8,6 +9,7 @@ import { modelLabel } from "@/lib/care";
 import { dayLabel } from "@/lib/collection";
 import { canSend, EARLIER_SHOWN, LIGHTS, MAX_PHOTOS, MAX_QUESTION, SETTINGS, STATUS_LABEL, togglePhoto, type Light, type Setting } from "@/lib/health";
 import type { PlantCheck } from "@/lib/specimens";
+import type { FindingTodo } from "@/lib/todos";
 
 // A plant's health check (#87), both cards. HealthCheckCard, first in the
 // side column, is where one is started: the plant's photos as checkable
@@ -16,7 +18,8 @@ import type { PlantCheck } from "@/lib/specimens";
 // column, shows the latest check, open, and the earlier ones, closed. Pressing the button
 // only queues a row (POST /api/plants/[id]/health); Fern asks the model, and
 // the panel refreshes the page every few seconds until the answer is there.
-// A finished check, done or failed, can be deleted from its row (#91).
+// A finished check, done or failed, can be deleted from its row (#91). Each
+// finding can be put on the to-do list from its own cell (#103).
 
 const PLACEHOLDER = "White fuzzy insects are nibbling the leaves, like in the photo. What are they and how do I get rid of them?";
 
@@ -234,7 +237,7 @@ export function HealthPanel({ plantId, checks, canCheck }: { plantId: number; ch
       </div>
 
       {latest ? (
-        <CheckRow key={latest.id} plantId={plantId} check={latest} lead stalled={gaveUp === latest.id} />
+        <CheckRow key={latest.id} plantId={plantId} check={latest} canAdd={canCheck} lead stalled={gaveUp === latest.id} />
       ) : (
         <RowShell
           top={<span className="font-bold">No health check yet</span>}
@@ -253,7 +256,7 @@ export function HealthPanel({ plantId, checks, canCheck }: { plantId: number; ch
           <ul className="divide-y divide-line">
             {shown.map((c) => (
               <li key={c.id} className="py-3 last:pb-0">
-                <CheckRow plantId={plantId} check={c} />
+                <CheckRow plantId={plantId} check={c} canAdd={canCheck} />
               </li>
             ))}
           </ul>
@@ -405,7 +408,79 @@ function DeleteCheck({ plantId, checkId, day }: { plantId: number; checkId: numb
   );
 }
 
-function CheckRow({ plantId, check, lead = false, stalled = false }: { plantId: number; check: PlantCheck; lead?: boolean; stalled?: boolean }) {
+/**
+ * A finding's place on the to-do list (#103), the last line of its cell and
+ * 40 px tall in every state, so adding, removing and ticking off move
+ * nothing. Not on the list: "Add to to-do list" (POST /api/todos). On it:
+ * "On your to-do list", which opens the To-do page, and "Remove" (DELETE
+ * /api/todos/[id]). Done: a check mark and the day. Each press refreshes the
+ * page, which redraws the line and the top bar's count. A plant that is no
+ * longer here keeps what its findings say but offers no "Add".
+ */
+function FindingTodoLine({ checkId, index, todo, canAdd }: { checkId: number; index: number; todo: FindingTodo; canAdd: boolean }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function call(url: string, init: RequestInit) {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await fetch(url, init);
+      // A 404 on Remove means another tab got there first: the refreshed page is right.
+      if (!r.ok && r.status !== 404) throw new Error(((await r.json().catch(() => ({}))) as { error?: string }).error ?? `server ${r.status}`);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "it did not go through");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (todo.kind === "none" && !canAdd) return null;
+  return (
+    <p className="mt-2 flex h-10 items-center gap-x-3 text-meta">
+      {todo.kind === "none" ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void call("/api/todos", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ checkId, finding: index }) })}
+          className="btn btn-ghost btn-compact bg-surface text-meta"
+        >
+          <svg aria-hidden width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" className="flex-none">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          {busy ? "Adding…" : "Add to to-do list"}
+        </button>
+      ) : todo.kind === "pending" ? (
+        <>
+          <Link href="/todo" className="inline-flex items-center gap-1.5 font-semibold">
+            <svg aria-hidden width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="flex-none">
+              <rect x="4" y="4" width="16" height="16" rx="4" />
+            </svg>
+            On your to-do list
+          </Link>
+          <button type="button" disabled={busy} onClick={() => void call(`/api/todos/${todo.id}`, { method: "DELETE" })} className="btn btn-ghost btn-compact bg-surface text-meta">
+            {busy ? "Removing…" : "Remove"}
+          </button>
+        </>
+      ) : (
+        <span className="inline-flex items-center gap-1.5 font-semibold text-moss-deep">
+          <svg aria-hidden width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className="flex-none">
+            <path d="M5 12.5l4.5 4.5L19 7.5" />
+          </svg>
+          Done {dayLabel(todo.completedAt)}
+        </span>
+      )}
+      <span role="status" aria-live="polite" className="min-w-0 truncate text-warn-ink">
+        {error ? `That didn’t go through: ${error}` : ""}
+      </span>
+    </p>
+  );
+}
+
+function CheckRow({ plantId, check, canAdd, lead = false, stalled = false }: { plantId: number; check: PlantCheck; canAdd: boolean; lead?: boolean; stalled?: boolean }) {
   // The latest check arrives open (#93): its findings and remedies are what the page is opened for. Earlier ones start closed.
   const [open, setOpen] = useState(lead);
   const id = useId();
@@ -507,6 +582,7 @@ function CheckRow({ plantId, check, lead = false, stalled = false }: { plantId: 
                         ) : null}
                       </p>
                       <p className="mt-2 text-body">{f.remedy}</p>
+                      <FindingTodoLine checkId={check.id} index={i} todo={check.todos[i] ?? { kind: "none" }} canAdd={canAdd} />
                     </li>
                   );
                 })}

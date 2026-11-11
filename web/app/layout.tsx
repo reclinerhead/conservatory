@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Nunito_Sans } from "next/font/google";
+import { connection } from "next/server";
 import { TopBar } from "@/components/topbar";
+import { withReadDb } from "@/lib/jobs";
+import { pendingTodoCount } from "@/lib/specimens";
 import "./globals.css";
 
 // The faces design/DESIGN.md §3 names: Fraunces for headings, binomials and
@@ -33,11 +36,16 @@ export const viewport: Viewport = {
   themeColor: "#F3F6EF",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  // The top bar's To-do count (#103) comes from the database on every
+  // request, never from the build: the query is synchronous, so without this
+  // a page that is otherwise static would bake the count in.
+  await connection();
+  const todoCount = withReadDb(pendingTodoCount, 0);
   return (
     <html lang="en" className={`${fraunces.variable} ${nunito.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-ground text-ink font-sans leading-normal">
-        <TopBar />
+        <TopBar todoCount={todoCount} />
         {children}
       </body>
     </html>

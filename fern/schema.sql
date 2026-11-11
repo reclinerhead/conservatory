@@ -113,3 +113,10 @@ CREATE TABLE IF NOT EXISTS confirmations (
 -- artificial), both NULL when the owner did not say. Like care_sheets (v3), it
 -- is a migration step and is folded into this baseline only once it has
 -- shipped everywhere.
+
+-- Migration v12 (fern/db.py, #103) adds todos: the to-do list, one row per
+-- finding the owner chose to keep from a health check, written by the web app
+-- alone: id, specimen_id (cascading), health_check_id (SET NULL when the check
+-- is deleted), finding_index, seen, remedy, likelihood (likely | possible),
+-- created_at, completed_at (NULL while pending). One finding makes at most
+-- one to-do (a unique index on the check and the index).

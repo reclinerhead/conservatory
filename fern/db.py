@@ -206,6 +206,31 @@ MIGRATIONS: list[tuple[int, str] | tuple[int, str, str]] = [
         ALTER TABLE health_checks ADD COLUMN light TEXT CHECK (light IN ('natural', 'artificial'));
         """,
     ),
+    # v12 (#103): the to-do list. A to-do is the owner's own copy of one
+    # finding from a health check: what was seen and the remedy are copied in,
+    # so the to-do stands by itself and outlives the check it came from
+    # (deleting the check clears the link, not the to-do). It goes with its
+    # plant. One finding makes at most one to-do. Fern only creates the table;
+    # the web app writes every row.
+    (
+        12,
+        """
+        CREATE TABLE todos (
+          id              INTEGER PRIMARY KEY AUTOINCREMENT,
+          specimen_id     INTEGER NOT NULL REFERENCES specimens(id) ON DELETE CASCADE,
+          health_check_id INTEGER REFERENCES health_checks(id) ON DELETE SET NULL,
+          finding_index   INTEGER,            -- the finding's place in the check's answer, from 0
+          seen            TEXT    NOT NULL,   -- what Fern saw
+          remedy          TEXT    NOT NULL,   -- what to do about it
+          likelihood      TEXT    NOT NULL CHECK (likelihood IN ('likely', 'possible')),
+          created_at      TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+          completed_at    TEXT                -- NULL while it is still to do
+        );
+        CREATE UNIQUE INDEX todos_finding ON todos (health_check_id, finding_index)
+          WHERE health_check_id IS NOT NULL;
+        CREATE INDEX todos_specimen ON todos (specimen_id);
+        """,
+    ),
 ]
 
 LATEST_VERSION = MIGRATIONS[-1][0] if MIGRATIONS else BASELINE_VERSION

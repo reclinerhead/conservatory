@@ -4,6 +4,7 @@ import type { DatabaseSync } from "node:sqlite";
 import type { SpecimenStatus, Tile } from "./collection";
 import { healthView, type HealthRow, type HealthView } from "./health";
 import { thumbPathFor } from "./photos";
+import { findingTodos, type FindingTodo } from "./todos";
 
 type TileRow = {
   id: number;
@@ -184,8 +185,8 @@ export function hasHealthChecks(db: DatabaseSync): boolean {
   return db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'health_checks'").get() !== undefined;
 }
 
-/** A check with the thumbs of the photos it was sent that the plant still has, each under its number in the check. */
-export type PlantCheck = HealthView & { thumbs: Array<{ n: number; id: number; thumbUrl: string }> };
+/** A check with the thumbs of the photos it was sent that the plant still has, each under its number in the check, and each finding's place on the to-do list (#103; empty unless the check is done). */
+export type PlantCheck = HealthView & { thumbs: Array<{ n: number; id: number; thumbUrl: string }>; todos: FindingTodo[] };
 
 /** A plant's health checks, newest first, each in the shape its row takes on the page. */
 export function readHealthChecks(db: DatabaseSync, specimenId: number): PlantCheck[] {
@@ -200,12 +201,87 @@ export function readHealthChecks(db: DatabaseSync, specimenId: number): PlantChe
   const paths = new Map(
     (db.prepare("SELECT id, path FROM photos WHERE specimen_id = ?").all(specimenId) as Array<{ id: number; path: string }>).map((p) => [p.id, p.path]),
   );
+  const listed = hasTodos(db)
+    ? (db
+        .prepare("SELECT id, health_check_id AS checkId, finding_index AS findingIndex, completed_at AS completedAt FROM todos WHERE specimen_id = ? AND health_check_id IS NOT NULL")
+        .all(specimenId) as Array<{ id: number; checkId: number; findingIndex: number | null; completedAt: string | null }>)
+    : [];
   return rows.map((r) => {
     const view = healthView(r);
     const thumbs = view.photoIds.flatMap((id, i) => {
       const path = paths.get(id);
       return path ? [{ n: i + 1, id, thumbUrl: `/media/${thumbPathFor(path)}` }] : [];
     });
-    return { ...view, thumbs };
+    const todos = view.kind === "done" ? findingTodos(view.findings.length, listed.filter((t) => t.checkId === r.id)) : [];
+    return { ...view, thumbs, todos };
   });
+}
+
+/**
+ * Whether the database has the `todos` table (schema v12, #103). One Fern
+ * has not migrated yet has none, which reads as an empty list.
+ */
+export function hasTodos(db: DatabaseSync): boolean {
+  return db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'todos'").get() !== undefined;
+}
+
+/** A to-do as the To-do page and the dashboard draw it: the finding's copy, and the plant it belongs to by its name and main photo. */
+export type TodoView = {
+  id: number;
+  seen: string;
+  remedy: string;
+  likelihood: "likely" | "possible";
+  createdAt: string;
+  completedAt: string | null;
+  plant: { id: number; speciesId: number; status: SpecimenStatus; scientificName: string; cultivar: string | null; commonName: string | null; thumbUrl: string | null };
+};
+
+/** Every to-do, pending and done, in no particular order: lib/todos.ts sorts. */
+export function readTodos(db: DatabaseSync): TodoView[] {
+  if (!hasTodos(db)) return [];
+  const hero = `(SELECT p.path FROM photos p WHERE p.specimen_id = sp.id ORDER BY ${photoOrder(db)} LIMIT 1)`;
+  const rows = db
+    .prepare(
+      `SELECT t.id, t.seen, t.remedy, t.likelihood, t.created_at, t.completed_at,
+              sp.id AS plant_id, sp.species_id, sp.status, s.scientific_name, s.cultivar, s.common_name, ${hero} AS hero
+         FROM todos t JOIN specimens sp ON sp.id = t.specimen_id JOIN species s ON s.id = sp.species_id`,
+    )
+    .all() as Array<{
+    id: number;
+    seen: string;
+    remedy: string;
+    likelihood: "likely" | "possible";
+    created_at: string;
+    completed_at: string | null;
+    plant_id: number;
+    species_id: number;
+    status: SpecimenStatus;
+    scientific_name: string;
+    cultivar: string | null;
+    common_name: string | null;
+    hero: string | null;
+  }>;
+  return rows.map((r) => ({
+    id: r.id,
+    seen: r.seen,
+    remedy: r.remedy,
+    likelihood: r.likelihood,
+    createdAt: r.created_at,
+    completedAt: r.completed_at,
+    plant: {
+      id: r.plant_id,
+      speciesId: r.species_id,
+      status: r.status,
+      scientificName: r.scientific_name,
+      cultivar: r.cultivar,
+      commonName: r.common_name,
+      thumbUrl: r.hero ? `/media/${thumbPathFor(r.hero)}` : null,
+    },
+  }));
+}
+
+/** How many to-dos are still to do: the top bar's count. */
+export function pendingTodoCount(db: DatabaseSync): number {
+  if (!hasTodos(db)) return 0;
+  return (db.prepare("SELECT COUNT(*) AS n FROM todos WHERE completed_at IS NULL").get() as { n: number }).n;
 }
