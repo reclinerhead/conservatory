@@ -47,7 +47,7 @@ export function CareFigures({ figures }: { figures: CareFigure[] }) {
         <span aria-hidden className="flex h-[18px] w-[18px] items-center justify-center rounded-full border border-line-strong bg-surface text-[11px]">
           #
         </span>
-        {figures.length === 1 ? "1 figure" : `${figures.length} figures`} and what they rest on
+        {figures.length === 1 ? "See the figure" : `See the ${figures.length} figures`}
       </button>
       {open ? (
         <div

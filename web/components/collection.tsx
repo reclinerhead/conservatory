@@ -27,10 +27,11 @@ export function SpecimenCard({ tile, tint, compact = false }: { tile: Tile; tint
       )}
       <div className="flex flex-col gap-1 px-4 pb-4 pt-3.5">
         <p className="text-lead font-bold leading-snug">{name}</p>
-        {/* The line under the name is reserved, so a card keeps its height when Fern finds a common name. */}
+        {/* The line under the name is reserved, so a card keeps its height when Fern finds a common name.
+            The compact card never shows a common name, so it has no line to reserve. */}
         {species ? (
           <p className="sp">{species}</p>
-        ) : (
+        ) : compact ? null : (
           <p aria-hidden className="invisible">
             &nbsp;
           </p>
