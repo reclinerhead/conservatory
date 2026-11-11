@@ -4,14 +4,8 @@ export const metadata = { title: "Add a plant · The Conservatory" };
 
 export default function AddPage() {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-7 px-4 pb-14 pt-6 sm:px-8 sm:pt-8">
-      <div>
-        <h1 className="text-h1 leading-[1.1]">Add a plant</h1>
-        <p className="mt-2 max-w-prose text-lead text-ink-2">
-          One plant at a time. Take its photos now, or choose the ones you took in the garden. Fern looks at them
-          together and suggests what it is, and you put the name on it afterwards.
-        </p>
-      </div>
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-4 pb-14 pt-4 sm:gap-7 sm:px-8 sm:pt-8">
+      <h1 className="text-h1 leading-[1.1]">Add a plant</h1>
       <Uploader />
     </main>
   );
