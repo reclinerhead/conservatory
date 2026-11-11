@@ -133,20 +133,28 @@ cuttings, divisions and offsets; the child's meta line says which.
 **Breadcrumb** — Collection › Family › *Genus* › Common name, 14 px,
 `ink-2` links, current page in `ink` 600.
 
-**Photo gallery** — 3-column grid; hero spans two columns at 560 px, second
-photo stacked right, then a 120 px reference thumb + "Add a photo". Each photo
+**Photo gallery** — on a plant's page, a 3-column grid; hero spans two columns,
+the next photos stacked right above "Add a photo". On the species page, the
+species photo is the hero, full width at 560 px, and under it one row of equal
+120 px tiles: each other plant by its main photo, then the reference image
+(the mockup's second photo, reference thumb and "Add a photo" are not drawn).
+A missing tile keeps its place as a dashed tile that says why. The hero
 carries a dark pill caption naming its source and date ("Your photo · Front bed
-coneflower · Jul 12, 2026" / "Wikipedia"). Owner photos always outrank the
-reference image. A plant is shown by its main photo, the one chosen for it, else
-its newest; on its own page that is the hero, its caption ending "· Main photo".
+coneflower · Jul 12, 2026"); a tile carries a dark bar with the name
+("Wikipedia" on the reference). Owner photos always outrank the reference
+image. A plant is shown by its main photo, the one chosen for it, else its
+newest; on its own page that is the hero, its caption ending "· Main photo".
+A species is shown by its species photo, the one chosen for it, else the
+newest of its plants' main photos.
 
 **Lightbox** — a tap on any photo opens it full size over the page: the ink
 backdrop nearly solid, white line-icon buttons (zoom, close, previous, next),
-"2 of 5" top left. Under the photo, the caption pill at the left and at most
-one action at the right as a white pill, 44 px: "Use as main photo" on a
-plant's photos ("Main photo" in its place on the main one, so nothing moves),
-or where the photo leads on the species page ("Open Ficus elastica", "The image and
-its licence on Wikimedia Commons"). Escape, Close or the backdrop closes it,
+"2 of 5" top left. Under the photo, the caption pill at the left and its
+actions at the right as white pills, 44 px. On a plant's page, "Use as main
+photo" ("Main photo" in its place on the main one, so nothing moves). On the
+species page, where the photo leads ("Open Ficus elastica", "The image and
+its licence on Wikimedia Commons") and, before it on a plant's photo, "Use as
+species photo" ("Species photo" on the one that leads). Escape, Close or the backdrop closes it,
 and the page is where it was.
 
 **QR pot tag** — a 7 × 7 module placeholder in the mockup; real tags are

@@ -51,6 +51,7 @@ export type Reference = { url: string; thumbUrl: string; credit: string | null; 
 export type GalleryItem = {
   kind: "owner" | "reference";
   key: string;
+  photoId?: number; // an owner photo's id, which can be made the species photo
   url: string; // the full image
   thumbUrl: string;
   href: string; // where a tap goes: the specimen's page, or the image's page on Commons
@@ -65,25 +66,35 @@ const when = (p: OwnerPhoto) => p.takenAt ?? p.uploadedAt;
 const newestFirst = (a: OwnerPhoto, b: OwnerPhoto) => (when(a) !== when(b) ? (when(a) < when(b) ? 1 : -1) : b.photoId - a.photoId);
 
 /**
- * The gallery, in order: each specimen of this species shown by its main
- * photo (#46: the one chosen on its page, else its newest), newest first by
- * that photo's date, then the reference image. The same rule as the plant's
- * page and the species list's thumbnail (photoOrder in lib/specimens.ts), so
- * a plant looks the same everywhere. Owner photos always outrank the
- * reference, so the reference is the hero only when the household has no
- * photo of this species yet.
+ * The gallery, in order: the species photo first, then the rest of the
+ * plants, then the reference image. Each specimen of this species is shown by
+ * its main photo (#46: the one chosen on its page, else its newest), newest
+ * first by that photo's date; the same rule as the plant's page (photoOrder
+ * in lib/specimens.ts), so a plant looks the same everywhere.
+ *
+ * The species photo (#77) is the one chosen on this page, `chosenId`, while
+ * it is still a photo of one of the species' plants; else the first of the
+ * plants' main photos. It is never repeated after itself. When its plant has
+ * since been given another main photo, the species keeps the photo chosen
+ * for it and the plant follows by its own.
+ *
+ * Owner photos always outrank the reference, so the reference leads only
+ * when the household has no photo of this species yet.
  */
-export function speciesGallery(photos: OwnerPhoto[], ref: Reference | null): GalleryItem[] {
+export function speciesGallery(photos: OwnerPhoto[], ref: Reference | null, chosenId: number | null = null): GalleryItem[] {
   const main = new Map<number, OwnerPhoto>();
   for (const p of [...photos].sort(newestFirst)) {
     const held = main.get(p.specimenId);
     if (!held || (p.chosen && !held.chosen)) main.set(p.specimenId, p);
   }
+  const plants = [...main.values()].sort(newestFirst);
+  const lead = chosenId === null ? undefined : photos.find((p) => p.photoId === chosenId);
   const items: GalleryItem[] = [];
-  for (const p of [...main.values()].sort(newestFirst)) {
+  for (const p of lead ? [lead, ...plants.filter((m) => m.photoId !== lead.photoId)] : plants) {
     items.push({
       kind: "owner",
       key: `photo-${p.photoId}`,
+      photoId: p.photoId,
       url: `/media/${p.path}`,
       thumbUrl: `/media/${thumbPathFor(p.path)}`,
       href: `/plants/${p.specimenId}`,
@@ -105,12 +116,6 @@ export function speciesGallery(photos: OwnerPhoto[], ref: Reference | null): Gal
     });
   }
   return items;
-}
-
-/** "2 of your photos · 1 reference image", under the gallery. */
-export function galleryLine(ownerPhotos: number, hasReference: boolean): string {
-  const own = ownerPhotos === 0 ? "No photos of yours yet" : `${ownerPhotos} of your photos`;
-  return hasReference ? `${own} · 1 reference image` : own;
 }
 
 export type AboutState =
@@ -166,23 +171,6 @@ export function inCollectionLine(tiles: Pick<Tile, "status" | "location">[]): st
   if (places > 0) parts.push(places === 1 ? "1 location" : `${places} locations`);
   if (gone > 0) parts.push(`${gone} no longer here`);
   return parts.join(" · ");
-}
-
-/** A plant the species page's "Add a photo" can put photos on, named for the status line and the chooser. */
-export type PhotoTarget = { id: number; label: string };
-
-/**
- * The plants "Add a photo" on a species page can put a photo on (#55): the
- * living ones, else, when every one has died or been given away, the rest;
- * newest first, as In your collection orders them. Every plant of a species
- * shares the species' name, so each goes by its pot tag number and its place:
- * "Plant #142 · Kitchen", or "Plant #142" with no place set.
- */
-export function photoTargets(tiles: Pick<Tile, "id" | "location" | "status" | "createdAt">[]): PhotoTarget[] {
-  const living = tiles.filter((t) => t.status === "alive");
-  return [...(living.length > 0 ? living : tiles)]
-    .sort((a, b) => (a.createdAt !== b.createdAt ? (a.createdAt < b.createdAt ? 1 : -1) : b.id - a.id))
-    .map((t) => ({ id: t.id, label: t.location?.trim() ? `Plant #${t.id} · ${t.location.trim()}` : `Plant #${t.id}` }));
 }
 
 export type Naming = { how: "pill" | "typed" | "same"; score: number | null; at: string } | null;

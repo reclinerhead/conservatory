@@ -25,6 +25,14 @@ export function hasHeroPhoto(db: DatabaseSync): boolean {
 }
 
 /**
+ * Whether the species table has `hero_photo_id` (schema v9, #77). Before it,
+ * no species has a photo chosen and each leads with its newest plant's.
+ */
+export function hasSpeciesHero(db: DatabaseSync): boolean {
+  return db.prepare("SELECT 1 FROM pragma_table_info('species') WHERE name = 'hero_photo_id'").get() !== undefined;
+}
+
+/**
  * A plant's photos in the order every screen shows them, as an ORDER BY over
  * the photos alias `p`: the main photo first (#46, chosen on the plant's
  * page), then newest first by when it was taken (upload time when the EXIF

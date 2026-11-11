@@ -187,7 +187,7 @@ def test_v7_drops_the_nickname_keeping_every_plant(tmp_path, monkeypatch):
 
 def test_a_fresh_database_has_no_nickname(tmp_path):
     conn = db.connect(tmp_path / "c.db")
-    assert db.current_version(conn) == db.LATEST_VERSION == 8
+    assert db.current_version(conn) == db.LATEST_VERSION == 9
     assert "nickname" not in {r["name"] for r in conn.execute("PRAGMA table_info(specimens)")}
 
 
@@ -244,7 +244,7 @@ def test_v8_fills_a_species_common_name_from_the_candidate_that_named_it(tmp_pat
         )
     conn.commit()
 
-    monkeypatch.setattr(db, "MIGRATIONS", steps)
+    monkeypatch.setattr(db, "MIGRATIONS", steps[:7])  # up to v8
     assert db.apply_schema(conn) == 8
     assert dict(conn.execute("SELECT id, common_name FROM species ORDER BY id").fetchall()) == {
         1: "Happy bean",
@@ -258,3 +258,35 @@ def test_v8_fills_a_species_common_name_from_the_candidate_that_named_it(tmp_pat
     # A second apply is a no-op.
     assert db.apply_schema(conn) == 8
     assert [r["version"] for r in conn.execute("SELECT version FROM schema_version ORDER BY version")] == [1, 2, 3, 4, 5, 6, 7, 8]
+
+
+def test_v9_adds_a_species_hero_photo_id_over_a_v8_database_once(tmp_path, monkeypatch):
+    conn = _v4_database_with_plants(tmp_path / "c.db", monkeypatch)
+    steps = db.MIGRATIONS
+    monkeypatch.setattr(db, "MIGRATIONS", steps[:7])
+    assert db.apply_schema(conn) == 8
+    conn.execute("INSERT INTO species (id, scientific_name, common_name) VALUES (2, 'Hoya carnosa', 'Wax plant')")
+    conn.commit()
+    monkeypatch.setattr(db, "MIGRATIONS", steps[:8])
+    assert db.apply_schema(conn) == 9
+    # Every species keeps its row and has no photo chosen: the newest of its plants' main photos, as before.
+    assert [tuple(r) for r in conn.execute("SELECT id, scientific_name, common_name, hero_photo_id FROM species ORDER BY id")] == [
+        (1, "Ficus elastica", None, None),
+        (2, "Hoya carnosa", "Wax plant", None),
+    ]
+    assert conn.execute("SELECT COUNT(*) FROM specimens").fetchone()[0] == 3
+    # A second apply is a no-op: the ALTER would fail if it ran again.
+    assert db.apply_schema(conn) == 9
+    assert [r["version"] for r in conn.execute("SELECT version FROM schema_version ORDER BY version")] == [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+
+def test_removing_a_species_chosen_photo_puts_it_back_on_the_default(tmp_path, monkeypatch):
+    conn = _v4_database_with_plants(tmp_path / "c.db", monkeypatch)
+    db.apply_schema(conn)
+    photo = conn.execute("SELECT id FROM photos WHERE specimen_id = 2").fetchone()[0]
+    conn.execute("UPDATE species SET hero_photo_id = ? WHERE id = 1", (photo,))
+    conn.commit()
+    conn.execute("DELETE FROM photos WHERE id = ?", (photo,))
+    conn.commit()
+    assert conn.execute("SELECT hero_photo_id FROM species WHERE id = 1").fetchone()[0] is None
+    assert conn.execute("PRAGMA foreign_key_check").fetchall() == []

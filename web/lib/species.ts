@@ -9,7 +9,7 @@ import { speciesLabel, type Tile } from "./collection";
 import { referenceUrls, thumbPathFor } from "./photos";
 import { relativesOf, type Relatives } from "./relatives";
 import { compareSpecies, type Naming, type OwnerPhoto, type SpeciesListRow } from "./species-page";
-import { collectionTiles, hasHeroPhoto, hasTaggedAt, photoOrder } from "./specimens";
+import { collectionTiles, hasHeroPhoto, hasSpeciesHero, hasTaggedAt, photoOrder } from "./specimens";
 
 export type SpeciesView = {
   id: number;
@@ -32,6 +32,7 @@ export type SpeciesView = {
   enrichedAt: string | null;
   tiles: Tile[];
   photos: OwnerPhoto[];
+  heroPhotoId: number | null; // the photo chosen for the species (#77), as stored; speciesGallery counts it only while it is one of `photos`
   naming: Naming;
   relatives: Relatives;
   care: CareState;
@@ -81,13 +82,15 @@ type Row = {
   image_credit: string | null;
   image_source_url: string | null;
   enriched_at: string | null;
+  hero_photo_id: number | null;
 };
 
 export function readSpecies(db: DatabaseSync, id: number): SpeciesView | null {
   const r = db
     .prepare(
       `SELECT id, scientific_name, cultivar, common_name, canonical_name, authorship, rank, kingdom, phylum, class, order_,
-              family, genus, gbif_key, summary, summary_url, image_path, image_credit, image_source_url, enriched_at
+              family, genus, gbif_key, summary, summary_url, image_path, image_credit, image_source_url, enriched_at,
+              ${hasSpeciesHero(db) ? "hero_photo_id" : "NULL"} AS hero_photo_id
          FROM species WHERE id = ?`,
     )
     .get(id) as Row | undefined;
@@ -163,6 +166,7 @@ export function readSpecies(db: DatabaseSync, id: number): SpeciesView | null {
     enrichedAt: r.enriched_at,
     tiles,
     photos,
+    heroPhotoId: r.hero_photo_id,
     naming,
     relatives: relativesOf(r, speciesList(db)),
     care: careState({ row: readCareRow(db, id), configured: careModelConfigured(), gbifKey: r.gbif_key, enrichedAt: r.enriched_at }),
@@ -177,10 +181,15 @@ export function readSpecies(db: DatabaseSync, id: number): SpeciesView | null {
  * { at, n }, at null for no location yet) and its plants no longer here, so
  * the grid filters by place on the phone. The thumbnail is an owner
  * photo's when there is one (owner photos outrank the reference everywhere):
- * the photo that leads the species gallery, which is each plant's main photo
- * (#46), the newest of those.
+ * the photo that leads the species gallery, which is the one chosen for the
+ * species (#77) while it is on one of its plants, else the newest of the
+ * plants' main photos (#46). speciesGallery in lib/species-page.ts is the
+ * same rule over the page's rows.
  */
 export function speciesList(db: DatabaseSync): SpeciesListRow[] {
+  const chosen = hasSpeciesHero(db)
+    ? `(SELECT c.path FROM photos c JOIN specimens cs ON cs.id = c.specimen_id WHERE c.id = s.hero_photo_id AND cs.species_id = s.id)`
+    : "NULL";
   const rows = db
     .prepare(
       `SELECT s.id, s.scientific_name, s.cultivar, s.common_name, s.canonical_name, s.family, s.genus, s.image_path, s.enriched_at, s.created_at,
@@ -191,10 +200,11 @@ export function speciesList(db: DatabaseSync): SpeciesListRow[] {
               (SELECT json_group_array(json_object('at', g.location, 'n', g.c))
                  FROM (SELECT sp.location, COUNT(*) AS c FROM specimens sp
                         WHERE sp.species_id = s.id AND sp.status = 'alive' GROUP BY sp.location) g) AS places,
-              (SELECT m.path FROM specimens sp
-                 JOIN photos m ON m.id = (SELECT p.id FROM photos p WHERE p.specimen_id = sp.id ORDER BY ${photoOrder(db)} LIMIT 1)
-                WHERE sp.species_id = s.id
-                ORDER BY COALESCE(m.taken_at, m.uploaded_at) DESC, m.id DESC LIMIT 1) AS hero
+              COALESCE(${chosen},
+                (SELECT m.path FROM specimens sp
+                   JOIN photos m ON m.id = (SELECT p.id FROM photos p WHERE p.specimen_id = sp.id ORDER BY ${photoOrder(db)} LIMIT 1)
+                  WHERE sp.species_id = s.id
+                  ORDER BY COALESCE(m.taken_at, m.uploaded_at) DESC, m.id DESC LIMIT 1)) AS hero
          FROM species s`,
     )
     .all() as Array<{
