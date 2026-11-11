@@ -212,6 +212,7 @@ export type SpeciesListRow = {
   addedAt: string; // when the species joined the collection, its name first confirmed (species.created_at); ISO datetime
   hasSummary: boolean; // Fern has stored a Wikipedia summary for it
   thumbUrl: string | null; // an owner photo's thumbnail first, else the reference's, else none
+  imageUrl: string | null; // the same photo at its full 1280 px, for a box too big for the thumbnail
 };
 
 /** Most owned first, then by what the species is called, A to Z. */

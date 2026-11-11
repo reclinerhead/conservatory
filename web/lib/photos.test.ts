@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contentTypeFor, extForMime, isOrgan, mediaRelPath, originalsForThumb, referenceUrls, relPathFor, thumbPathFor } from "./photos";
+import { contentTypeFor, extForMime, isOrgan, mediaRelPath, originalsForThumb, referenceUrls, relPathFor, thumbPathFor, tileUrls } from "./photos";
 
 describe("relPathFor", () => {
   it("files by upload year and month in UTC", () => {
@@ -85,5 +85,20 @@ describe("contentTypeFor", () => {
     expect(contentTypeFor("photos/2026/10/a.jpg")).toBe("image/jpeg");
     expect(contentTypeFor("photos/2026/10/a.png")).toBe("image/png");
     expect(contentTypeFor("photos/2026/10/a.heic")).toBe("image/heic");
+  });
+});
+
+describe("tileUrls", () => {
+  it("gives an owner's photo as its thumbnail and its full file, ahead of the reference", () => {
+    expect(tileUrls("photos/2026/10/abc.jpg", "reference/1.jpg", "x")).toEqual({
+      thumbUrl: "/media/photos/2026/10/abc.thumb.jpg",
+      imageUrl: "/media/photos/2026/10/abc.jpg",
+    });
+  });
+  it("falls back to the reference image, both files carrying its version", () => {
+    expect(tileUrls(null, "reference/1.jpg", "x")).toEqual({ thumbUrl: "/media/reference/1.thumb.jpg?v=x", imageUrl: "/media/reference/1.jpg?v=x" });
+  });
+  it("is empty when the species has neither", () => {
+    expect(tileUrls(null, null, null)).toEqual({ thumbUrl: null, imageUrl: null });
   });
 });

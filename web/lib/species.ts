@@ -6,7 +6,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { careState, type CareRow, type CareState } from "./care";
 import { speciesLabel, type Tile } from "./collection";
-import { referenceUrls, thumbPathFor } from "./photos";
+import { referenceUrls, tileUrls } from "./photos";
 import { relativesOf, type Relatives } from "./relatives";
 import { compareSpecies, type Naming, type OwnerPhoto, type SpeciesListRow } from "./species-page";
 import { collectionTiles, hasHeroPhoto, hasTaggedAt, photoOrder } from "./specimens";
@@ -230,7 +230,7 @@ export function speciesList(db: DatabaseSync): SpeciesListRow[] {
       latest: r.latest,
       addedAt: r.created_at,
       hasSummary: r.has_summary === 1,
-      thumbUrl: r.hero ? `/media/${thumbPathFor(r.hero)}` : (referenceUrls(r.image_path, r.enriched_at)?.thumbUrl ?? null),
+      ...tileUrls(r.hero, r.image_path, r.enriched_at),
     }))
     .sort(compareSpecies);
 }
