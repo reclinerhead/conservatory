@@ -208,7 +208,10 @@ only) — the title with its info mark, one meta line, the plant's photos
 newest first as the tags page's row without its text (a 44 px checkbox
 target and the 56 px thumb, wrapping), "2 of 3 chosen", a labelled text box
 for a problem or a question (14 px radius, four lines, a character count at
-the label's right), then the card's one primary button, "Check health", full
+the label's right), then "About this plant" with "Optional" at its right: two
+rows, "It grows" Indoors / Outdoors and "Its light" Natural / Artificial,
+each a pair of compact chips where at most one is on and the chosen one
+taps off, none on to begin with; then the card's one primary button, "Check health", full
 width with a pulse-line icon, and two reserved meta lines for what happened.
 Unchosen photos fade once three are chosen. With no model key the card is
 its title and two lines saying health checks are off.

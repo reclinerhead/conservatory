@@ -6,12 +6,13 @@ import { Term } from "@/components/term";
 import { LeafMark } from "@/components/topbar";
 import { modelLabel } from "@/lib/care";
 import { dayLabel } from "@/lib/collection";
-import { canSend, EARLIER_SHOWN, MAX_PHOTOS, MAX_QUESTION, STATUS_LABEL, togglePhoto } from "@/lib/health";
+import { canSend, EARLIER_SHOWN, LIGHTS, MAX_PHOTOS, MAX_QUESTION, SETTINGS, STATUS_LABEL, togglePhoto, type Light, type Setting } from "@/lib/health";
 import type { PlantCheck } from "@/lib/specimens";
 
 // A plant's health check (#87), both cards. HealthCheckCard, first in the
 // side column, is where one is started: the plant's photos as checkable
-// thumbs, an optional question, "Check health". HealthPanel, in the main
+// thumbs, an optional question, where it grows and under what light (#99,
+// both optional), "Check health". HealthPanel, in the main
 // column, shows the latest check, open, and the earlier ones, closed. Pressing the button
 // only queues a row (POST /api/plants/[id]/health); Fern asks the model, and
 // the panel refreshes the page every few seconds until the answer is there.
@@ -38,6 +39,9 @@ export function HealthCheckCard({
   const questionId = useId();
   const [selected, setSelected] = useState<number[]>(initial);
   const [question, setQuestion] = useState("");
+  // Neither is chosen to begin with, and a blank is sent as nothing: Fern tells the model only what the owner said.
+  const [setting, setSetting] = useState<Setting | null>(null);
+  const [light, setLight] = useState<Light | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,7 +56,7 @@ export function HealthCheckCard({
       const r = await fetch(`/api/plants/${plantId}/health`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ photoIds: photos.filter((p) => chosen.includes(p.id)).map((p) => p.id), question: question.trim() || undefined }),
+        body: JSON.stringify({ photoIds: photos.filter((p) => chosen.includes(p.id)).map((p) => p.id), question: question.trim() || undefined, setting: setting ?? undefined, light: light ?? undefined }),
       });
       if (!r.ok) throw new Error(((await r.json().catch(() => ({}))) as { error?: string }).error ?? `The server answered ${r.status}.`);
       router.refresh(); // the page comes back with the check in flight, which the status line below says
@@ -145,6 +149,36 @@ export function HealthCheckCard({
         placeholder={PLACEHOLDER}
         className="mt-1.5 block w-full resize-y rounded-tile border border-line-2 bg-surface px-4 py-3 text-body text-ink placeholder:text-ink-3 focus:border-line-strong"
       />
+
+      {/* Two pairs of chips, at most one of each on; the chosen one taps off again, so "not said" is always a tap away. */}
+      <fieldset className="mt-4">
+        <legend className="flex w-full items-baseline justify-between gap-3 text-meta font-semibold text-ink-2">
+          About this plant
+          <span className="font-normal">Optional</span>
+        </legend>
+        <div className="mt-1.5 grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2">
+          <span id={`${questionId}-setting`} className="text-meta text-ink-2">
+            It grows
+          </span>
+          <div role="group" aria-labelledby={`${questionId}-setting`} className="flex flex-wrap gap-2">
+            {SETTINGS.map((v) => (
+              <button key={v} type="button" aria-pressed={setting === v} disabled={busy} onClick={() => setSetting(setting === v ? null : v)} className={`chip chip-compact capitalize ${setting === v ? "chip-on" : ""}`}>
+                {v}
+              </button>
+            ))}
+          </div>
+          <span id={`${questionId}-light`} className="text-meta text-ink-2">
+            <Term k="light">Its light</Term>
+          </span>
+          <div role="group" aria-labelledby={`${questionId}-light`} className="flex flex-wrap gap-2">
+            {LIGHTS.map((v) => (
+              <button key={v} type="button" aria-pressed={light === v} disabled={busy} onClick={() => setLight(light === v ? null : v)} className={`chip chip-compact capitalize ${light === v ? "chip-on" : ""}`}>
+                {v}
+              </button>
+            ))}
+          </div>
+        </div>
+      </fieldset>
 
       <button type="button" onClick={() => void send()} disabled={busy || inFlight || !canSend(chosen)} className="btn btn-primary mt-4 w-full">
         <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
