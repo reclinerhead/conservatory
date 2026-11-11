@@ -218,6 +218,9 @@ export function Uploader() {
     setCurrent([]);
     setNotice(null);
     enqueue(plant);
+    // The button is at the foot of the card and the sent strip is at the top
+    // of the page: go there, so Fern's status is what the person sees next.
+    window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }
 
   function sendAgain(plant: Plant) {

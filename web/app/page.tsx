@@ -204,7 +204,15 @@ export default function Home() {
                 <Link href={`/species/${pick.id}`} aria-hidden tabIndex={-1} className="block">
                   {pick.thumbUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={pick.thumbUrl} alt="" width={320} height={168} className="h-[168px] w-full rounded-tile object-cover" />
+                    <img
+                      src={pick.thumbUrl}
+                      srcSet={pick.imageUrl ? `${pick.thumbUrl} 320w, ${pick.imageUrl} 1280w` : undefined}
+                      sizes="(min-width: 640px) 320px, 100vw"
+                      alt=""
+                      width={320}
+                      height={168}
+                      className="h-[168px] w-full rounded-tile object-cover"
+                    />
                   ) : (
                     <div className={`flex h-[168px] items-center justify-center rounded-tile ${TILE_TINTS[2]}`}>
                       <LeafMark size={72} className="text-[#6B8F66]" />

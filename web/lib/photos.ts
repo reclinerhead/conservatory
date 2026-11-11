@@ -82,3 +82,13 @@ export function contentTypeFor(rel: string): string {
   if (ext === "heic") return "image/heic";
   return "image/jpeg";
 }
+
+/**
+ * A species' picture on a tile, as its 320 px thumbnail and its full 1280 px
+ * file: an owner's photo first, else the reference image, else neither.
+ */
+export function tileUrls(hero: string | null, imagePath: string | null, version: string | null): { thumbUrl: string | null; imageUrl: string | null } {
+  if (hero) return { thumbUrl: `/media/${thumbPathFor(hero)}`, imageUrl: `/media/${hero}` };
+  const ref = referenceUrls(imagePath, version);
+  return { thumbUrl: ref?.thumbUrl ?? null, imageUrl: ref?.url ?? null };
+}

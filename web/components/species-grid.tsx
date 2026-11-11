@@ -227,8 +227,19 @@ function SpeciesTile({ row, line, tint }: { row: SpeciesListRow; line: string; t
   return (
     <Link href={`/species/${row.id}`} className="card card-link flex h-full flex-col overflow-hidden text-ink hover:text-ink hover:no-underline">
       {row.thumbUrl ? (
+        // The 320 px thumbnail is too small for a tile a phone draws full width
+        // at 3×, so the browser may take the 1280 px photo instead.
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={row.thumbUrl} alt="" loading="lazy" width={320} height={168} className="h-[168px] w-full object-cover" />
+        <img
+          src={row.thumbUrl}
+          srcSet={row.imageUrl ? `${row.thumbUrl} 320w, ${row.imageUrl} 1280w` : undefined}
+          sizes="(min-width: 1024px) 300px, (min-width: 640px) 50vw, 100vw"
+          alt=""
+          loading="lazy"
+          width={320}
+          height={168}
+          className="h-[168px] w-full object-cover"
+        />
       ) : (
         <div className={`flex h-[168px] items-center justify-center ${tint}`}>
           <LeafMark size={72} className="text-[#6B8F66]" />
