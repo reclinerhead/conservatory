@@ -18,7 +18,8 @@ apart from the care sheets' CONSERVATORY_LLM, at effort medium. Each check's
 model and tokens are on its row and in the journal.
 
 Everything that decides something is pure and tested (`time_in_care`,
-`care_headlines`, `build_prompt`, `parse_answer`, `media_type`, `worklist`);
+`care_headlines`, `build_prompt`, `parse_answer`, `photo_number`, `media_type`,
+`worklist`);
 the model call is a parameter the tests replace.
 """
 
@@ -206,12 +207,30 @@ def _one_of(v: object, field: str, allowed: tuple[str, ...]) -> str:
     return v.strip().lower()
 
 
+def photo_number(v: object, photo_count: int) -> int | None:
+    """Which photo a finding points at, read leniently: 1, 1.0, "1" and
+    "Photo 1" are all photo 1. Anything else, or a number that is not among
+    the photos sent, is None: the finding is kept without a photo. Never a
+    reason to fail a check. The first live check with two photos came back
+    with "1" as text, and a good paid answer was thrown away over the least
+    important field in it."""
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, float) and v.is_integer():
+        v = int(v)
+    if isinstance(v, str):
+        digits = re.findall(r"\d+", v)
+        v = int(digits[0]) if len(digits) == 1 else None
+    return v if isinstance(v, int) and 1 <= v <= photo_count else None
+
+
 def parse_answer(text: str, asked: bool, photo_count: int = MAX_PHOTOS) -> dict:
     """The model's answer -> the check as the page will show it, or InvalidAnswer.
 
     A status from the four, a summary of at most 200 characters (the prompt
     asks for 140; see MAX_SUMMARY), none to four
-    findings each with what was seen, the photo, a likelihood and a remedy,
+    findings each with what was seen, the photo (read leniently, see
+    `photo_number`), a likelihood and a remedy,
     a confidence with its reason, and none to three photos to take next. A
     reply is required when the owner asked something and refused when they
     did not, so the page never shows an answer to a question nobody asked. A
@@ -248,13 +267,10 @@ def parse_answer(text: str, asked: bool, photo_count: int = MAX_PHOTOS) -> dict:
     for i, f in enumerate(findings, 1):
         if not isinstance(f, dict):
             raise InvalidAnswer(f"finding {i} is not an object")
-        photo = f.get("photo")
-        if photo is not None and (isinstance(photo, bool) or not isinstance(photo, int) or not 1 <= photo <= photo_count):
-            raise InvalidAnswer(f"finding {i} photo is {photo!r}, not a photo number from 1 to {photo_count}")
         out["findings"].append(
             {
                 "seen": _text(f.get("seen"), f"finding {i} seen", 1, 300),
-                "photo": photo,
+                "photo": photo_number(f.get("photo"), photo_count),
                 "likelihood": _one_of(f.get("likelihood"), f"finding {i} likelihood", LIKELIHOODS),
                 "remedy": _text(f.get("remedy"), f"finding {i} remedy", 20, 700),
             }
