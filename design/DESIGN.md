@@ -93,18 +93,26 @@ tiny 11 px icon (the cutting/division "sprout" glyph).
 28 × 32; side-panel cards pad 20. Hover (when the card is a link): border
 `line-strong` plus `shadow-hover`.
 
-**Specimen card** (species page, In your collection) — photo or tinted tile 168 px tall, then the
+**Photos are squares.** Every box that crops a photo is a square, its width set
+by its grid column: tiles, cards, both heroes, and the tinted or dashed tile
+that holds a photo's place. Most photos are portraits from a phone, and a wide
+box cuts the plant out of them; a square keeps three quarters of a portrait and
+of a landscape alike. The mockups predate this and draw fixed-height landscape
+boxes: follow them for everything but photo proportions. Only the lightbox
+shows a photo whole.
+
+**Specimen card** (species page, In your collection) — photo or tinted tile in a square, then the
 common name (17/700; the species when there is none), the italic species under
 a common name (`ink-2`), "Location · since Month YYYY" (meta), then a row of
 tags. The whole card is one `<a>`.
 
 **Species tile** (life list) — the specimen card's shape: photo or tinted tile
-168 px tall, the common name (17/700) with the italic binomial under it, or the
+in a square, the common name (17/700) with the italic binomial under it, or the
 binomial alone in Fraunces italic with the line under it reserved, then a meta
 line ("3 plants · 2 places"). One `<a>` to the species page.
 
-**Relative card** (species page) — the same at 120 px photo height and
-16 px radius, four across.
+**Relative card** (species page) — the same with a 16 px radius, four across
+(three, then two on a phone).
 
 **Side-panel row** — 48 px thumb (12 px radius) + name link (700) + meta line,
 hairline dividers between rows, none above the first.
@@ -133,11 +141,16 @@ cuttings, divisions and offsets; the child's meta line says which.
 **Breadcrumb** — Collection › Family › *Genus* › Common name, 14 px,
 `ink-2` links, current page in `ink` 600.
 
-**Photo gallery** — on a plant's page, a 3-column grid; hero spans two columns,
-the next photos stacked right above "Add a photo". On the species page, the
-species photo is the hero, full width at 560 px, and under it one row of equal
-120 px tiles: each other plant by its main photo, then the reference image
-(the mockup's second photo, reference thumb and "Add a photo" are not drawn).
+**Photo gallery** — one shape on a plant's page and the species page (the
+`gallery` recipe): the hero in a square on the left, and to its right a grid
+of equal square tiles, as many columns as fit at 8rem or wider, top-aligned
+with the hero and free to run taller than it. The hero takes half the row from
+640 px and five twelfths from 1024 px (about 530 px at full width); on a phone
+it is the full width and the tiles sit under it, two across. On a plant's page
+the tiles are its other photos, newest first, then "Add a photo" as a sage
+tile of the same size. On the species page they are each other plant by its
+main photo, then the reference image (the mockup's second photo, reference
+thumb and "Add a photo" are not drawn).
 A missing tile keeps its place as a dashed tile that says why. The hero
 carries a dark pill caption naming its source and date ("Your photo · Front bed
 coneflower · Jul 12, 2026"); a tile carries a dark bar with the name
@@ -189,7 +202,7 @@ cards, which are species tiles, not specimen cards), top to bottom:
      found by typing it in the search. On a phone these chips, the select
      and the search are 36 px tall with 13 px text, the one exception to the
      40 px compact minimum, so the first photo is on the first screen.
-   - 3-across species tiles (the specimen card's shape: 168 px photo, common
+   - 4-across species tiles (the specimen card's shape: a square photo, common
      name, italic binomial, a meta line for the chip on screen), each opening
      the species page; "Showing 9 of 42 species".
    - Side panels in order: New species added recently · Get to know ·
@@ -229,9 +242,11 @@ cards, which are species tiles, not specimen cards), top to bottom:
 
 Phone first in spirit, but the mockups are drawn at 1440. Rules that keep
 them honest at 390: every row is `flex-wrap`; the side column is a flex sibling,
-never sticky or `100vh`; the 3- and 4-across card grids go to 1-across below
-~640 px and 2-across below ~1000 px; chip rows wrap; wide tables (table view)
-scroll inside their own box; photo hero drops to 320 px tall.
+never sticky or `100vh`; the photo grids (life list, In your collection) are
+2-across on a phone, 3 from 640 px and 4 from 1280 px, so a square tile is
+never a screen tall; chip rows wrap; wide tables (table view) scroll inside
+their own box; a photo hero is a full-width square on a phone and shares its
+row with its tiles from 640 px.
 
 ## 7. Using this with Claude Code
 

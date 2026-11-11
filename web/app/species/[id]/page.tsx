@@ -135,27 +135,28 @@ export default async function SpeciesPage({ params }: { params: Promise<{ id: st
         </Link>
       </div>
 
-      {/* The gallery (#77): the species photo, full width, then one row of equal
-          tiles: every other plant by its main photo (#46), newest first, and the
-          reference image last. The row is always drawn: a dashed tile holds the
-          place of the household's first photo, or of a reference Fern has not
-          fetched, so nothing moves when either arrives. Every photo opens the
-          lightbox, where a plant's photo can be made the species photo. */}
+      {/* The gallery (#77, #83): the species photo in a square, and beside it
+          (under it on a phone) a grid of equal square tiles: every other plant
+          by its main photo (#46), newest first, and the reference image last.
+          Squares, because most photos are portraits from a phone and a wide box
+          cuts the plant out of them. The tiles are always drawn: a dashed tile
+          holds the place of the household's first photo, or of a reference Fern
+          has not fetched, so nothing moves when either arrives. Every photo
+          opens the lightbox, where a plant's photo can be made the species photo. */}
       <PhotoLightbox
         slides={slides}
         title={`Photos of ${speciesTitle(s)}`}
         choice={ownerShown > 1 ? { endpoint: `/api/species/${s.id}`, noun: "species photo" } : undefined}
       >
-        <section aria-label="Photos" className="flex flex-col gap-3.5">
+        <section aria-label="Photos" className="gallery">
           {hero ? (
             <Figure item={hero} hero />
           ) : (
-            <div className="flex h-[320px] items-center justify-center rounded-[22px] border border-line bg-sage sm:h-[420px] lg:h-[560px]">
+            <div className="flex aspect-square items-center justify-center rounded-[22px] border border-line bg-sage">
               <LeafMark size={96} className="text-[#6B8F66]" />
             </div>
           )}
-          {/* As many equal columns as fit at 9.5rem or wider: two on a phone, eight at full width. */}
-          <ul className="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-3.5">
+          <ul className="gallery-tiles">
             {ownerShown === 0 ? <EmptyTile>Your own photo takes the lead here once you add one.</EmptyTile> : null}
             {rest.map((g) => (
               <li key={g.key}>
@@ -232,7 +233,7 @@ export default async function SpeciesPage({ params }: { params: Promise<{ id: st
                   {g.label}
                   <span className="text-meta font-normal tabular-nums">{g.tiles.length}</span>
                 </h3>
-                <ul className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+                <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-3.5 xl:grid-cols-4">
                   {g.tiles.map((t, i) => (
                     <li key={t.id}>
                       <SpecimenCard tile={t} tint={TILE_TINTS[i % TILE_TINTS.length]} compact />
@@ -422,7 +423,7 @@ function RelativeGroup({ heading, rows, none }: { heading: React.ReactNode; rows
       <h3 className="font-sans text-[15px] font-bold text-ink-2">{heading}</h3>
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {rows.length === 0 ? (
-          <li className="col-span-2 flex flex-col justify-center gap-1 rounded-[16px] border border-dashed border-line-2 px-4 py-3 sm:col-span-1 sm:min-h-[120px]">
+          <li className="col-span-2 flex flex-col justify-center gap-1 rounded-[16px] border border-dashed border-line-2 px-4 py-3 sm:col-span-1 sm:aspect-square">
             <p className="font-bold text-ink-2">{none}</p>
             <p className="text-meta text-ink-2">The next one you name lands here.</p>
           </li>
@@ -438,7 +439,7 @@ function RelativeGroup({ heading, rows, none }: { heading: React.ReactNode; rows
   );
 }
 
-/** The mockup's `rel` card: a 120 px photo (owner's, else the reference, else a tinted tile), the name, the binomial under a common name, the count. One link. */
+/** The mockup's `rel` card: a square photo (owner's, else the reference, else a tinted tile), the name, the binomial under a common name, the count. One link. */
 function RelativeCard({ row, tint }: { row: SpeciesListRow; tint: string }) {
   const common = displayName(row.commonName);
   return (
@@ -448,9 +449,18 @@ function RelativeCard({ row, tint }: { row: SpeciesListRow; tint: string }) {
     >
       {row.thumbUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={row.thumbUrl} alt="" loading="lazy" width={320} height={120} className="h-[120px] w-full object-cover" />
+        <img
+          src={row.thumbUrl}
+          srcSet={row.imageUrl ? `${row.thumbUrl} 240w, ${row.imageUrl} 1280w` : undefined}
+          sizes="(min-width: 1024px) 190px, (min-width: 640px) 30vw, 45vw"
+          alt=""
+          loading="lazy"
+          width={320}
+          height={320}
+          className="aspect-square w-full object-cover"
+        />
       ) : (
-        <div className={`flex h-[120px] items-center justify-center ${tint}`}>
+        <div className={`flex aspect-square items-center justify-center ${tint}`}>
           <LeafMark size={52} className="text-[#6B8F66]" />
         </div>
       )}
@@ -588,15 +598,22 @@ function PotTags({ s, living }: { s: SpeciesView; living: number }) {
   );
 }
 
-/** One photo in the gallery, with the mockup's dark caption: a pill on the hero, a bar on a tile. A tap opens it in the lightbox. */
+/** One photo in the gallery, in a square, with the mockup's dark caption: a pill on the hero, a bar on a tile. A tap opens it in the lightbox. */
 function Figure({ item, hero = false }: { item: GalleryItem; hero?: boolean }) {
   return (
     <figure
-      className={`relative m-0 overflow-hidden border border-line bg-sage ${hero ? "h-[320px] rounded-[22px] sm:h-[420px] lg:h-[560px]" : "h-[120px] rounded-[16px]"}`}
+      className={`relative m-0 overflow-hidden border border-line bg-sage aspect-square ${hero ? "rounded-[22px]" : "rounded-[16px]"}`}
     >
       <OpenPhoto slideKey={item.key} label={`See ${item.alt.charAt(0).toLowerCase()}${item.alt.slice(1)} full size`} className="h-full w-full">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={hero ? item.url : item.thumbUrl} alt="" loading={hero ? "eager" : "lazy"} className="h-full w-full object-cover" />
+        <img
+          src={hero ? item.url : item.thumbUrl}
+          srcSet={hero ? undefined : `${item.thumbUrl} 240w, ${item.url} 1280w`}
+          sizes={hero ? undefined : "(min-width: 640px) 180px, 45vw"}
+          alt=""
+          loading={hero ? "eager" : "lazy"}
+          className="h-full w-full object-cover"
+        />
       </OpenPhoto>
       {hero ? (
         <figcaption className="pointer-events-none absolute bottom-4 left-4 max-w-[calc(100%-2rem)] truncate rounded-pill bg-[rgba(30,42,28,.82)] px-3 py-1.5 text-[13px] font-semibold text-white">
@@ -614,7 +631,7 @@ function Figure({ item, hero = false }: { item: GalleryItem; hero?: boolean }) {
 /** A gallery tile's place held for a photo that is not there yet, at a tile's size, saying why. */
 function EmptyTile({ children }: { children: React.ReactNode }) {
   return (
-    <li className="flex h-[120px] items-center justify-center rounded-[16px] border border-dashed border-line-2 bg-ground px-3 text-center">
+    <li className="flex aspect-square items-center justify-center rounded-[16px] border border-dashed border-line-2 bg-ground px-3 text-center">
       <p className="line-clamp-4 text-tag leading-snug text-ink-2">{children}</p>
     </li>
   );

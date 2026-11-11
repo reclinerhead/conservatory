@@ -179,14 +179,14 @@ export function SpeciesGrid({ rows }: { rows: SpeciesListRow[] }) {
         ))}
       </div>
 
-      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4">
         {shown.length === 0 ? (
           <>
             <li className="card flex flex-col overflow-hidden">
-              <div className={`flex h-[168px] items-center justify-center ${TILE_TINTS[1]}`}>
+              <div className={`flex aspect-square items-center justify-center ${TILE_TINTS[1]}`}>
                 <LeafMark size={72} className="text-[#6B8F66]" />
               </div>
-              <div className="flex flex-col gap-1.5 px-4 pb-4 pt-3.5">
+              <div className="flex flex-col gap-1.5 px-3 pb-3.5 pt-3 sm:px-4 sm:pb-4 sm:pt-3.5">
                 <p className="text-lead font-bold">{q.trim() ? `Nothing called “${q.trim()}”` : "Nothing here"}</p>
                 <p className="text-meta text-ink-2">
                   {q.trim() ? "Try part of the common name, the Latin name, the genus or the family." : "Pick another place, or add a plant."}
@@ -218,7 +218,7 @@ export function SpeciesGrid({ rows }: { rows: SpeciesListRow[] }) {
 
 /**
  * One species: its photo (the owner's, else the reference, else a tinted
- * tile) 168 px tall, the common name with the italic binomial under it (or
+ * tile) in a square, the common name with the italic binomial under it (or
  * the binomial as the name, with that line reserved so every tile is the
  * same height), and the meta line for the chip on screen. One link.
  */
@@ -227,25 +227,26 @@ function SpeciesTile({ row, line, tint }: { row: SpeciesListRow; line: string; t
   return (
     <Link href={`/species/${row.id}`} className="card card-link flex h-full flex-col overflow-hidden text-ink hover:text-ink hover:no-underline">
       {row.thumbUrl ? (
-        // The 320 px thumbnail is too small for a tile a phone draws full width
-        // at 3×, so the browser may take the 1280 px photo instead.
+        // The thumbnail is 240 px on its short side, which is all a square shows
+        // of it: too small for a phone at 3×, so the browser may take the 1280 px
+        // photo instead.
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={row.thumbUrl}
-          srcSet={row.imageUrl ? `${row.thumbUrl} 320w, ${row.imageUrl} 1280w` : undefined}
-          sizes="(min-width: 1024px) 300px, (min-width: 640px) 50vw, 100vw"
+          srcSet={row.imageUrl ? `${row.thumbUrl} 240w, ${row.imageUrl} 1280w` : undefined}
+          sizes="(min-width: 1280px) 210px, (min-width: 1024px) 280px, (min-width: 640px) 33vw, 50vw"
           alt=""
           loading="lazy"
           width={320}
-          height={168}
-          className="h-[168px] w-full object-cover"
+          height={320}
+          className="aspect-square w-full object-cover"
         />
       ) : (
-        <div className={`flex h-[168px] items-center justify-center ${tint}`}>
+        <div className={`flex aspect-square items-center justify-center ${tint}`}>
           <LeafMark size={72} className="text-[#6B8F66]" />
         </div>
       )}
-      <div className="flex flex-col gap-1 px-4 pb-4 pt-3.5">
+      <div className="flex flex-col gap-1 px-3 pb-3.5 pt-3 sm:px-4 sm:pb-4 sm:pt-3.5">
         <p className={`text-lead leading-snug ${common ? "font-bold" : "font-display italic"}`}>{speciesTitle(row)}</p>
         {common ? (
           <p className="sp">{speciesLabel(row.scientificName, row.cultivar)}</p>
@@ -264,8 +265,8 @@ function SpeciesTile({ row, line, tint }: { row: SpeciesListRow; line: string; t
 export function BlankTile({ tint }: { tint: string }) {
   return (
     <div className="card flex h-full flex-col overflow-hidden">
-      <div className={`h-[168px] ${tint}`} />
-      <div aria-hidden className="invisible flex flex-col gap-1 px-4 pb-4 pt-3.5">
+      <div className={`aspect-square ${tint}`} />
+      <div aria-hidden className="invisible flex flex-col gap-1 px-3 pb-3.5 pt-3 sm:px-4 sm:pb-4 sm:pt-3.5">
         <p className="text-lead leading-snug">&nbsp;</p>
         <p>&nbsp;</p>
         <p className="text-meta">&nbsp;</p>

@@ -64,6 +64,7 @@ export function collectionTiles(db: DatabaseSync, speciesId?: number): Tile[] {
     status: r.status,
     createdAt: r.created_at,
     thumbUrl: r.hero ? `/media/${thumbPathFor(r.hero)}` : null,
+    imageUrl: r.hero ? `/media/${r.hero}` : null,
   }));
 }
 

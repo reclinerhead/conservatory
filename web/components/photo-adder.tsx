@@ -6,7 +6,8 @@ import { exifTakenAt } from "@/lib/exif";
 import { NoRetry, withRetry } from "@/lib/retry";
 import { shrinkToJpeg } from "@/lib/shrink";
 
-// "Add a photo" in the specimen page's sage tile (#26). The photos go
+// "Add a photo", the sage tile that closes the specimen page's photo grid, a
+// square like the photos beside it (#26, #83). The photos go
 // straight onto the plant through POST /api/plants/[id]/photos, with the
 // uploader's pipeline (the date from the original's EXIF, the shrink, one
 // request per photo with retry) and none of its questions: no organ, no job,
@@ -57,18 +58,29 @@ export function PhotoAdder({ plantId, countLine }: { plantId: number; countLine:
 
   const text = note?.text ?? countLine;
   return (
-    <>
-      {/* Reserved: two lines where the tile is a narrow column (from 640 px), so no state moves it. */}
-      <p role="status" aria-live="polite" title={text} className={`line-clamp-2 text-meta sm:min-h-[2lh] ${note?.kind === "error" ? "text-warn-ink" : "text-ink-2"}`}>
-        {text}
-      </p>
-      <button type="button" disabled={busy} aria-busy={busy} onClick={() => inputRef.current?.click()} className="btn btn-ghost self-start bg-surface">
-        <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <div className="flex aspect-square flex-col rounded-[16px] bg-sage">
+      <button
+        type="button"
+        disabled={busy}
+        aria-busy={busy}
+        onClick={() => inputRef.current?.click()}
+        className="flex min-h-11 flex-1 cursor-pointer flex-col items-center justify-end gap-1.5 rounded-[16px] px-2 pb-1.5 font-bold text-moss transition-colors duration-[120ms] hover:text-moss-deep disabled:cursor-default disabled:opacity-60"
+      >
+        <svg aria-hidden width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
           <circle cx="12" cy="13" r="3.5" />
         </svg>
         Add a photo
       </button>
+      {/* Reserved: two lines, so no state moves the label above it. */}
+      <p
+        role="status"
+        aria-live="polite"
+        title={text}
+        className={`mb-3 line-clamp-2 h-[2lh] flex-none px-3 text-center text-tag leading-snug ${note?.kind === "error" ? "text-warn-ink" : "text-ink-2"}`}
+      >
+        {text}
+      </p>
       {/* No `capture`: a phone offers the camera or the library from one picker, a laptop a file dialog. */}
       <input
         ref={inputRef}
@@ -82,6 +94,6 @@ export function PhotoAdder({ plantId, countLine }: { plantId: number; countLine:
           if (files.length > 0) void addAll(files);
         }}
       />
-    </>
+    </div>
   );
 }
