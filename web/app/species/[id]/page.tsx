@@ -105,7 +105,7 @@ export default async function SpeciesPage({ params }: { params: Promise<{ id: st
           Both lines are always there, so the block keeps its height when Fern
           fills in the common name. */}
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
-        <div className="flex flex-col gap-2.5">
+        <div className="flex min-w-0 flex-col gap-2.5">
           <h1 className="text-h1 leading-[1.05] sm:text-page-title">{common ?? <Binomial s={s} />}</h1>
           <p className="font-display text-section leading-tight text-ink-2">
             {common ? (
@@ -127,6 +127,25 @@ export default async function SpeciesPage({ params }: { params: Promise<{ id: st
             ) : null}
             {s.rank === "genus" ? <span className="tag">Known to genus</span> : null}
             <span className="tag">{living === 1 ? "1 in your collection" : `${living} in your collection`}</span>
+            {/* The care sheet's light and watering headlines, as on Get to
+                know (#107). Drawn only with a sheet; the row is there either
+                way. On a phone a long headline truncates, its mark kept. */}
+            {s.care.kind === "sheet" ? (
+              <>
+                <span className="tag max-w-full gap-0">
+                  <span className="min-w-0 truncate">{s.care.cells.light.headline}</span>
+                  <Term k="light">
+                    <span className="sr-only">light</span>
+                  </Term>
+                </span>
+                <span className="tag tag-water max-w-full gap-0">
+                  <span className="min-w-0 truncate">{s.care.cells.water.headline}</span>
+                  <Term k="watering">
+                    <span className="sr-only">watering</span>
+                  </Term>
+                </span>
+              </>
+            ) : null}
           </div>
         </div>
         <Link href={`/tags?species=${s.id}`} className="btn btn-soft hover:no-underline">
