@@ -12,7 +12,7 @@ import { count, ledgerEntries, waitingDetail, waitingLabel } from "@/lib/ledger"
 import { readSpecies, speciesList } from "@/lib/species";
 import { ALL, tileLine } from "@/lib/species-grid";
 import { readTodos } from "@/lib/specimens";
-import { DASHBOARD_SHOWN, latestPending, pendingTodos } from "@/lib/todos";
+import { latestPending, pendingTodos } from "@/lib/todos";
 import { aboutState, latinRuns, speciesTitle } from "@/lib/species-page";
 
 // The dashboard from design/DESIGN.md §5, Phase 1 subset: the pending strip,
@@ -131,8 +131,8 @@ export default function Home() {
         {/* Side column */}
         <aside className="flex w-full flex-[1_1_300px] flex-col gap-5 lg:max-w-sidebar">
           {/* To do (#103): the three newest still to do, each opening the
-              To-do page, where they are ticked off. Always three rows tall;
-              blank rows hold the rest. */}
+              To-do page, where they are ticked off. As tall as its rows, one
+              to three: no blank rows; with none pending, one row says so. */}
           <section className="card px-5 pb-3 pt-5" aria-labelledby="todo-h">
             <div className="mb-2 flex items-baseline justify-between gap-3">
               <h3 id="todo-h" className="text-h3">
@@ -143,37 +143,23 @@ export default function Home() {
               </Link>
             </div>
             <ul>
-              {Array.from({ length: DASHBOARD_SHOWN }, (_, i) => {
-                const t = todoRows[i];
+              {todoRows.length === 0 && (
+                <li>
+                  <div className="flex min-h-[68px] items-center gap-3 py-2.5">
+                    <div aria-hidden className={`thumb ${TILE_TINTS[0]}`}>
+                      <LeafMark size={26} className="text-[#6B8F66]" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-bold">Nothing to do</p>
+                      <p className="truncate text-meta text-ink-2">Add one from a plant&rsquo;s health check.</p>
+                    </div>
+                  </div>
+                </li>
+              )}
+              {todoRows.map((t, i) => {
                 const tint = TILE_TINTS[i % TILE_TINTS.length];
-                const rowClass = "border-t border-sage first:border-t-0";
-                if (!t) {
-                  return i === 0 ? (
-                    <li key={`blank-${i}`} className={rowClass}>
-                      <div className="flex min-h-[68px] items-center gap-3 py-2.5">
-                        <div aria-hidden className={`thumb ${tint}`}>
-                          <LeafMark size={26} className="text-[#6B8F66]" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate font-bold">Nothing to do</p>
-                          <p className="truncate text-meta text-ink-2">Add one from a plant&rsquo;s health check.</p>
-                        </div>
-                      </div>
-                    </li>
-                  ) : (
-                    <li key={`blank-${i}`} aria-hidden className={rowClass}>
-                      <div className="flex min-h-[68px] items-center gap-3 py-2.5">
-                        <div className={`thumb ${tint} opacity-60`} />
-                        <div className="flex flex-1 flex-col gap-2">
-                          <span className="block h-3 w-3/5 rounded-pill bg-sage" />
-                          <span className="block h-2.5 w-2/5 rounded-pill bg-sage" />
-                        </div>
-                      </div>
-                    </li>
-                  );
-                }
                 return (
-                  <li key={t.id} className={rowClass}>
+                  <li key={t.id} className="border-t border-sage first:border-t-0">
                     <Link href="/todo" className="group flex min-h-[68px] items-center gap-3 py-2.5 text-ink hover:text-ink hover:no-underline">
                       {t.plant.thumbUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element

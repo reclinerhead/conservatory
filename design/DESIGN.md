@@ -277,7 +277,8 @@ cards, which are species tiles, not specimen cards), top to bottom:
      (ribbons).
    - To do: the heading with "All (N)" at its right, then the three newest
      to-dos still to do as side-panel rows (the plant's thumb and name, one
-     line of the remedy), each opening the To-do page; always three rows tall.
+     line of the remedy), each opening the To-do page; as tall as its rows,
+     with no blank rows below, and one row saying so when none are pending.
    - New species added recently: the four species that joined last (a new pot
      of one already owned doesn't count), as side-panel rows, always four rows
      tall. No "All N species" foot link: the grid is beside it.
