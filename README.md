@@ -13,13 +13,17 @@ It also teaches. All three have grown plants for years without ever being told w
 ## What it looks like
 
 ### Dashboard
-<img width="1387" height="1290" alt="The dashboard" src="https://github.com/user-attachments/assets/8b11fce9-9a80-4cdd-9d88-7c2a0c090c97" />
+<img width="1373" height="1285" alt="image" src="https://github.com/user-attachments/assets/cd8209ee-1398-4d9b-8688-9042da54754d" />
 
 ### Species page
-<img width="1394" height="1215" alt="A species page: the title block, the gallery and About this species" src="https://github.com/user-attachments/assets/1ef0b4a6-19fa-445b-bb80-ae1ac944aee6" />
+<img width="723" height="1147" alt="image" src="https://github.com/user-attachments/assets/ff192d62-5f15-4d52-8945-ebaf2d0cd7df" />
 
 ### Species page: care sheet and relatives
 <img width="1043" height="1310" alt="A species page's care sheet and Relatives you already have" src="https://github.com/user-attachments/assets/7522d587-2175-44da-b6ea-02df0a92c165" />
+
+### Health Check and To-Do Items
+<img width="1356" height="1177" alt="image" src="https://github.com/user-attachments/assets/9a3f5afa-9bae-4ba6-8739-3dd32056c7ba" />
+
 
 ## Lineage
 
