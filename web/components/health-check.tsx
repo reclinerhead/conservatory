@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Term } from "@/components/term";
 import { LeafMark } from "@/components/topbar";
 import { modelLabel } from "@/lib/care";
@@ -15,6 +15,7 @@ import type { PlantCheck } from "@/lib/specimens";
 // column, shows the latest check and the earlier ones. Pressing the button
 // only queues a row (POST /api/plants/[id]/health); Fern asks the model, and
 // the panel refreshes the page every few seconds until the answer is there.
+// A finished check, done or failed, can be deleted from its row (#91).
 
 const PLACEHOLDER = "White fuzzy insects are nibbling the leaves, like in the photo. What are they and how do I get rid of them?";
 
@@ -162,7 +163,7 @@ export function HealthCheckCard({
 const POLL_MS = 2500;
 const POLL_TICKS = 144; // six minutes: twice the model call's own timeout
 
-export function HealthPanel({ checks, canCheck }: { checks: PlantCheck[]; canCheck: boolean }) {
+export function HealthPanel({ plantId, checks, canCheck }: { plantId: number; checks: PlantCheck[]; canCheck: boolean }) {
   const router = useRouter();
   const [latest, ...earlier] = checks;
   const [showAll, setShowAll] = useState(false);
@@ -204,7 +205,7 @@ export function HealthPanel({ checks, canCheck }: { checks: PlantCheck[]; canChe
       </div>
 
       {latest ? (
-        <CheckRow key={latest.id} check={latest} lead stalled={gaveUp === latest.id} />
+        <CheckRow key={latest.id} plantId={plantId} check={latest} lead stalled={gaveUp === latest.id} />
       ) : (
         <RowShell
           top={<span className="font-bold">No health check yet</span>}
@@ -223,7 +224,7 @@ export function HealthPanel({ checks, canCheck }: { checks: PlantCheck[]; canChe
           <ul className="divide-y divide-line">
             {shown.map((c) => (
               <li key={c.id} className="py-3 last:pb-0">
-                <CheckRow check={c} />
+                <CheckRow plantId={plantId} check={c} />
               </li>
             ))}
           </ul>
@@ -263,7 +264,7 @@ function RowShell({
     <span className="flex flex-col gap-2 text-left">
       <span className="flex h-7 items-center gap-x-2.5 whitespace-nowrap">{top}</span>
       <span className={`block text-body leading-snug ${muted ? "text-ink-2" : "text-ink"} ${open ? "min-h-[4lh] sm:min-h-[3lh]" : "line-clamp-4 h-[4lh] sm:line-clamp-3 sm:h-[3lh]"}`}>{body}</span>
-      <span className="flex h-10 items-center gap-1.5">{foot}</span>
+      <span className="flex h-10 min-w-0 items-center gap-1.5">{foot}</span>
     </span>
   );
 }
@@ -276,7 +277,7 @@ function Thumbs({ check }: { check: PlantCheck }) {
         // eslint-disable-next-line @next/next/no-img-element
         <img key={t.id} src={t.thumbUrl} alt="" loading="lazy" width={40} height={40} className="h-10 w-10 flex-none rounded-thumb border border-line bg-sage object-cover" />
       ))}
-      <span className="ml-1 text-meta text-ink-2">
+      <span className="ml-1 min-w-0 truncate text-meta text-ink-2">
         {check.thumbs.length === 0
           ? "The photos sent have since been removed"
           : `${check.photoIds.length === 1 ? "1 photo" : `${check.photoIds.length} photos`} sent${gone > 0 ? `, ${gone} since removed` : ""}`}
@@ -285,7 +286,89 @@ function Thumbs({ check }: { check: PlantCheck }) {
   );
 }
 
-function CheckRow({ check, lead = false, stalled = false }: { check: PlantCheck; lead?: boolean; stalled?: boolean }) {
+const DISARM_MS = 5000;
+
+/**
+ * "Delete" on a finished check (#91). Two taps, as Remove is on a photo: the
+ * first arms it ("Yes, delete"), the second calls DELETE
+ * /api/plants/[id]/health/[checkId] and refreshes, so the next check down
+ * becomes the latest. A tap anywhere else, Escape, or five seconds put it
+ * back. It sits at the right end of its line, so its changing label moves
+ * nothing beside it.
+ */
+function DeleteCheck({ plantId, checkId, day }: { plantId: number; checkId: number; day: string | null }) {
+  const router = useRouter();
+  const ref = useRef<HTMLButtonElement>(null);
+  const [state, setState] = useState<"rest" | "armed" | "busy" | "error">("rest");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (state !== "armed" && state !== "error") return;
+    const timer = window.setTimeout(() => setState("rest"), DISARM_MS);
+    const outside = (e: PointerEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setState("rest");
+    };
+    const escape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setState("rest");
+    };
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", escape);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [state]);
+
+  async function press() {
+    if (state === "busy") return;
+    if (state !== "armed") {
+      setState("armed");
+      return;
+    }
+    setState("busy");
+    try {
+      const r = await fetch(`/api/plants/${plantId}/health/${checkId}`, { method: "DELETE" });
+      if (!r.ok) {
+        if (r.status === 404) router.refresh(); // this page is out of date: another tab got there first
+        throw new Error(((await r.json().catch(() => ({}))) as { error?: string }).error ?? `server ${r.status}`);
+      }
+      router.refresh(); // stays "Deleting…" until the refreshed page drops this check
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "could not delete it");
+      setState("error");
+    }
+  }
+
+  const what = `the health check${day ? ` of ${day}` : ""}`;
+  const armed = state === "armed";
+  return (
+    <span className="ml-auto flex flex-none items-center">
+      <button
+        ref={ref}
+        type="button"
+        onClick={() => void press()}
+        aria-label={{ rest: `Delete ${what}`, armed: `Yes, delete ${what}`, busy: `Deleting ${what}`, error: `Not deleted: ${what}` }[state]}
+        aria-busy={state === "busy"}
+        title={state === "error" ? `Could not delete it: ${error}` : undefined}
+        className={`btn btn-compact ${armed ? "btn-soft" : "btn-ghost"} text-meta`}
+      >
+        <svg aria-hidden width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-none">
+          <path d="M4 7h16" />
+          <path d="M9 7V4h6v3" />
+          <path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12" />
+          <path d="M10 11v6M14 11v6" />
+        </svg>
+        {{ rest: "Delete", armed: "Yes, delete", busy: "Deleting…", error: "Not deleted" }[state]}
+      </button>
+      <span role="status" aria-live="polite" className="sr-only">
+        {armed ? "Press again to delete it." : state === "error" ? `Could not delete it: ${error}` : ""}
+      </span>
+    </span>
+  );
+}
+
+function CheckRow({ plantId, check, lead = false, stalled = false }: { plantId: number; check: PlantCheck; lead?: boolean; stalled?: boolean }) {
   const [open, setOpen] = useState(false);
   const id = useId();
   const day = dayLabel(check.finishedAt ?? check.createdAt);
@@ -319,7 +402,13 @@ function CheckRow({ check, lead = false, stalled = false }: { check: PlantCheck;
                 : `${check.why} This check won't be tried again; you can start a new one.`}
             </span>
           }
-          foot={thumbs}
+          // A failed check has no opened row, so its Delete ends its summary row. One still with Fern has none.
+          foot={
+            <>
+              {thumbs}
+              {waiting ? null : <DeleteCheck plantId={plantId} checkId={check.id} day={day} />}
+            </>
+          }
           muted
         />
         {lead && check.question ? <Asked question={check.question} reply={null} waiting={waiting} /> : null}
@@ -407,10 +496,13 @@ function CheckRow({ check, lead = false, stalled = false }: { check: PlantCheck;
               </ul>
             )}
           </div>
-          <p className="text-meta text-ink-2">
-            Read by {modelLabel(check.model)}
-            {day ? ` on ${day}` : ""}.
-          </p>
+          <div className="flex min-h-10 flex-wrap items-center gap-x-4 gap-y-2">
+            <p className="text-meta text-ink-2">
+              Read by {modelLabel(check.model)}
+              {day ? ` on ${day}` : ""}.
+            </p>
+            <DeleteCheck plantId={plantId} checkId={check.id} day={day} />
+          </div>
         </div>
       ) : null}
     </div>

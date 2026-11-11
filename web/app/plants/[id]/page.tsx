@@ -148,7 +148,7 @@ export default async function PlantPage({ params }: { params: Promise<{ id: stri
       <div className="flex flex-wrap items-start gap-7">
         <div className="flex min-w-0 flex-[999_1_560px] flex-col gap-7">
           {/* Always drawn (#87): with no check yet it holds a result's summary row, so the first one moves nothing. */}
-          <HealthPanel checks={checks} canCheck={plant.status === "alive"} />
+          <HealthPanel plantId={plant.id} checks={checks} canCheck={plant.status === "alive"} />
           <section aria-labelledby="facts-h" className="card flex flex-col gap-5 p-5 sm:px-8 sm:py-7">
             <h2 id="facts-h" className="text-section leading-tight">
               About this <Term k="specimen" />

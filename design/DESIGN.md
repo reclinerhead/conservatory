@@ -188,7 +188,11 @@ the same row with "Didn't finish" and the reason in a sentence. With no check
 yet the row says so at the same height. Under a hairline, "Earlier checks":
 the same rows, newest first, five and then "Show all" (ghost, compact). A
 last hairline and one meta line: "A model's reading of your photos, not a
-diagnosis." The heading carries the health check info mark.
+diagnosis." The heading carries the health check info mark. A finished check
+can be deleted: a compact ghost "Delete" with the bin icon, at the right of
+"Read by …" in an opened row, or ending the thumbs line of a failed check,
+which has nothing to open. Two taps: the first makes it the soft button
+saying "Yes, delete"; it puts itself back after five seconds.
 
 **Health check card** (plant page, first in the side column, living plants
 only) — the title with its info mark, one meta line, the plant's photos
