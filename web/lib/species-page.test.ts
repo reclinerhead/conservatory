@@ -2,12 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   aboutState,
   compareSpecies,
-  galleryLine,
   inCollectionLine,
   latinRuns,
   matchesSpecies,
   namingLine,
-  photoTargets,
   speciesCrumbs,
   speciesGallery,
   speciesTitle,
@@ -118,16 +116,38 @@ describe("speciesGallery", () => {
     expect(items.map((i) => i.key)).toEqual(["photo-2", "photo-3", "reference"]);
   });
 
+  it("leads with the photo chosen for the species, and does not repeat it", () => {
+    const items = speciesGallery(
+      [photo(1, 10, "2026-03-01T00:00:00Z"), photo(2, 20, "2026-07-12T00:00:00Z"), photo(3, 30, "2026-05-01T00:00:00Z")],
+      REF,
+      1,
+    );
+    expect(items.map((i) => i.key)).toEqual(["photo-1", "photo-2", "photo-3", "reference"]);
+    expect(items[0]).toMatchObject({ kind: "owner", photoId: 1, href: "/plants/10" });
+  });
+
+  it("keeps the species' chosen photo when its plant has since taken another main photo, and shows the plant by that one", () => {
+    const items = speciesGallery(
+      [
+        photo(1, 10, "2026-03-01T00:00:00Z"), // chosen for the species
+        photo(2, 10, "2026-07-12T00:00:00Z", undefined, true), // now plant 10's main photo
+        photo(3, 20, "2026-09-01T00:00:00Z"),
+      ],
+      REF,
+      1,
+    );
+    expect(items.map((i) => i.key)).toEqual(["photo-1", "photo-3", "photo-2", "reference"]);
+  });
+
+  it("ignores a chosen photo that is not on a plant of this species", () => {
+    const photos = [photo(1, 10, "2026-03-01T00:00:00Z"), photo(2, 20, "2026-07-12T00:00:00Z")];
+    expect(speciesGallery(photos, REF, 99)).toEqual(speciesGallery(photos, REF));
+    expect(speciesGallery(photos, REF, null).map((i) => i.key)).toEqual(["photo-2", "photo-1", "reference"]);
+    expect(speciesGallery([], REF, 99).map((i) => i.kind)).toEqual(["reference"]);
+  });
+
   it("links the reference to its image when Commons gave no page", () => {
     expect(speciesGallery([], { ...REF, credit: null, sourceUrl: null })[0]).toMatchObject({ href: REF.url, caption: "Reference · Wikipedia" });
-  });
-});
-
-describe("galleryLine", () => {
-  it("counts the owner's photos and the reference", () => {
-    expect(galleryLine(2, true)).toBe("2 of your photos · 1 reference image");
-    expect(galleryLine(1, false)).toBe("1 of your photos");
-    expect(galleryLine(0, true)).toBe("No photos of yours yet · 1 reference image");
   });
 });
 
@@ -174,39 +194,6 @@ describe("counts lines", () => {
       ]),
     ).toBe("3 specimens · 2 locations · 1 no longer here");
     expect(inCollectionLine([{ status: "alive", location: null }])).toBe("1 specimen");
-  });
-});
-
-describe("photoTargets", () => {
-  const plant = (id: number, status: "alive" | "died" | "gifted", location: string | null, createdAt: string) => ({ id, status, location, createdAt });
-
-  it("offers the one living plant, named by its tag number and place", () => {
-    expect(photoTargets([plant(142, "alive", "Kitchen", "2026-10-30T12:00:00Z")])).toEqual([{ id: 142, label: "Plant #142 · Kitchen" }]);
-  });
-
-  it("offers every living plant, newest first, and leaves out the ones no longer here", () => {
-    const targets = photoTargets([
-      plant(3, "alive", "Front bed", "2026-09-01T12:00:00Z"),
-      plant(7, "died", "Kitchen", "2026-10-15T12:00:00Z"),
-      plant(9, "alive", null, "2026-10-20T12:00:00Z"),
-      plant(5, "alive", "  ", "2026-09-01T12:00:00Z"),
-    ]);
-    expect(targets).toEqual([
-      { id: 9, label: "Plant #9" },
-      { id: 5, label: "Plant #5" },
-      { id: 3, label: "Plant #3 · Front bed" },
-    ]);
-  });
-
-  it("falls back to the plants no longer here when none is living", () => {
-    expect(photoTargets([plant(4, "gifted", "Office", "2026-08-01T12:00:00Z"), plant(6, "died", null, "2026-09-01T12:00:00Z")])).toEqual([
-      { id: 6, label: "Plant #6" },
-      { id: 4, label: "Plant #4 · Office" },
-    ]);
-  });
-
-  it("offers nothing for a species with no plants", () => {
-    expect(photoTargets([])).toEqual([]);
   });
 });
 

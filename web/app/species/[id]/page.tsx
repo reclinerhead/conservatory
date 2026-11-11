@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { CareFigures, CareRewrite } from "@/components/care";
 import { SpecimenCard } from "@/components/collection";
 import { OpenPhoto, PhotoLightbox, type PhotoSlide } from "@/components/lightbox";
-import { PhotoAdder } from "@/components/photo-adder";
 import { QrIcon, TagCodeBox } from "@/components/tag-code";
 import { Term } from "@/components/term";
 import { LeafMark } from "@/components/topbar";
@@ -16,11 +15,9 @@ import { readSpecies, type SpeciesView } from "@/lib/species";
 import { tagCode } from "@/lib/tag-code";
 import {
   aboutState,
-  galleryLine,
   inCollectionLine,
   latinRuns,
   namingLine,
-  photoTargets,
   speciesCrumbs,
   speciesGallery,
   specimenCount,
@@ -30,8 +27,8 @@ import {
 } from "@/lib/species-page";
 
 // /species/[id]: one species, design/mockups/species.html in its Phase 2
-// subset. Breadcrumb, title block, the gallery (owner photos first, the
-// reference image after), About this species, the care sheet, In your
+// subset. Breadcrumb, title block, the gallery (the species photo, then a
+// tile for each other plant and the reference image), About this species, the care sheet, In your
 // collection, Relatives you already have, the taxonomy card and the pot
 // tags card (#36). Everything is what Fern wrote; before it has looked a
 // species up, each block keeps its space and says so. Lineage and events
@@ -53,17 +50,21 @@ export default async function SpeciesPage({ params }: { params: Promise<{ id: st
 
   const common = displayName(s.commonName);
   const crumbs = speciesCrumbs(s);
-  const gallery = speciesGallery(s.photos, s.reference);
-  const [hero, second, small, ...rest] = gallery;
+  const gallery = speciesGallery(s.photos, s.reference, s.heroPhotoId);
+  const [hero, ...rest] = gallery;
   const ownerShown = gallery.filter((g) => g.kind === "owner").length;
   // The lightbox's slides, in the gallery's order. A photo no longer navigates
   // on tap, so where it led goes under it in the lightbox: its plant's page,
-  // or the reference's file page on Commons, where its licence lives.
-  const slides: PhotoSlide[] = gallery.map((g) => ({
+  // or the reference's file page on Commons, where its licence lives. With
+  // more than one of the household's photos, each can be made the species
+  // photo there (#77); the one that leads is it, chosen or not.
+  const slides: PhotoSlide[] = gallery.map((g, i) => ({
     key: g.key,
     src: g.url,
     alt: g.alt,
     caption: g.caption,
+    photoId: ownerShown > 1 ? g.photoId : undefined,
+    main: i === 0,
     link:
       g.kind === "owner"
         ? { href: g.href, label: `Open ${g.short}`, external: false }
@@ -75,7 +76,6 @@ export default async function SpeciesPage({ params }: { params: Promise<{ id: st
   const living = s.tiles.filter((t) => t.status === "alive").length;
   const groups = groupTiles(s.tiles);
   const naming = namingLine(s.naming);
-  const targets = photoTargets(s.tiles);
 
   return (
     <main className="mx-auto flex w-full max-w-page flex-1 flex-col gap-6 px-4 pb-14 pt-6 sm:gap-7 sm:px-8 sm:pt-8">
@@ -135,60 +135,37 @@ export default async function SpeciesPage({ params }: { params: Promise<{ id: st
         </Link>
       </div>
 
-      {/* The gallery: owner photos first, one per specimen by its main photo (#46),
-          newest first; the reference image after them. Every slot keeps its size
-          when empty. Every photo opens the lightbox. */}
-      <PhotoLightbox slides={slides} title={`Photos of ${speciesTitle(s)}`}>
-        <section aria-label="Photos" className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+      {/* The gallery (#77): the species photo, full width, then one row of equal
+          tiles: every other plant by its main photo (#46), newest first, and the
+          reference image last. The row is always drawn: a dashed tile holds the
+          place of the household's first photo, or of a reference Fern has not
+          fetched, so nothing moves when either arrives. Every photo opens the
+          lightbox, where a plant's photo can be made the species photo. */}
+      <PhotoLightbox
+        slides={slides}
+        title={`Photos of ${speciesTitle(s)}`}
+        choice={ownerShown > 1 ? { endpoint: `/api/species/${s.id}`, noun: "species photo" } : undefined}
+      >
+        <section aria-label="Photos" className="flex flex-col gap-3.5">
           {hero ? (
-            <Figure item={hero} size="hero" />
+            <Figure item={hero} hero />
           ) : (
-            <div className="flex h-[320px] items-center justify-center rounded-[22px] border border-line bg-sage sm:col-span-2 sm:h-[420px] lg:h-[560px]">
+            <div className="flex h-[320px] items-center justify-center rounded-[22px] border border-line bg-sage sm:h-[420px] lg:h-[560px]">
               <LeafMark size={96} className="text-[#6B8F66]" />
             </div>
           )}
-          <div className="flex flex-col gap-3.5">
-            {second ? (
-              <Figure item={second} size="second" />
-            ) : (
-              <div className="flex h-[220px] flex-col items-center justify-center gap-2 rounded-[22px] border border-dashed border-line-2 bg-ground px-6 text-center sm:h-auto sm:min-h-[180px] sm:flex-1">
-                <LeafMark size={40} className="text-line-strong" />
-                <p className="text-meta text-ink-2">
-                  {ownerShown === 0 && s.reference
-                    ? "Your own photo takes the lead here once you add one."
-                    : s.enrichedAt
-                      ? "Wikipedia has no reference image for this one."
-                      : "Fern has not fetched a reference image yet."}
-                </p>
-              </div>
+          {/* As many equal columns as fit at 9.5rem or wider: two on a phone, eight at full width. */}
+          <ul className="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-3.5">
+            {ownerShown === 0 ? <EmptyTile>Your own photo takes the lead here once you add one.</EmptyTile> : null}
+            {rest.map((g) => (
+              <li key={g.key}>
+                <Figure item={g} />
+              </li>
+            ))}
+            {s.reference ? null : (
+              <EmptyTile>{s.enrichedAt ? "Wikipedia has no reference image for this one." : "Fern has not fetched a reference image yet."}</EmptyTile>
             )}
-            <div className="flex min-h-[120px] flex-wrap items-center gap-3">
-              {small ? <Figure item={small} size="small" /> : null}
-              {/* Add a photo puts it straight onto a plant of this species (#55);
-                  /add is for a plant not in the collection yet. */}
-              <div className="flex min-w-[9.5rem] flex-1 flex-col gap-2">
-                {targets.length > 0 ? (
-                  <PhotoAdder plants={targets} countLine={galleryLine(s.photos.length, s.reference !== null)} compact />
-                ) : (
-                  <>
-                    <p className="text-meta text-ink-2">{galleryLine(s.photos.length, s.reference !== null)}</p>
-                    <Link href="/add" className="btn btn-ghost btn-compact self-start hover:no-underline">
-                      Add a plant
-                    </Link>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-          {rest.length > 0 ? (
-            <ul className="grid grid-cols-2 gap-3.5 sm:col-span-3 sm:grid-cols-4 lg:grid-cols-6">
-              {rest.map((g) => (
-                <li key={g.key}>
-                  <Figure item={g} size="tile" />
-                </li>
-              ))}
-            </ul>
-          ) : null}
+          </ul>
         </section>
       </PhotoLightbox>
 
@@ -611,27 +588,18 @@ function PotTags({ s, living }: { s: SpeciesView; living: number }) {
   );
 }
 
-/** One photo in the gallery, with the mockup's dark caption: a pill on the large ones, a bar on the small ones. A tap opens it in the lightbox. */
-function Figure({ item, size }: { item: GalleryItem; size: "hero" | "second" | "small" | "tile" }) {
-  const box = {
-    hero: "h-[320px] rounded-[22px] sm:col-span-2 sm:h-[420px] lg:h-[560px]",
-    second: "h-[220px] rounded-[22px] sm:h-auto sm:min-h-[180px] sm:flex-1",
-    small: "h-[120px] w-[120px] flex-none rounded-[16px]",
-    tile: "h-[120px] rounded-[16px]",
-  }[size];
-  const large = size === "hero" || size === "second";
+/** One photo in the gallery, with the mockup's dark caption: a pill on the hero, a bar on a tile. A tap opens it in the lightbox. */
+function Figure({ item, hero = false }: { item: GalleryItem; hero?: boolean }) {
   return (
-    <figure className={`relative m-0 overflow-hidden border border-line bg-sage ${box}`}>
+    <figure
+      className={`relative m-0 overflow-hidden border border-line bg-sage ${hero ? "h-[320px] rounded-[22px] sm:h-[420px] lg:h-[560px]" : "h-[120px] rounded-[16px]"}`}
+    >
       <OpenPhoto slideKey={item.key} label={`See ${item.alt.charAt(0).toLowerCase()}${item.alt.slice(1)} full size`} className="h-full w-full">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={large ? item.url : item.thumbUrl} alt="" loading={size === "hero" ? "eager" : "lazy"} className="h-full w-full object-cover" />
+        <img src={hero ? item.url : item.thumbUrl} alt="" loading={hero ? "eager" : "lazy"} className="h-full w-full object-cover" />
       </OpenPhoto>
-      {large ? (
-        <figcaption
-          className={`pointer-events-none absolute max-w-[calc(100%-1.5rem)] truncate rounded-pill bg-[rgba(30,42,28,.82)] font-semibold text-white ${
-            size === "hero" ? "bottom-4 left-4 px-3 py-1.5 text-[13px]" : "bottom-3 left-3 px-2.5 py-1 text-[12px]"
-          }`}
-        >
+      {hero ? (
+        <figcaption className="pointer-events-none absolute bottom-4 left-4 max-w-[calc(100%-2rem)] truncate rounded-pill bg-[rgba(30,42,28,.82)] px-3 py-1.5 text-[13px] font-semibold text-white">
           {item.caption}
         </figcaption>
       ) : (
@@ -640,5 +608,14 @@ function Figure({ item, size }: { item: GalleryItem; size: "hero" | "second" | "
         </figcaption>
       )}
     </figure>
+  );
+}
+
+/** A gallery tile's place held for a photo that is not there yet, at a tile's size, saying why. */
+function EmptyTile({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="flex h-[120px] items-center justify-center rounded-[16px] border border-dashed border-line-2 bg-ground px-3 text-center">
+      <p className="line-clamp-4 text-tag leading-snug text-ink-2">{children}</p>
+    </li>
   );
 }

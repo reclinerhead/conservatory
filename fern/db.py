@@ -153,6 +153,16 @@ MIGRATIONS: list[tuple[int, str] | tuple[int, str, str]] = [
         WHERE common_name IS NULL;
         """,
     ),
+    # v9 (#77): the photo a species is known by, chosen on its page, as v6's
+    # is for a plant. NULL means the newest of its plants' main photos, as
+    # before, so no species changes on deploy. It goes with the photo. The web
+    # app counts it only while the photo is on a plant of that species.
+    (
+        9,
+        """
+        ALTER TABLE species ADD COLUMN hero_photo_id INTEGER REFERENCES photos(id) ON DELETE SET NULL;
+        """,
+    ),
 ]
 
 LATEST_VERSION = MIGRATIONS[-1][0] if MIGRATIONS else BASELINE_VERSION

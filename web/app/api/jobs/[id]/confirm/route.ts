@@ -21,7 +21,7 @@
 import { openReadWrite } from "@/lib/db";
 import { isSettled } from "@/lib/job-state";
 import { firstCommonName, nextWaitingJob, waitingJobIds } from "@/lib/jobs";
-import { hasHeroPhoto } from "@/lib/specimens";
+import { hasHeroPhoto, hasSpeciesHero } from "@/lib/specimens";
 
 export const dynamic = "force-dynamic";
 
@@ -200,6 +200,8 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     db.prepare("DELETE FROM confirmations WHERE job_id = ?").run(jobId);
     if (hasHeroPhoto(db))
       db.prepare("UPDATE specimens SET hero_photo_id = NULL WHERE id = ? AND hero_photo_id IN (SELECT id FROM photos WHERE job_id = ?)").run(conf.specimen_id, jobId);
+    // The species' chosen photo too (#77): the plant may come back under another name.
+    if (hasSpeciesHero(db)) db.prepare("UPDATE species SET hero_photo_id = NULL WHERE hero_photo_id IN (SELECT id FROM photos WHERE job_id = ?)").run(jobId);
     db.prepare("UPDATE photos SET specimen_id = NULL WHERE job_id = ?").run(jobId);
     const left = (db.prepare("SELECT COUNT(*) AS n FROM photos WHERE specimen_id = ?").get(conf.specimen_id) as { n: number }).n;
     let removedSpecimen = false;
