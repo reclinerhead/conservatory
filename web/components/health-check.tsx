@@ -1,0 +1,437 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useEffect, useId, useState } from "react";
+import { Term } from "@/components/term";
+import { LeafMark } from "@/components/topbar";
+import { modelLabel } from "@/lib/care";
+import { dayLabel } from "@/lib/collection";
+import { canSend, EARLIER_SHOWN, MAX_PHOTOS, MAX_QUESTION, STATUS_LABEL, togglePhoto } from "@/lib/health";
+import type { PlantCheck } from "@/lib/specimens";
+
+// A plant's health check (#87), both cards. HealthCheckCard, first in the
+// side column, is where one is started: the plant's photos as checkable
+// thumbs, an optional question, "Check health". HealthPanel, in the main
+// column, shows the latest check and the earlier ones. Pressing the button
+// only queues a row (POST /api/plants/[id]/health); Fern asks the model, and
+// the panel refreshes the page every few seconds until the answer is there.
+
+const PLACEHOLDER = "White fuzzy insects are nibbling the leaves, like in the photo. What are they and how do I get rid of them?";
+
+export type PickerPhoto = { id: number; thumbUrl: string; label: string };
+
+export function HealthCheckCard({
+  plantId,
+  photos,
+  initial,
+  enabled,
+  inFlight,
+}: {
+  plantId: number;
+  photos: PickerPhoto[]; // newest first
+  initial: number[]; // the three newest
+  enabled: boolean; // this box has a model key
+  inFlight: boolean; // a check of this plant is queued or running
+}) {
+  const router = useRouter();
+  const questionId = useId();
+  const [selected, setSelected] = useState<number[]>(initial);
+  const [question, setQuestion] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // A photo removed since the page was drawn is no longer chosen.
+  const chosen = selected.filter((id) => photos.some((p) => p.id === id));
+  const full = chosen.length >= MAX_PHOTOS;
+
+  async function send() {
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await fetch(`/api/plants/${plantId}/health`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ photoIds: photos.filter((p) => chosen.includes(p.id)).map((p) => p.id), question: question.trim() || undefined }),
+      });
+      if (!r.ok) throw new Error(((await r.json().catch(() => ({}))) as { error?: string }).error ?? `The server answered ${r.status}.`);
+      router.refresh(); // the page comes back with the check in flight, which the status line below says
+      // On a phone the Health card is above this one; bring it into view. Where it is already on screen, nothing scrolls.
+      document.getElementById("health")?.scrollIntoView({
+        block: "nearest",
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      });
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const heading = (
+    <h3 id="health-check-h" className="mb-1 text-h3">
+      <Term k="health-check">Health check</Term>
+    </h3>
+  );
+
+  if (!enabled) {
+    return (
+      <section id="health-check" className="card scroll-mt-4 p-5" aria-labelledby="health-check-h">
+        {heading}
+        <p className="text-body">Health checks are off on this box.</p>
+        <p className="mt-1 text-meta text-ink-2">They need AI_GATEWAY_API_KEY in the environment Fern and the web app read.</p>
+      </section>
+    );
+  }
+
+  const status = error ?? (inFlight ? "Fern is looking at this plant now. Its answer will show in the Health card." : "");
+  return (
+    <section id="health-check" className="card scroll-mt-4 p-5" aria-labelledby="health-check-h">
+      {heading}
+      <p className="text-meta text-ink-2">Choose up to three photos for Fern to read.</p>
+
+      <fieldset className="mt-3">
+        <legend className="sr-only">Photos to send</legend>
+        {/* The tags page's row, without its text: a 44 px checkbox target and the 56 px thumb, wrapping. */}
+        <ul className="flex flex-wrap gap-x-2 gap-y-1">
+          {photos.map((p) => {
+            const on = chosen.includes(p.id);
+            const off = !on && full;
+            return (
+              <li key={p.id}>
+                <label className={`flex min-h-[60px] items-center rounded-thumb pr-1 ${off ? "cursor-default" : "cursor-pointer hover:bg-ground"}`}>
+                  <span className="flex h-11 w-9 flex-none items-center justify-center">
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      disabled={off || busy}
+                      onChange={() => setSelected(togglePhoto(chosen, p.id))}
+                      aria-label={p.label}
+                      className="h-5 w-5 accent-moss"
+                    />
+                  </span>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={p.thumbUrl}
+                    alt=""
+                    title={p.label}
+                    loading="lazy"
+                    width={56}
+                    height={56}
+                    className={`h-14 w-14 flex-none rounded-thumb border border-line bg-sage object-cover ${off ? "opacity-45" : ""}`}
+                  />
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+        <p className="mt-1.5 text-meta text-ink-2 tabular-nums" aria-live="polite">
+          {chosen.length} of {MAX_PHOTOS} chosen
+        </p>
+      </fieldset>
+
+      <label htmlFor={questionId} className="mt-4 flex items-baseline justify-between gap-3 text-meta font-semibold text-ink-2">
+        Describe a problem or ask a question
+        <span className="font-normal tabular-nums">
+          {question.length}/{MAX_QUESTION}
+        </span>
+      </label>
+      <textarea
+        id={questionId}
+        rows={4}
+        maxLength={MAX_QUESTION}
+        value={question}
+        onChange={(e) => setQuestion(e.target.value)}
+        placeholder={PLACEHOLDER}
+        className="mt-1.5 block w-full resize-y rounded-tile border border-line-2 bg-surface px-4 py-3 text-body text-ink placeholder:text-ink-3 focus:border-line-strong"
+      />
+
+      <button type="button" onClick={() => void send()} disabled={busy || inFlight || !canSend(chosen)} className="btn btn-primary mt-4 w-full">
+        <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 12h4l2-5 4 10 2-5h6" />
+        </svg>
+        {busy ? "Sending…" : "Check health"}
+      </button>
+      {/* Reserved: two lines, so a refusal or "Fern is looking" moves nothing. */}
+      <p role="status" aria-live="polite" className={`mt-2 min-h-[2lh] text-meta leading-snug ${error ? "text-warn-ink" : "text-ink-2"}`}>
+        {status}
+      </p>
+    </section>
+  );
+}
+
+const POLL_MS = 2500;
+const POLL_TICKS = 144; // six minutes: twice the model call's own timeout
+
+export function HealthPanel({ checks, canCheck }: { checks: PlantCheck[]; canCheck: boolean }) {
+  const router = useRouter();
+  const [latest, ...earlier] = checks;
+  const [showAll, setShowAll] = useState(false);
+  const waitingId = latest?.kind === "waiting" ? latest.id : null;
+  const [gaveUp, setGaveUp] = useState<number | null>(null);
+
+  // While Fern has the check, the page asks again every few seconds, as the
+  // confirm screen does for a job; the answer arrives as a refreshed page.
+  useEffect(() => {
+    if (waitingId === null) return;
+    let n = 0;
+    const t = setInterval(() => {
+      n += 1;
+      if (n > POLL_TICKS) {
+        clearInterval(t);
+        setGaveUp(waitingId);
+      } else router.refresh();
+    }, POLL_MS);
+    return () => clearInterval(t);
+  }, [waitingId, router]);
+
+  const shown = showAll ? earlier : earlier.slice(0, EARLIER_SHOWN);
+  return (
+    <section id="health" aria-labelledby="health-h" className="card flex scroll-mt-4 flex-col gap-4 p-5 sm:px-8 sm:py-7">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h2 id="health-h" className="text-section leading-tight">
+          Health{" "}
+          <span className="font-sans text-body">
+            <Term k="health-check">
+              <span className="sr-only">health check</span>
+            </Term>
+          </span>
+        </h2>
+        {canCheck ? (
+          <a href="#health-check" className="font-semibold">
+            New health check
+          </a>
+        ) : null}
+      </div>
+
+      {latest ? (
+        <CheckRow key={latest.id} check={latest} lead stalled={gaveUp === latest.id} />
+      ) : (
+        <RowShell
+          top={<span className="font-bold">No health check yet</span>}
+          body={
+            canCheck
+              ? "Choose photos in the Health check card and Fern will read them: what it can see, the likeliest cause, and what to do."
+              : "This plant was never checked while it was here."
+          }
+          muted
+        />
+      )}
+
+      {earlier.length > 0 ? (
+        <div className="flex flex-col gap-1 border-t border-line pt-4">
+          <h3 className="font-sans text-meta font-semibold tracking-normal text-ink-2">Earlier checks</h3>
+          <ul className="divide-y divide-line">
+            {shown.map((c) => (
+              <li key={c.id} className="py-3 last:pb-0">
+                <CheckRow check={c} />
+              </li>
+            ))}
+          </ul>
+          {earlier.length > EARLIER_SHOWN && !showAll ? (
+            <button type="button" onClick={() => setShowAll(true)} className="btn btn-ghost btn-compact mt-2 self-start">
+              Show all {earlier.length}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      <p className="border-t border-line pt-3 text-meta text-ink-2">A model&rsquo;s reading of your photos, not a diagnosis.</p>
+    </section>
+  );
+}
+
+/**
+ * The summary row's box, the same in every state so nothing moves when a
+ * check lands or fails: one line for the tag and date, the sentence at
+ * a fixed height (four lines on a phone, three from 640 px; one opened row
+ * shows it whole), and the thumbs' 40 px.
+ */
+function RowShell({
+  top,
+  body,
+  foot,
+  muted = false,
+  open = false,
+}: {
+  top: React.ReactNode;
+  body: React.ReactNode;
+  foot?: React.ReactNode;
+  muted?: boolean;
+  open?: boolean;
+}) {
+  return (
+    <span className="flex flex-col gap-2 text-left">
+      <span className="flex h-7 items-center gap-x-2.5 whitespace-nowrap">{top}</span>
+      <span className={`block text-body leading-snug ${muted ? "text-ink-2" : "text-ink"} ${open ? "min-h-[4lh] sm:min-h-[3lh]" : "line-clamp-4 h-[4lh] sm:line-clamp-3 sm:h-[3lh]"}`}>{body}</span>
+      <span className="flex h-10 items-center gap-1.5">{foot}</span>
+    </span>
+  );
+}
+
+function Thumbs({ check }: { check: PlantCheck }) {
+  const gone = check.photoIds.length - check.thumbs.length;
+  return (
+    <>
+      {check.thumbs.map((t) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img key={t.id} src={t.thumbUrl} alt="" loading="lazy" width={40} height={40} className="h-10 w-10 flex-none rounded-thumb border border-line bg-sage object-cover" />
+      ))}
+      <span className="ml-1 text-meta text-ink-2">
+        {check.thumbs.length === 0
+          ? "The photos sent have since been removed"
+          : `${check.photoIds.length === 1 ? "1 photo" : `${check.photoIds.length} photos`} sent${gone > 0 ? `, ${gone} since removed` : ""}`}
+      </span>
+    </>
+  );
+}
+
+function CheckRow({ check, lead = false, stalled = false }: { check: PlantCheck; lead?: boolean; stalled?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
+  const day = dayLabel(check.finishedAt ?? check.createdAt);
+  const date = day ? <span className="text-meta text-ink-2">{day}</span> : null;
+  const thumbs = <Thumbs check={check} />;
+
+  if (check.kind !== "done") {
+    const waiting = check.kind === "waiting";
+    return (
+      <div className="flex flex-col gap-3">
+        <RowShell
+          top={
+            <>
+              {waiting ? (
+                <span className="tag">
+                  <LeafMark size={12} className={stalled ? "" : "animate-pulse motion-reduce:animate-none"} />
+                  Checking
+                </span>
+              ) : (
+                <span className="tag">Didn&rsquo;t finish</span>
+              )}
+              {date}
+            </>
+          }
+          body={
+            <span role="status">
+              {waiting
+                ? stalled
+                  ? "Fern hasn't answered yet. If Fern is running, the answer will be here when you reload the page."
+                  : "Fern is looking…"
+                : `${check.why} This check won't be tried again; you can start a new one.`}
+            </span>
+          }
+          foot={thumbs}
+          muted
+        />
+        {lead && check.question ? <Asked question={check.question} reply={null} waiting={waiting} /> : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => setOpen((v) => !v)}
+        className="-m-2 cursor-pointer rounded-tile p-2 text-left transition-colors duration-[120ms] hover:bg-ground"
+      >
+        <RowShell
+          open={open}
+          top={
+            <>
+              <span className={`tag ${check.status === "needs_attention" ? "tag-warn" : ""}`}>{STATUS_LABEL[check.status]}</span>
+              {date}
+              <span className="ml-auto inline-flex items-center gap-1 text-meta font-semibold text-moss">
+                {/* On a phone the tag and the date fill the line; the chevron stands alone there. */}
+                <span className="max-sm:sr-only">{open ? "Close" : "Findings and remedies"}</span>
+                <svg aria-hidden width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform duration-[120ms] motion-reduce:transition-none ${open ? "rotate-180" : ""}`}>
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </span>
+            </>
+          }
+          body={check.summary}
+          foot={thumbs}
+        />
+      </button>
+      {/* The reply is what the owner came for: under the summary, without opening anything. */}
+      {check.question && (lead || open) ? <Asked question={check.question} reply={check.reply} waiting={false} /> : null}
+      {open ? (
+        <div id={id} className="flex flex-col gap-4">
+          <div>
+            <h4 className="mb-2 text-meta font-semibold text-ink-2">What Fern saw, and what to do</h4>
+            {check.findings.length === 0 ? (
+              <p className="text-body">Nothing to note in these photos.</p>
+            ) : (
+              <ol className="flex flex-col gap-2.5">
+                {check.findings.map((f, i) => {
+                  const thumb = check.thumbs.find((t) => t.n === f.photo);
+                  return (
+                    <li key={i} className="rounded-tile bg-ground p-4">
+                      <p className="font-bold">{f.seen}</p>
+                      <p className="mt-1.5 flex flex-wrap items-center gap-2">
+                        <span className="tag">{f.likelihood === "likely" ? "Likely cause" : "Possible cause"}</span>
+                        {f.photo ? (
+                          <span className="inline-flex items-center gap-1.5 text-meta text-ink-2 tabular-nums">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            {thumb ? <img src={thumb.thumbUrl} alt="" width={24} height={24} className="h-6 w-6 rounded-[6px] object-cover" /> : null}
+                            Photo {f.photo}
+                          </span>
+                        ) : null}
+                      </p>
+                      <p className="mt-2 text-body">{f.remedy}</p>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </div>
+          {check.confidence ? (
+            <div>
+              <h4 className="mb-1 text-meta font-semibold text-ink-2">How sure this reading is</h4>
+              <p className="text-body">
+                <span className="font-bold capitalize">{check.confidence.level}.</span> {check.confidence.why}
+              </p>
+            </div>
+          ) : null}
+          <div>
+            <h4 className="mb-1 text-meta font-semibold text-ink-2">Photos to take next</h4>
+            {check.nextPhotos.length === 0 ? (
+              <p className="text-body">None needed.</p>
+            ) : (
+              <ul className="list-disc pl-5 text-body marker:text-line-strong">
+                {check.nextPhotos.map((p, i) => (
+                  <li key={i}>{p}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <p className="text-meta text-ink-2">
+            Read by {modelLabel(check.model)}
+            {day ? ` on ${day}` : ""}.
+          </p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * The owner's question with the reply under it. The reply's place is held
+ * in every state at eight lines on a phone and five from 640 px (the prompt
+ * asks for two to five sentences), so a reply of ordinary length lands
+ * without moving the page; a longer one is shown whole and takes its room.
+ */
+function Asked({ question, reply, waiting }: { question: string; reply: string | null; waiting: boolean }) {
+  return (
+    <div className="rounded-tile bg-ground p-4">
+      <p className="text-meta font-semibold text-ink-2">You asked</p>
+      <p className="mt-0.5 text-body">{question}</p>
+      <p className="mt-3 text-meta font-semibold text-ink-2">The reply</p>
+      <p className={`mt-0.5 min-h-[8lh] text-body sm:min-h-[5lh] ${reply ? "" : "text-ink-2"}`}>
+        {reply ?? (waiting ? "Fern is looking…" : "There is no reply: the check didn't finish.")}
+      </p>
+    </div>
+  );
+}

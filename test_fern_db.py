@@ -187,7 +187,7 @@ def test_v7_drops_the_nickname_keeping_every_plant(tmp_path, monkeypatch):
 
 def test_a_fresh_database_has_no_nickname(tmp_path):
     conn = db.connect(tmp_path / "c.db")
-    assert db.current_version(conn) == db.LATEST_VERSION == 9
+    assert db.current_version(conn) == db.LATEST_VERSION == 10
     assert "nickname" not in {r["name"] for r in conn.execute("PRAGMA table_info(specimens)")}
 
 

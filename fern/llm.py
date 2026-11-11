@@ -1,13 +1,20 @@
-"""The language model behind the care sheet (#23): Claude through the Vercel
-AI Gateway, the Aviary's route (its gateway_client.py is the model for this).
+"""The language model behind the care sheet (#23) and the health check (#87):
+Claude through the Vercel AI Gateway, the Aviary's route (its
+gateway_client.py is the model for this).
 
 One POST, no SDK: the Anthropic Messages endpoint at the gateway's base URL,
 a bearer token, a JSON body, urllib from the standard library, so Fern's venv
-grows no dependency. The body is exactly four keys (model, max_tokens, system,
-messages). No sampling settings, because current Claude models reject
-non-default ones. No thinking settings, because thinking is always on at the
-default effort, and its tokens count against max_tokens, so the ceiling is
-roomy. Usage is logged per call so the bill is visible in Fern's journal.
+grows no dependency. A care sheet's body is exactly four keys (model,
+max_tokens, system, messages). No sampling settings, because current Claude
+models reject non-default ones. No thinking settings, because thinking is
+always on, and its tokens count against max_tokens, so the ceiling is roomy.
+Usage is logged per call so the bill is visible in Fern's journal.
+
+A health check adds two things, both optional and both absent from a care
+sheet's request: photos, as base64 image blocks ahead of the text, each under
+a line saying which photo it is; and an effort setting (output_config.effort),
+which a caller that does not name one never sends, so the model's default
+stands.
 
 Config (the environment file, read by both units):
     AI_GATEWAY_API_KEY   the gateway's key; unset means no care model, and
@@ -15,12 +22,15 @@ Config (the environment file, read by both units):
     CONSERVATORY_LLM     the gateway model slug (dots in the version), default
                          DEFAULT_MODEL; the list is at
                          https://ai-gateway.vercel.sh/v1/models
+    CONSERVATORY_HEALTH_LLM  the same for health checks, on its own so another
+                         model can be tried there without touching care sheets
 
 Ollama is not wired: the owner chose the gateway alone for now (#23).
 """
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import os
@@ -64,24 +74,51 @@ class Config:
 
 
 @dataclass
+class Image:
+    """One photo for the model: the line that introduces it, and the file's bytes as stored."""
+
+    caption: str
+    data: bytes
+    media_type: str = "image/jpeg"
+
+
+@dataclass
 class Reply:
     text: str
     input_tokens: int | None
     output_tokens: int | None
 
 
-def config(environ: Mapping[str, str] | None = None) -> Config | None:
-    """The gateway key and model from the environment, or None when there is no key."""
+def config(environ: Mapping[str, str] | None = None, model_var: str = "CONSERVATORY_LLM") -> Config | None:
+    """The gateway key and model from the environment, or None when there is no key.
+    `model_var` names the variable the slug is read from: care sheets and
+    health checks each have their own."""
     env = os.environ if environ is None else environ
     key = (env.get("AI_GATEWAY_API_KEY") or "").strip()
     if not key:
         return None
-    return Config(key=key, model=(env.get("CONSERVATORY_LLM") or "").strip() or DEFAULT_MODEL)
+    return Config(key=key, model=(env.get(model_var) or "").strip() or DEFAULT_MODEL)
 
 
-def payload(system: str, prompt: str, model: str) -> dict:
-    """Exactly what leaves the box: the instructions, the facts, the model, a ceiling."""
-    return {"model": model, "max_tokens": MAX_TOKENS, "system": system, "messages": [{"role": "user", "content": prompt}]}
+def payload(system: str, prompt: str, model: str, images: list[Image] | None = None, effort: str | None = None) -> dict:
+    """Exactly what leaves the box: the instructions, the facts, the model, a ceiling.
+
+    With images, the user message is a list of blocks: each photo under its
+    caption, then the facts. With an effort, output_config carries it. With
+    neither, the body is the four keys it always was."""
+    content: str | list[dict] = prompt
+    if images:
+        content = []
+        for im in images:
+            content.append({"type": "text", "text": im.caption})
+            content.append(
+                {"type": "image", "source": {"type": "base64", "media_type": im.media_type, "data": base64.standard_b64encode(im.data).decode("ascii")}}
+            )
+        content.append({"type": "text", "text": prompt})
+    body: dict = {"model": model, "max_tokens": MAX_TOKENS, "system": system, "messages": [{"role": "user", "content": content}]}
+    if effort:
+        body["output_config"] = {"effort": effort}
+    return body
 
 
 def parse_reply(body: object) -> Reply:
@@ -109,11 +146,11 @@ def status_line(code: int, detail: str = "") -> str:
     return f"{words} ({code})" + (f": {detail}" if detail else "")
 
 
-def complete(cfg: Config, system: str, prompt: str) -> Reply:
+def complete(cfg: Config, system: str, prompt: str, images: list[Image] | None = None, effort: str | None = None) -> Reply:
     """One blocking completion. Raises LlmError, never anything else."""
     req = urllib.request.Request(
         GATEWAY_URL,
-        data=json.dumps(payload(system, prompt, cfg.model)).encode("utf-8"),
+        data=json.dumps(payload(system, prompt, cfg.model, images, effort)).encode("utf-8"),
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {cfg.key}",

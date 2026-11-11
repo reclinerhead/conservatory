@@ -103,3 +103,11 @@ CREATE TABLE IF NOT EXISTS confirmations (
   typed_name   TEXT,
   confirmed_at TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
+
+-- Migration v10 (fern/db.py, #87) adds health_checks: one row per health
+-- check of a plant, queued by the web app and answered once by Fern
+-- (fern/health.py): id, specimen_id (cascading), state (queued | running |
+-- done | failed), photo_ids (JSON), question, status, summary, answer (JSON),
+-- model, prompt_version, input_tokens, output_tokens, error, created_at,
+-- finished_at. Like care_sheets (v3), it is a migration step and is folded
+-- into this baseline only once it has shipped everywhere.

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { HealthCheckCard, HealthPanel } from "@/components/health-check";
 import { OpenPhoto, PhotoLightbox, type PhotoSlide } from "@/components/lightbox";
 import { PhotoAdder } from "@/components/photo-adder";
 import { PhotoRemover } from "@/components/photo-remover";
@@ -8,18 +9,21 @@ import { TagCodeBox } from "@/components/tag-code";
 import { Term } from "@/components/term";
 import { LeafMark } from "@/components/topbar";
 import { cardNames, dayLabel, displayName, metaLine, STATUS_LABEL } from "@/lib/collection";
+import { defaultSelection, newestFirst } from "@/lib/health";
 import { withReadDb } from "@/lib/jobs";
 import { relativeCount, relativesLine, relativesOf } from "@/lib/relatives";
-import { speciesList } from "@/lib/species";
-import { knownLocations, readSpecimen } from "@/lib/specimens";
+import { careModelConfigured, speciesList } from "@/lib/species";
+import { knownLocations, readHealthChecks, readSpecimen } from "@/lib/specimens";
 import { tagCode } from "@/lib/tag-code";
 
 // /plants/[id]: one specimen. Breadcrumb (through its species' page), title
 // block, its photos as a timeline (its main photo first, #46, each opening
 // the lightbox), the editable facts, and its species in the side column with
 // how many relatives it has, then how it was named and, while it
-// lives, its pot tag (#36). Care and events arrive with the phases that
-// bring them.
+// lives, its pot tag (#36). Health checks (#87): the Health card leads the
+// main column with the latest check and the earlier ones, and while the
+// plant lives the Health check card leads the side column, where one is
+// started. Care and events arrive with the phases that bring them.
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -34,10 +38,12 @@ export default async function PlantPage({ params }: { params: Promise<{ id: stri
   if (!Number.isInteger(plantId) || plantId <= 0) notFound();
   const data = withReadDb((db) => {
     const plant = readSpecimen(db, plantId);
-    return plant ? { plant, locations: knownLocations(db), relatives: relativesOf(plant.species, speciesList(db)) } : null;
+    return plant
+      ? { plant, locations: knownLocations(db), relatives: relativesOf(plant.species, speciesList(db)), checks: readHealthChecks(db, plantId) }
+      : null;
   }, null);
   if (!data) notFound();
-  const { plant, locations, relatives } = data;
+  const { plant, locations, relatives, checks } = data;
   const sp = plant.species;
   const relCount = relativeCount(relatives);
   // Named as its dashboard card is: the common name, else the species.
@@ -140,19 +146,32 @@ export default async function PlantPage({ params }: { params: Promise<{ id: stri
       </PhotoLightbox>
 
       <div className="flex flex-wrap items-start gap-7">
-        <section aria-labelledby="facts-h" className="card flex min-w-0 flex-[999_1_560px] flex-col gap-5 p-5 sm:px-8 sm:py-7">
-          <h2 id="facts-h" className="text-section leading-tight">
-            About this <Term k="specimen" />
-          </h2>
-          <PlantEditor
-            id={plant.id}
-            facts={{ location: plant.location, acquiredOn: plant.acquiredOn, status: plant.status }}
-            locations={locations}
-            photoCount={plant.photos.length}
-          />
-        </section>
+        <div className="flex min-w-0 flex-[999_1_560px] flex-col gap-7">
+          {/* Always drawn (#87): with no check yet it holds a result's summary row, so the first one moves nothing. */}
+          <HealthPanel checks={checks} canCheck={plant.status === "alive"} />
+          <section aria-labelledby="facts-h" className="card flex flex-col gap-5 p-5 sm:px-8 sm:py-7">
+            <h2 id="facts-h" className="text-section leading-tight">
+              About this <Term k="specimen" />
+            </h2>
+            <PlantEditor
+              id={plant.id}
+              facts={{ location: plant.location, acquiredOn: plant.acquiredOn, status: plant.status }}
+              locations={locations}
+              photoCount={plant.photos.length}
+            />
+          </section>
+        </div>
 
         <aside className="flex w-full flex-[1_1_300px] flex-col gap-5 lg:max-w-sidebar">
+          {plant.status === "alive" ? (
+            <HealthCheckCard
+              plantId={plant.id}
+              photos={newestFirst(plant.photos).map((p) => ({ id: p.id, thumbUrl: p.thumbUrl, label: `Photo ${photoCaption(p).charAt(0).toLowerCase()}${photoCaption(p).slice(1)}` }))}
+              initial={defaultSelection(plant.photos)}
+              enabled={careModelConfigured()}
+              inFlight={checks[0]?.kind === "waiting"}
+            />
+          ) : null}
           <section className="card p-5" aria-labelledby="species-h">
             <h3 id="species-h" className="mb-3 text-h3">
               Its species

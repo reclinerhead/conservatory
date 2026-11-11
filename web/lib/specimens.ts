@@ -2,6 +2,7 @@
 
 import type { DatabaseSync } from "node:sqlite";
 import type { SpecimenStatus, Tile } from "./collection";
+import { healthView, type HealthRow, type HealthView } from "./health";
 import { thumbPathFor } from "./photos";
 
 type TileRow = {
@@ -173,4 +174,38 @@ export function knownLocations(db: DatabaseSync): string[] {
     .prepare("SELECT location FROM specimens WHERE location IS NOT NULL GROUP BY location ORDER BY COUNT(*) DESC, location")
     .all() as Array<{ location: string }>;
   return rows.map((r) => r.location);
+}
+
+/**
+ * Whether the database has the `health_checks` table (schema v10, #87). One
+ * Fern has not migrated yet has none, which reads as no check ever made.
+ */
+export function hasHealthChecks(db: DatabaseSync): boolean {
+  return db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'health_checks'").get() !== undefined;
+}
+
+/** A check with the thumbs of the photos it was sent that the plant still has, each under its number in the check. */
+export type PlantCheck = HealthView & { thumbs: Array<{ n: number; id: number; thumbUrl: string }> };
+
+/** A plant's health checks, newest first, each in the shape its row takes on the page. */
+export function readHealthChecks(db: DatabaseSync, specimenId: number): PlantCheck[] {
+  if (!hasHealthChecks(db)) return [];
+  const rows = db
+    .prepare(
+      `SELECT id, state, photo_ids, question, status, summary, answer, model, error, created_at, finished_at
+         FROM health_checks WHERE specimen_id = ? ORDER BY id DESC`,
+    )
+    .all(specimenId) as HealthRow[];
+  if (rows.length === 0) return [];
+  const paths = new Map(
+    (db.prepare("SELECT id, path FROM photos WHERE specimen_id = ?").all(specimenId) as Array<{ id: number; path: string }>).map((p) => [p.id, p.path]),
+  );
+  return rows.map((r) => {
+    const view = healthView(r);
+    const thumbs = view.photoIds.flatMap((id, i) => {
+      const path = paths.get(id);
+      return path ? [{ n: i + 1, id, thumbUrl: `/media/${thumbPathFor(path)}` }] : [];
+    });
+    return { ...view, thumbs };
+  });
 }
