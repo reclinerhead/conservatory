@@ -8,22 +8,21 @@ It is being built for three gardeners in one family. One raises around 150 succu
 
 It also teaches. All three have grown plants for years without ever being told what a genus is or why a nursery tag says 'Black Prince' instead of a species. Every horticultural term the app shows carries a small info mark that explains it in plain language, with an example from the person's own collection when there is one. Nobody should have to leave the app to understand the app.
 
-> **Status:** Phases 0, 1 and 2 are built, and Phase 3 has started: plants are added from photos, named, kept, given a species page with a care sheet, and tagged with a printed QR code. Next are the care log and the reminders ([#39](https://github.com/reclinerhead/conservatory/issues/39)). It runs at the house, on orchid, for phones on the home Wi-Fi. This README is the design brief; the state of what is built lives in the [technical guide](docs/guide/README.md), and the look of every screen is defined in [`design/DESIGN.md`](design/DESIGN.md).
+> **Status:** Phases 0, 1 and 2 are built, and Phase 3 has started: plants are added from photos, named, kept, given a species page with a care sheet, tagged with a printed QR code, and checked for health from their photos, with a to-do list for what a check finds. Next are the care log and the reminders ([#39](https://github.com/reclinerhead/conservatory/issues/39)). It runs at the house, on orchid, for phones on the home Wi-Fi. This README is the design brief; the state of what is built lives in the [technical guide](docs/guide/README.md), and the look of every screen is defined in [`design/DESIGN.md`](design/DESIGN.md).
 
 ## What it looks like
 
 ### Dashboard
-<img width="1373" height="1285" alt="image" src="https://github.com/user-attachments/assets/cd8209ee-1398-4d9b-8688-9042da54754d" />
+<img width="1373" height="1285" alt="The dashboard: the species grid, with the To do card leading the side column" src="https://github.com/user-attachments/assets/cd8209ee-1398-4d9b-8688-9042da54754d" />
 
 ### Species page
-<img width="723" height="1147" alt="image" src="https://github.com/user-attachments/assets/ff192d62-5f15-4d52-8945-ebaf2d0cd7df" />
+<img width="723" height="1147" alt="A species page: the title block with its light and watering pills, the gallery and About this species" src="https://github.com/user-attachments/assets/ff192d62-5f15-4d52-8945-ebaf2d0cd7df" />
 
 ### Species page: care sheet and relatives
 <img width="1043" height="1310" alt="A species page's care sheet and Relatives you already have" src="https://github.com/user-attachments/assets/7522d587-2175-44da-b6ea-02df0a92c165" />
 
-### Health Check and To-Do Items
-<img width="1356" height="1177" alt="image" src="https://github.com/user-attachments/assets/9a3f5afa-9bae-4ba6-8739-3dd32056c7ba" />
-
+### Health check and to-do items
+<img width="1356" height="1177" alt="A plant's page: the Health card with a check's findings, and the to-do lines under them" src="https://github.com/user-attachments/assets/9a3f5afa-9bae-4ba6-8739-3dd32056c7ba" />
 
 ## Lineage
 
@@ -35,10 +34,12 @@ The Conservatory is the fourth app in a family of home-scale projects, and it bo
 
 ## What it does
 
-- **Add a plant from photos.** One plant at a time, up to five photos of it: the flower, a leaf, the whole plant. Each plant becomes one identification job, and Fern, the worker on the household's station, sends all of its photos to a plant classifier together. The result is a short list of candidates with confidence, which the owner confirms, corrects, or replaces with the name on the nursery tag.
+- **Add a plant from photos.** One plant at a time, up to five photos of it: the flower, a leaf, the whole plant. Each plant becomes one identification job, and Fern, the worker on the household's station, sends all of its photos to a plant classifier together. The result is a short list of candidates with confidence, which the owner confirms, corrects, or replaces with the name on the nursery tag. On a computer, photos can be dragged onto the page from a folder.
 - **Keep the collection.** Every confirmed plant is a *specimen*, known by its species' name, with a location (a shelf, a room, a bed), the date it arrived, whether it is still alive or was gifted or died, and a timeline of its photos. One photo is the plant's main photo, the one it is known by everywhere, and any photo opens full size. More photos go straight onto a plant from its own page, without naming it again.
-- **Show the collection.** The dashboard is a grid of species, one tile per species, narrowed by place ("Shelf 2", "No location yet", "No longer here"), searched by any name, genus or family from the top bar, and sorted by name or by what was added last. Beside it: the species that joined most recently, the collection at a glance, the families grown most, and one species a day to get to know. A strip at the top says how many plants are waiting for a name.
-- **Know the species.** Each species has its own page: the Wikipedia summary and reference image (the owner's own photos lead once there are any), its taxonomy from kingdom to species, a care sheet (light, water, soil, hardiness, fertilizing, dormancy) with the figures behind every line, every specimen of that species in the household, and its relatives in the collection, meaning other plants in the same genus or family.
+- **Show the collection.** The dashboard is a grid of species, one tile per species, narrowed by place ("Shelf 2", "No location yet", "No longer here"), searched by any name, genus or family, and sorted by name or by what was added last. Beside it: what is waiting on the to-do list, the species that joined most recently, one species a day to get to know, the collection at a glance, and the families grown most. A strip at the top says how many plants are waiting for a name. Photos are squares everywhere, because most of them are portraits from a phone.
+- **Know the species.** Each species has its own page: its light and watering at a glance beside the name, the Wikipedia summary and reference image (the owner's own photos lead once there are any, and any one of them can be chosen as the photo the species is known by), every specimen of that species in the household, a care sheet (light, water, soil, hardiness, fertilizing, dormancy) with the figures behind every line, its relatives in the collection, meaning other plants in the same genus or family, and its taxonomy from kingdom to species.
+- **Check a plant's health.** On a plant's page, choose up to three of its photos, say what has been noticed or ask a question, and Fern has a vision model read them. The answer is a status, one sentence, and findings that each carry a likely cause and a remedy. Checks are kept on the plant's page, the latest one open. It is a model's reading of photos, not a diagnosis.
+- **Keep a to-do list.** One tap puts a health check's finding on the to-do list, with its remedy. The list has its own page, a count in the top bar, and a card at the top of the dashboard's side column that turns amber while anything is waiting. Ticking an item off moves it to Done. A to-do outlives the check it came from.
 - **Tag the pots.** Every specimen gets a QR code that opens its page. Choose the plants, start at the first free label on a part-used sheet, and print onto standard 30-up address labels (the Avery 5160 layout, in weatherproof stock for outdoors). Each label also carries the plant's name, species, place and number, so it means something without a phone. A tag's address never changes, and a plant's number is never reused, so a label printed today still opens the right plant in ten years.
 - **Explain itself.** Genus, species, cultivar, family, specimen, confidence score, hardiness zone, dormancy: each one is a word with an info mark beside it, and the explanation uses the reader's own plants as the example where it can.
 
@@ -46,7 +47,7 @@ The Conservatory is the fourth app in a family of home-scale projects, and it bo
 
 - **The care log** ([#40](https://github.com/reclinerhead/conservatory/issues/40)): watered, fertilized, repotted, bloomed, logged on a plant's page in a tap.
 - **The care rhythm** ([#41](https://github.com/reclinerhead/conservatory/issues/41)): how often each species wants water and feeding, read from its care sheet and overridable per species.
-- **Reminders** ([#42](https://github.com/reclinerhead/conservatory/issues/42)): worked out from the rhythm, the log and the season, grouped by location so a shelf of 40 succulents is one card ("Water Shelf 2 · 14 plants"), not 40. They appear as "Today's care" on the dashboard and on a Reminders page. Frost warnings for the beds come after.
+- **Reminders** ([#42](https://github.com/reclinerhead/conservatory/issues/42)): worked out from the rhythm, the log and the season, grouped by location so a shelf of 40 succulents is one card ("Water Shelf 2 · 14 plants"), not 40. They appear as "Today's care" on the dashboard and on a Reminders page, apart from the to-do list, which holds only what its owner chose to keep from a health check. Frost warnings for the beds come after.
 - **Lineage** ([#3](https://github.com/reclinerhead/conservatory/issues/3)): a cutting linked to the plant it came from, so a collection grown from cuttings gets a family tree for free.
 - **An info mark on every term** ([#10](https://github.com/reclinerhead/conservatory/issues/10)): the confirm screen, the plant pages, the species page and the care sheet have theirs; the rest of the app follows.
 - **The Flower Show** (Phase 4): each household publishes a digest, and a hub at the house gathers them into a family view with ribbons: most species, most families, bloom of the week, longest-lived plant. Two sisters with competing flower beds are the reason this feature exists.
@@ -90,7 +91,7 @@ When the queue is idle, Fern fills in each species once, the first time it is co
 - **GBIF** supplies the taxonomy. Family and genus are what power the relatives block and the dashboard's families, which are joins, not model calls.
 - **A language model** writes the care sheet once, from the taxonomy, the first lines of the Wikipedia summary and the household's hardiness zone, and stores it. It is Claude Sonnet, called through the Vercel AI Gateway. A genus, or a hybrid, gets a sheet written for the genus as a whole. Every figure the sheet uses is kept with what it rests on, so it can be checked. A sheet costs a few cents, so a whole shelf of species is a one-time cost of a couple of dollars. Rewrite on the species page asks for a fresh one.
 
-Fern also reads a plant's health when its owner asks ([#87](https://github.com/reclinerhead/conservatory/issues/87)): on the plant's page they choose up to three of its photos, say what they have noticed if they like, and Fern sends the photos to a vision model (Claude Sonnet, through the same gateway) with the species, its care sheet's headlines and how long the plant has been in their care. The answer is a status, one sentence, what was seen with the likeliest cause and a remedy, how sure the reading is, and which photos would settle it; a question gets a direct reply. Checks are kept, so a plant's page shows the latest and the earlier ones. A check is only ever started by a person, is tried once, costs a few cents, and the household has a daily cap. It is a model's reading of photos, not a diagnosis.
+Fern also reads a plant's health when its owner asks ([#87](https://github.com/reclinerhead/conservatory/issues/87)): on the plant's page they choose up to three of its photos (one that shows the soil helps), say what they have noticed if they like, and can add whether it grows indoors or outdoors and under natural or artificial light. Fern sends the photos to a vision model (Claude Sonnet, through the same gateway) with those facts, the species, its care sheet's headlines and how long the plant has been in their care. The answer is a status, one sentence, what was seen with the likeliest cause and a remedy, how sure the reading is, and which photos would settle it; a question gets a direct reply, shown as a conversation. Checks are kept, so a plant's page shows the latest and the earlier ones, and any finished check can be deleted. A finding can be put on the to-do list, which keeps its own copy, so it stays when the check is deleted. An answer with a flawed part is trimmed and kept, not thrown away, since it has been paid for. A check is only ever started by a person, is tried once, costs a few cents, and the household has a daily cap. It is a model's reading of photos, not a diagnosis.
 
 The web app only reads what Fern wrote. A page never waits on Wikipedia, GBIF or a model.
 
@@ -110,6 +111,7 @@ The code is a separate repository from the Aviary on purpose. Patterns are copie
 | Worker and storage | Fern: Python 3.13 (uv), SQLite in WAL mode, Pillow with pillow-heif |
 | Web app | Next.js 16 (App Router), React 19 with the React Compiler, TypeScript, Tailwind CSS 4, `node:sqlite`, pnpm |
 | Enrichment | Wikipedia (Action API) and GBIF; care sheets by Claude Sonnet through the Vercel AI Gateway, once per species |
+| Health checks | Claude Sonnet reading a plant's photos, through the same gateway, only when the owner asks |
 | Photos | Resized in the browser; HEIC decoded in the page with heic-to; full-size viewing with yet-another-react-lightbox |
 | Tags | QR codes drawn on the server with `qrcode`, printed on letter-size label sheets from the browser |
 | Station and ops | systemd, Caddy, git-driven autodeploy |
@@ -120,7 +122,7 @@ The code is a separate repository from the Aviary on purpose. Patterns are copie
 - **Phase 0, the spike.** Done ([#1](https://github.com/reclinerhead/conservatory/issues/1)). A throwaway script ran the succulent shelf through Pl@ntNet and scored it at the genus and species level. Pl@ntNet stayed the identifier.
 - **Phase 1, one household.** Done ([#4](https://github.com/reclinerhead/conservatory/issues/4)). Capture from the camera roll and on the spot, the job queue, the confirm screen, the collection and the plant pages, running on orchid.
 - **Phase 2, the species.** Done ([#19](https://github.com/reclinerhead/conservatory/issues/19)). The enrichment pass, species pages, care sheets, relatives.
-- **Phase 3, the pots.** In progress ([#39](https://github.com/reclinerhead/conservatory/issues/39)). Pot tags and label printing are built; the care log, the care rhythm and the reminders are next.
+- **Phase 3, the pots.** In progress ([#39](https://github.com/reclinerhead/conservatory/issues/39)). Pot tags and label printing are built, and the health check and the to-do list arrived alongside them; the care log, the care rhythm and the reminders are next.
 - **Phase 4, the flower show.** To come. Digests from each household, the hub, ribbons.
 
 ## Open questions
