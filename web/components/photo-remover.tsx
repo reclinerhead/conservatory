@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from "react";
 // else, Escape, or five seconds put it back. It sits in the photo's top-right
 // corner beside the photo's link (never inside it), and every state draws
 // over the photo, so nothing on the page moves. The pill is smaller than the
-// button: the button's padding keeps the target at 44 px on the 120 px tiles.
+// button: the button's padding keeps the target at 44 px on the tiles.
 const DISARM_MS = 5000;
 
 type State = "rest" | "armed" | "busy" | "error";

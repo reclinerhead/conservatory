@@ -3,15 +3,14 @@ import { LeafMark } from "@/components/topbar";
 import { cardNames, metaLine, STATUS_LABEL, type Tile } from "@/lib/collection";
 
 /**
- * The specimen card from DESIGN.md §4: photo or tinted tile 168 px tall,
+ * The specimen card from DESIGN.md §4: photo or tinted tile in a square,
  * the name (the common name, else the species), the italic species under a
  * common name, meta line, tags. One link. `compact` is the species page's
- * variant: 140 px and a 16 px radius, as the mockup's `rel`, and no common name, since every card
+ * variant: a 16 px radius, as the mockup's `rel`, and no common name, since every card
  * there is the page's own species and its common name is the page's title.
  */
 export function SpecimenCard({ tile, tint, compact = false }: { tile: Tile; tint: string; compact?: boolean }) {
   const { name, species } = cardNames(compact ? { ...tile, commonName: null } : tile);
-  const h = compact ? "h-[140px]" : "h-[168px]";
   return (
     <Link
       href={`/plants/${tile.id}`}
@@ -19,13 +18,22 @@ export function SpecimenCard({ tile, tint, compact = false }: { tile: Tile; tint
     >
       {tile.thumbUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={tile.thumbUrl} alt="" loading="lazy" width={320} height={320} className={`${h} w-full object-cover`} />
+        <img
+          src={tile.thumbUrl}
+          srcSet={tile.imageUrl ? `${tile.thumbUrl} 240w, ${tile.imageUrl} 1280w` : undefined}
+          sizes="(min-width: 1280px) 200px, (min-width: 640px) 30vw, 45vw"
+          alt=""
+          loading="lazy"
+          width={320}
+          height={320}
+          className="aspect-square w-full object-cover"
+        />
       ) : (
-        <div className={`flex ${h} items-center justify-center ${tint}`}>
+        <div className={`flex aspect-square items-center justify-center ${tint}`}>
           <LeafMark size={compact ? 60 : 72} className="text-[#6B8F66]" />
         </div>
       )}
-      <div className="flex flex-col gap-1 px-4 pb-4 pt-3.5">
+      <div className="flex flex-col gap-1 px-3 pb-3.5 pt-3 sm:px-4 sm:pb-4 sm:pt-3.5">
         <p className="text-lead font-bold leading-snug">{name}</p>
         {/* The line under the name is reserved, so a card keeps its height when Fern finds a common name.
             The compact card never shows a common name, so it has no line to reserve. */}

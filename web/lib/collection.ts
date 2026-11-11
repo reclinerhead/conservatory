@@ -14,7 +14,8 @@ export type Tile = {
   acquiredOn: string | null; // ISO date
   status: SpecimenStatus;
   createdAt: string; // ISO datetime
-  thumbUrl: string | null; // the newest photo's 320 px thumbnail
+  thumbUrl: string | null; // the main photo's 320 px thumbnail
+  imageUrl: string | null; // the same photo at its full 1280 px, for a box too big for the thumbnail
 };
 
 export type Group = { key: string; label: string; tiles: Tile[] };

@@ -237,6 +237,34 @@
     justify-content: center;
   }
 
+  /* The photo gallery of a plant's page and the species page (#83): the hero
+   * in a square, and beside it a grid of equal square tiles. On a phone the
+   * tiles sit under the hero; from 640 px the two share the row, since a
+   * full-width square would be a screen tall. Photos are squares everywhere:
+   * most are portraits from a phone, and a wide box cuts the plant out. */
+  .gallery {
+    display: grid;
+    gap: var(--spacing-grid);
+    align-items: start;
+  }
+  @media (min-width: 640px) {
+    .gallery {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+  }
+  @media (min-width: 1024px) {
+    .gallery {
+      grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    }
+  }
+  /* As many equal columns as fit at 8rem or wider: two on a phone, five beside the hero at full width. */
+  .gallery-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+    gap: var(--spacing-grid);
+    align-content: start;
+  }
+
   /* Latin names are always italic. */
   .sp {
     font-style: italic;

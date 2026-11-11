@@ -24,6 +24,7 @@ function tile(over: Partial<Tile> & { id: number }): Tile {
     status: "alive",
     createdAt: `2026-10-${String(over.id).padStart(2, "0")}T12:00:00Z`,
     thumbUrl: null,
+    imageUrl: null,
     ...over,
   };
 }

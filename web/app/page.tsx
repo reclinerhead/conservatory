@@ -100,12 +100,12 @@ export default function Home() {
           </div>
 
           {rows.length === 0 ? (
-            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4">
               <li className="card flex flex-col overflow-hidden">
-                <div className={`flex h-[168px] items-center justify-center ${TILE_TINTS[0]}`}>
+                <div className={`flex aspect-square items-center justify-center ${TILE_TINTS[0]}`}>
                   <LeafMark size={72} className="text-[#6B8F66]" />
                 </div>
-                <div className="flex flex-col gap-1.5 px-4 pb-4 pt-3.5">
+                <div className="flex flex-col gap-1.5 px-3 pb-3.5 pt-3 sm:px-4 sm:pb-4 sm:pt-3.5">
                   <p className="text-lead font-bold">No species yet</p>
                   <p className="text-meta text-ink-2">The first plant you name becomes the first card here.</p>
                   <Link href="/add" className="btn btn-soft mt-2 self-start hover:no-underline">
@@ -194,88 +194,93 @@ export default function Home() {
           </section>
 
           {/* Get to know: one of the household's species a day. Every part
-              keeps its height whichever species it is, or none. */}
-          <section className="card p-5" aria-labelledby="know-h">
+              keeps its height whichever species it is, or none. The photo is a
+              square the card's width; where the card is wide (the side column
+              under the list, on a tablet) the square sits beside the text
+              instead, so it is never a screen tall. */}
+          <section className="@container card p-5" aria-labelledby="know-h">
             <h3 id="know-h" className="mb-3 text-h3">
               Get to know
             </h3>
             {pick && spot && spotParagraph ? (
-              <>
-                <Link href={`/species/${pick.id}`} aria-hidden tabIndex={-1} className="block">
+              <div className="flex flex-col gap-3.5 @md:flex-row @md:items-start @md:gap-5">
+                <Link href={`/species/${pick.id}`} aria-hidden tabIndex={-1} className="block @md:w-52 @md:flex-none">
                   {pick.thumbUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={pick.thumbUrl}
-                      srcSet={pick.imageUrl ? `${pick.thumbUrl} 320w, ${pick.imageUrl} 1280w` : undefined}
-                      sizes="(min-width: 640px) 320px, 100vw"
+                      srcSet={pick.imageUrl ? `${pick.thumbUrl} 240w, ${pick.imageUrl} 1280w` : undefined}
+                      sizes="(min-width: 952px) 320px, (min-width: 560px) 208px, 100vw"
                       alt=""
                       width={320}
-                      height={168}
-                      className="h-[168px] w-full rounded-tile object-cover"
+                      height={320}
+                      className="aspect-square w-full rounded-tile object-cover"
                     />
                   ) : (
-                    <div className={`flex h-[168px] items-center justify-center rounded-tile ${TILE_TINTS[2]}`}>
+                    <div className={`flex aspect-square items-center justify-center rounded-tile ${TILE_TINTS[2]}`}>
                       <LeafMark size={72} className="text-[#6B8F66]" />
                     </div>
                   )}
                 </Link>
-                <div className="mt-3.5 flex flex-col gap-1">
-                  <Link href={`/species/${pick.id}`} className={`truncate text-lead leading-snug text-ink hover:text-ink ${spotCommon ? "font-bold" : "font-display italic"}`}>
-                    {speciesTitle(pick)}
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-col gap-1">
+                    <Link href={`/species/${pick.id}`} className={`truncate text-lead leading-snug text-ink hover:text-ink ${spotCommon ? "font-bold" : "font-display italic"}`}>
+                      {speciesTitle(pick)}
+                    </Link>
+                    {spotCommon ? (
+                      <p className="sp truncate">{speciesLabel(pick.scientificName, pick.cultivar)}</p>
+                    ) : (
+                      <p aria-hidden className="invisible">
+                        &nbsp;
+                      </p>
+                    )}
+                    <p className="truncate text-meta text-ink-2 tabular-nums">{tileLine(pick, ALL)}</p>
+                  </div>
+                  <p className="mt-3 line-clamp-4 h-[4lh] leading-normal">
+                    {latinRuns(spotParagraph, [spot.scientificName, spot.canonicalName, spot.genus]).map((r, j) => (r.latin ? <em key={j}>{r.text}</em> : r.text))}
+                  </p>
+                  <div className="mt-3 flex flex-col gap-2">
+                    {spotCells ? (
+                      <>
+                        <div className="h-6 whitespace-nowrap leading-6">
+                          <Term k="light">
+                            <span className="tag max-w-[calc(100%-1.75rem)] align-middle">
+                              <span className="truncate">{spotCells.light.headline}</span>
+                            </span>
+                          </Term>
+                        </div>
+                        <div className="h-6 whitespace-nowrap leading-6">
+                          <Term k="watering">
+                            <span className="tag tag-water max-w-[calc(100%-1.75rem)] align-middle">
+                              <span className="truncate">{spotCells.water.headline}</span>
+                            </span>
+                          </Term>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div aria-hidden className="flex h-6 items-center">
+                          <span className="block h-[22px] w-40 rounded-pill bg-sage" />
+                        </div>
+                        <div aria-hidden className="flex h-6 items-center">
+                          <span className="block h-[22px] w-32 rounded-pill bg-sage" />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <Link href={`/species/${pick.id}`} className="mt-3 block truncate font-semibold">
+                    More about {speciesTitle(pick)}
                   </Link>
-                  {spotCommon ? (
-                    <p className="sp truncate">{speciesLabel(pick.scientificName, pick.cultivar)}</p>
-                  ) : (
-                    <p aria-hidden className="invisible">
-                      &nbsp;
-                    </p>
-                  )}
-                  <p className="truncate text-meta text-ink-2 tabular-nums">{tileLine(pick, ALL)}</p>
                 </div>
-                <p className="mt-3 line-clamp-4 h-[4lh] leading-normal">
-                  {latinRuns(spotParagraph, [spot.scientificName, spot.canonicalName, spot.genus]).map((r, j) => (r.latin ? <em key={j}>{r.text}</em> : r.text))}
-                </p>
-                <div className="mt-3 flex flex-col gap-2">
-                  {spotCells ? (
-                    <>
-                      <div className="h-6 whitespace-nowrap leading-6">
-                        <Term k="light">
-                          <span className="tag max-w-[calc(100%-1.75rem)] align-middle">
-                            <span className="truncate">{spotCells.light.headline}</span>
-                          </span>
-                        </Term>
-                      </div>
-                      <div className="h-6 whitespace-nowrap leading-6">
-                        <Term k="watering">
-                          <span className="tag tag-water max-w-[calc(100%-1.75rem)] align-middle">
-                            <span className="truncate">{spotCells.water.headline}</span>
-                          </span>
-                        </Term>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div aria-hidden className="flex h-6 items-center">
-                        <span className="block h-[22px] w-40 rounded-pill bg-sage" />
-                      </div>
-                      <div aria-hidden className="flex h-6 items-center">
-                        <span className="block h-[22px] w-32 rounded-pill bg-sage" />
-                      </div>
-                    </>
-                  )}
-                </div>
-                <Link href={`/species/${pick.id}`} className="mt-3 block truncate font-semibold">
-                  More about {speciesTitle(pick)}
-                </Link>
-              </>
+              </div>
             ) : (
-              <>
-                <div aria-hidden className={`flex h-[168px] items-center justify-center rounded-tile ${TILE_TINTS[2]}`}>
+              <div className="flex flex-col gap-3.5 @md:flex-row @md:items-start @md:gap-5">
+                <div aria-hidden className={`flex aspect-square items-center justify-center rounded-tile @md:w-52 @md:flex-none ${TILE_TINTS[2]}`}>
                   <LeafMark size={72} className="text-[#6B8F66]" />
                 </div>
                 {/* An invisible copy of the filled card's lines sets the
                     height; the message sits over it, under its title. */}
-                <div className="mt-3.5 grid">
+                <div className="grid min-w-0 flex-1">
                   <div aria-hidden className="invisible col-start-1 row-start-1">
                     <div className="flex flex-col gap-1">
                       <p className="text-lead leading-snug">&nbsp;</p>
@@ -302,7 +307,7 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
-              </>
+              </div>
             )}
           </section>
 
