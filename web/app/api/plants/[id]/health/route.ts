@@ -1,6 +1,7 @@
 // POST /api/plants/:id/health: "Check health" on a plant's page (#87). Queues
 // one health check: a `health_checks` row in state `queued` with the chosen
-// photos and the owner's question. Fern takes it on its next idle tick, asks
+// photos, the owner's question, and where the plant grows and under what
+// light when they said (#99). Fern takes it on its next idle tick, asks
 // the vision model once and writes the answer on the row (fern/health.py);
 // the web app never calls the model and this request never waits on one.
 //
@@ -10,13 +11,12 @@
 // finished check (the result is on the page), 429 once the household has
 // started CONSERVATORY_HEALTH_DAILY_MAX checks today by the station's
 // calendar, and 503 with no AI_GATEWAY_API_KEY or before Fern has made the
-// table. The checks are read inside the write transaction, so two presses
+// table and its v11 columns. The checks are read inside the write transaction, so two presses
 // cannot both get through.
 
 import { openReadWrite } from "@/lib/db";
 import { capReached, checkRequest, dailyMax, healthView, sameAsLast, type HealthRow } from "@/lib/health";
 import { careModelConfigured } from "@/lib/species";
-import { hasHealthChecks } from "@/lib/specimens";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +36,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return Response.json({ error: (err as Error).message }, { status: 503 });
   }
   try {
-    if (!hasHealthChecks(db)) return Response.json({ error: "Fern has not set up health checks yet; restart Fern." }, { status: 503 });
+    // The v11 columns stand for the table too: without them (or it) Fern has not migrated this database yet.
+    const ready = db.prepare("SELECT 1 FROM pragma_table_info('health_checks') WHERE name = 'light'").get();
+    if (!ready) return Response.json({ error: "Fern has not set up health checks yet; restart Fern." }, { status: 503 });
     const plant = db.prepare("SELECT status FROM specimens WHERE id = ?").get(id) as { status: string } | undefined;
     if (!plant) return Response.json({ error: "no such plant" }, { status: 404 });
     if (plant.status !== "alive") return Response.json({ error: "This plant is no longer here." }, { status: 409 });
@@ -56,8 +58,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     // The plant's last finished check, done or failed. A failed one never
     // stops a new one; a done one with the same photos and question does.
     const last = db
-      .prepare("SELECT state, photo_ids, question FROM health_checks WHERE specimen_id = ? AND state IN ('done', 'failed') ORDER BY id DESC LIMIT 1")
-      .get(id) as Pick<HealthRow, "state" | "photo_ids" | "question"> | undefined;
+      .prepare("SELECT state, photo_ids, question, setting, light FROM health_checks WHERE specimen_id = ? AND state IN ('done', 'failed') ORDER BY id DESC LIMIT 1")
+      .get(id) as (Pick<HealthRow, "state" | "photo_ids" | "question"> & { setting: string | null; light: string | null }) | undefined;
     if (last?.state === "done") {
       let lastIds: number[] = [];
       try {
@@ -65,7 +67,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       } catch {
         /* unreadable: not the same */
       }
-      if (Array.isArray(lastIds) && sameAsLast({ photoIds: lastIds, question: last.question }, body.photoIds, body.question)) {
+      if (Array.isArray(lastIds) && sameAsLast({ photoIds: lastIds, question: last.question, setting: last.setting, light: last.light }, body.photoIds, body.question, body.setting, body.light)) {
         return refuse(409, "That is the same photos and question as the last check. Its result is in the Health card.");
       }
     }
@@ -80,7 +82,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       return refuse(429, `The household has used today's ${max} health check${max === 1 ? "" : "s"}. They come back at midnight.`);
     }
 
-    const r = db.prepare("INSERT INTO health_checks (specimen_id, photo_ids, question) VALUES (?, ?, ?)").run(id, JSON.stringify(body.photoIds), body.question);
+    const r = db
+      .prepare("INSERT INTO health_checks (specimen_id, photo_ids, question, setting, light) VALUES (?, ?, ?, ?, ?)")
+      .run(id, JSON.stringify(body.photoIds), body.question, body.setting, body.light);
     const row = db.prepare(`SELECT ${COLUMNS} FROM health_checks WHERE id = ?`).get(Number(r.lastInsertRowid)) as HealthRow;
     db.exec("COMMIT");
     return Response.json({ check: healthView(row) }, { status: 201 });

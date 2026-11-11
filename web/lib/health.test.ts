@@ -51,8 +51,8 @@ describe("the one-to-three limit", () => {
   });
 
   it("holds in the route's body check", () => {
-    expect(checkRequest({ photoIds: [3, 1] })).toEqual({ ok: true, photoIds: [3, 1], question: null });
-    expect(checkRequest({ photoIds: [1, 1, 2] })).toEqual({ ok: true, photoIds: [1, 2], question: null });
+    expect(checkRequest({ photoIds: [3, 1] })).toEqual({ ok: true, photoIds: [3, 1], question: null, setting: null, light: null });
+    expect(checkRequest({ photoIds: [1, 1, 2] })).toEqual({ ok: true, photoIds: [1, 2], question: null, setting: null, light: null });
     expect(checkRequest({ photoIds: [] })).toEqual({ ok: false, error: "choose at least one photo" });
     expect(checkRequest({})).toEqual({ ok: false, error: "choose at least one photo" });
     expect(checkRequest(null)).toEqual({ ok: false, error: "choose at least one photo" });
@@ -63,12 +63,24 @@ describe("the one-to-three limit", () => {
   });
 
   it("trims the question, treats an empty one as none, and stops at 500 characters", () => {
-    expect(checkRequest({ photoIds: [1], question: "  Why are the tips brown?  " })).toEqual({ ok: true, photoIds: [1], question: "Why are the tips brown?" });
-    expect(checkRequest({ photoIds: [1], question: "   " })).toEqual({ ok: true, photoIds: [1], question: null });
-    expect(checkRequest({ photoIds: [1], question: null })).toEqual({ ok: true, photoIds: [1], question: null });
+    expect(checkRequest({ photoIds: [1], question: "  Why are the tips brown?  " })).toEqual({ ok: true, photoIds: [1], question: "Why are the tips brown?", setting: null, light: null });
+    expect(checkRequest({ photoIds: [1], question: "   " })).toEqual({ ok: true, photoIds: [1], question: null, setting: null, light: null });
+    expect(checkRequest({ photoIds: [1], question: null })).toEqual({ ok: true, photoIds: [1], question: null, setting: null, light: null });
     expect(checkRequest({ photoIds: [1], question: "x".repeat(500) }).ok).toBe(true);
     expect(checkRequest({ photoIds: [1], question: "x".repeat(501) })).toEqual({ ok: false, error: "the question is at most 500 characters" });
     expect(checkRequest({ photoIds: [1], question: 7 }).ok).toBe(false);
+  });
+
+  it("takes where the plant grows and its light, each optional, and nothing but the two values of each", () => {
+    expect(checkRequest({ photoIds: [1], setting: "outdoors", light: "natural" })).toEqual({ ok: true, photoIds: [1], question: null, setting: "outdoors", light: "natural" });
+    expect(checkRequest({ photoIds: [1], setting: "indoors" })).toEqual({ ok: true, photoIds: [1], question: null, setting: "indoors", light: null });
+    expect(checkRequest({ photoIds: [1], light: "artificial" })).toEqual({ ok: true, photoIds: [1], question: null, setting: null, light: "artificial" });
+    expect(checkRequest({ photoIds: [1], setting: null, light: null })).toEqual({ ok: true, photoIds: [1], question: null, setting: null, light: null });
+    expect(checkRequest({ photoIds: [1], setting: "greenhouse" })).toEqual({ ok: false, error: "setting must be indoors or outdoors" });
+    expect(checkRequest({ photoIds: [1], setting: "" }).ok).toBe(false);
+    expect(checkRequest({ photoIds: [1], setting: true }).ok).toBe(false);
+    expect(checkRequest({ photoIds: [1], light: "sunny" })).toEqual({ ok: false, error: "light must be natural or artificial" });
+    expect(checkRequest({ photoIds: [1], light: "Natural" }).ok).toBe(false);
   });
 });
 
@@ -85,6 +97,18 @@ describe("same as the last check", () => {
     expect(sameAsLast(last, [5, 4], last.question)).toBe(false);
     expect(sameAsLast(last, [5, 4, 3], null)).toBe(false);
     expect(sameAsLast(last, [5, 4, 3], "why are the tips brown?")).toBe(false);
+  });
+
+  it("is not the same once the setting or the light is said, changed or taken back", () => {
+    expect(sameAsLast(last, [5, 4, 3], last.question, "indoors", null)).toBe(false);
+    expect(sameAsLast(last, [5, 4, 3], last.question, null, "artificial")).toBe(false);
+    const said = { ...last, setting: "indoors", light: "artificial" };
+    expect(sameAsLast(said, [3, 4, 5], last.question, "indoors", "artificial")).toBe(true);
+    expect(sameAsLast(said, [5, 4, 3], last.question, "outdoors", "artificial")).toBe(false);
+    expect(sameAsLast(said, [5, 4, 3], last.question, "indoors", "natural")).toBe(false);
+    expect(sameAsLast(said, [5, 4, 3], last.question)).toBe(false);
+    // A check from before the two were asked said neither.
+    expect(sameAsLast({ ...last, setting: null, light: null }, [5, 4, 3], last.question)).toBe(true);
   });
 
   it("is never the same when there is no last check", () => {

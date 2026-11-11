@@ -195,6 +195,17 @@ MIGRATIONS: list[tuple[int, str] | tuple[int, str, str]] = [
         CREATE INDEX health_checks_state ON health_checks (state, id);
         """,
     ),
+    # v11 (#99): two things the owner may say about the plant when starting a
+    # check, both optional and NULL when left blank: whether it grows indoors
+    # or outdoors, and whether its light is natural or artificial. They are on
+    # the check, not the plant: they are what the owner said for this reading.
+    (
+        11,
+        """
+        ALTER TABLE health_checks ADD COLUMN setting TEXT CHECK (setting IN ('indoors', 'outdoors'));
+        ALTER TABLE health_checks ADD COLUMN light TEXT CHECK (light IN ('natural', 'artificial'));
+        """,
+    ),
 ]
 
 LATEST_VERSION = MIGRATIONS[-1][0] if MIGRATIONS else BASELINE_VERSION

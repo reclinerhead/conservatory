@@ -109,5 +109,7 @@ CREATE TABLE IF NOT EXISTS confirmations (
 -- (fern/health.py): id, specimen_id (cascading), state (queued | running |
 -- done | failed), photo_ids (JSON), question, status, summary, answer (JSON),
 -- model, prompt_version, input_tokens, output_tokens, error, created_at,
--- finished_at. Like care_sheets (v3), it is a migration step and is folded
--- into this baseline only once it has shipped everywhere.
+-- finished_at. v11 (#99) adds setting (indoors | outdoors) and light (natural |
+-- artificial), both NULL when the owner did not say. Like care_sheets (v3), it
+-- is a migration step and is folded into this baseline only once it has
+-- shipped everywhere.

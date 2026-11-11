@@ -49,15 +49,27 @@ export function canSend(selected: number[]): boolean {
   return selected.length >= 1 && selected.length <= MAX_PHOTOS;
 }
 
-export type CheckRequest = { ok: true; photoIds: number[]; question: string | null } | { ok: false; error: string };
+/**
+ * What the owner may say about the plant when starting a check (#99), both
+ * optional: whether it grows indoors or outdoors, and whether its light is
+ * natural or artificial. In the order the card draws them.
+ */
+export const SETTINGS = ["indoors", "outdoors"] as const;
+export const LIGHTS = ["natural", "artificial"] as const;
+export type Setting = (typeof SETTINGS)[number];
+export type Light = (typeof LIGHTS)[number];
+
+export type CheckRequest = { ok: true; photoIds: number[]; question: string | null; setting: Setting | null; light: Light | null } | { ok: false; error: string };
 
 /**
  * What POST /api/plants/[id]/health must carry: `photoIds`, one to three
  * distinct positive integers, and optionally `question`, text of at most 500
- * characters once trimmed (empty means none).
+ * characters once trimmed (empty means none), `setting` (indoors or outdoors)
+ * and `light` (natural or artificial); either left out or null means the
+ * owner did not say.
  */
 export function checkRequest(body: unknown): CheckRequest {
-  const b = (body && typeof body === "object" ? body : {}) as { photoIds?: unknown; question?: unknown };
+  const b = (body && typeof body === "object" ? body : {}) as { photoIds?: unknown; question?: unknown; setting?: unknown; light?: unknown };
   const ids = b.photoIds;
   if (!Array.isArray(ids) || ids.length === 0) return { ok: false, error: "choose at least one photo" };
   if (!ids.every((n) => Number.isInteger(n) && (n as number) > 0)) return { ok: false, error: "photoIds must be photo ids" };
@@ -66,16 +78,28 @@ export function checkRequest(body: unknown): CheckRequest {
   if (b.question !== undefined && b.question !== null && typeof b.question !== "string") return { ok: false, error: "question must be text" };
   const question = (b.question ?? "").trim();
   if (question.length > MAX_QUESTION) return { ok: false, error: `the question is at most ${MAX_QUESTION} characters` };
-  return { ok: true, photoIds, question: question || null };
+  const setting = b.setting ?? null;
+  if (setting !== null && !SETTINGS.includes(setting as Setting)) return { ok: false, error: "setting must be indoors or outdoors" };
+  const light = b.light ?? null;
+  if (light !== null && !LIGHTS.includes(light as Light)) return { ok: false, error: "light must be natural or artificial" };
+  return { ok: true, photoIds, question: question || null, setting: setting as Setting | null, light: light as Light | null };
 }
 
 /**
- * Whether a request repeats a check: the same photos, in any order, and the
- * same question once trimmed. The route refuses a repeat of the plant's last
- * finished check, whose result is already on the page.
+ * Whether a request repeats a check: the same photos, in any order, the same
+ * question once trimmed, and the same setting and light (#99; saying where
+ * the plant grows is a new thing to ask). The route refuses a repeat of the
+ * plant's last finished check, whose result is already on the page.
  */
-export function sameAsLast(last: { photoIds: number[]; question: string | null } | null, photoIds: number[], question: string | null): boolean {
+export function sameAsLast(
+  last: { photoIds: number[]; question: string | null; setting?: string | null; light?: string | null } | null,
+  photoIds: number[],
+  question: string | null,
+  setting: string | null = null,
+  light: string | null = null,
+): boolean {
   if (!last) return false;
+  if ((last.setting ?? null) !== setting || (last.light ?? null) !== light) return false;
   const a = [...new Set(last.photoIds)].sort((x, y) => x - y);
   const b = [...new Set(photoIds)].sort((x, y) => x - y);
   if (a.length !== b.length || a.some((x, i) => x !== b[i])) return false;

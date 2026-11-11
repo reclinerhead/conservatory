@@ -5,8 +5,9 @@ something, and presses "Check health". The web app inserts a `health_checks`
 row in state `queued` and answers at once; it never calls the model. Fern
 takes the oldest queued check on an idle tick, ahead of the thumbnail sweep,
 enrichment and care sheets, because someone is waiting on the page. It sends
-the photos as they are stored, with the species, where the plant is kept, how
-long it has been in the household's care, the date, the zone, the care sheet's
+the photos as they are stored, with the species, where the plant is kept,
+whether it grows indoors or outdoors and under natural or artificial light
+when the owner said (#99), how long it has been in the household's care, the date, the zone, the care sheet's
 headlines, the previous check and the owner's question, and writes the
 validated answer on the row.
 
@@ -44,6 +45,10 @@ MAX_PHOTOS = 3
 STATUSES = ("healthy", "watch", "needs_attention", "cannot_tell")
 LIKELIHOODS = ("likely", "possible")
 LEVELS = ("high", "medium", "low")
+# What the owner may say about the plant when starting a check (#99), and how
+# the prompt says each. Anything else on the row is treated as not said.
+SETTINGS = {"indoors": "indoors", "outdoors": "outdoors"}
+LIGHTS = {"natural": "natural light (the sun, through a window or in the open)", "artificial": "artificial light (grow lights or lamps, not the sun)"}
 # The prompt asks for a summary of at most 140 characters. A model cannot
 # count characters exactly, and the first live checks came back at 144 and
 # 156, so the validator allows some slack before it throws a paid answer
@@ -149,12 +154,16 @@ def build_prompt(
     previous: sqlite3.Row | dict | None,
     zone: str | None,
     today: date,
+    setting: str | None = None,
+    light: str | None = None,
 ) -> str:
     """The text that follows the photos: the facts about this plant.
 
     `plant` carries the species' names, the plant's location and dates, and
     the species' care sheet cells (`care_cells`, JSON or None). `previous` is
-    the plant's last finished check (status, summary, finished_at) or None."""
+    the plant's last finished check (status, summary, finished_at) or None.
+    `setting` and `light` are what the owner said for this check (#99); each
+    is a line when given and absent when not, so a blank is never a claim."""
     name = plant["scientific_name"]
     if plant["cultivar"]:
         name += f" '{plant['cultivar']}'"
@@ -162,6 +171,10 @@ def build_prompt(
     if plant["common_name"]:
         lines.append(f"Common name: {plant['common_name']}")
     lines.append(f"Where it is kept: {plant['location']}" if plant["location"] else "Where it is kept: not recorded")
+    if setting in SETTINGS:
+        lines.append(f"The owner says it grows: {SETTINGS[setting]}")
+    if light in LIGHTS:
+        lines.append(f"The owner says its light is: {LIGHTS[light]}")
     lines.append(f"In the household's care: {time_in_care(plant['acquired_on'], plant['created_at'], today)}")
     lines.append(f"Today: {_day_words(today)}")
     lines.append(f"Household hardiness zone: USDA {zone}" if zone else "Household hardiness zone: not set")
@@ -360,7 +373,7 @@ def run_check(
     ).fetchone()
     question = (check["question"] or "").strip() or None
     version, system = care.load_prompt(prompt_path)
-    prompt = build_prompt(plant, len(images), question, previous, zone, now.astimezone().date())
+    prompt = build_prompt(plant, len(images), question, previous, zone, now.astimezone().date(), check["setting"], check["light"])
     reply = complete(cfg, system, prompt, images=images, effort=EFFORT)
     answer = parse_answer(reply.text, asked=question is not None, photo_count=len(images))
     with conn:

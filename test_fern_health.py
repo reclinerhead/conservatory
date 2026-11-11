@@ -191,6 +191,29 @@ def test_build_prompt_without_a_zone_says_so():
     assert "Household hardiness zone: not set" in health.build_prompt(_plant(), 1, None, None, None, TODAY)
 
 
+def test_build_prompt_says_where_it_grows_and_its_light_only_when_the_owner_did():
+    said = health.build_prompt(_plant(), 1, None, None, "6a", TODAY, "outdoors", "natural")
+    assert "The owner says it grows: outdoors" in said and "The owner says its light is: natural light" in said
+    basement = health.build_prompt(_plant(), 1, None, None, "6a", TODAY, "indoors", "artificial")
+    assert "The owner says it grows: indoors" in basement and "The owner says its light is: artificial light (grow lights" in basement
+    # One without the other.
+    only_light = health.build_prompt(_plant(), 1, None, None, "6a", TODAY, None, "artificial")
+    assert "its light is: artificial" in only_light and "it grows:" not in only_light
+    only_setting = health.build_prompt(_plant(), 1, None, None, "6a", TODAY, "indoors", None)
+    assert "it grows: indoors" in only_setting and "its light is" not in only_setting
+    # Left blank, or a value the app never writes: no line, so a blank is never a claim.
+    for setting, light in ((None, None), ("", ""), ("greenhouse", "sunny")):
+        p = health.build_prompt(_plant(), 1, None, None, "6a", TODAY, setting, light)
+        assert "The owner says" not in p
+    assert health.build_prompt(_plant(), 1, None, None, "6a", TODAY) == health.build_prompt(_plant(), 1, None, None, "6a", TODAY, None, None)
+
+
+def test_the_prompt_file_says_how_to_use_the_setting_and_the_light():
+    _, system = care.load_prompt(health.PROMPT_PATH)
+    for words in ("indoors or outdoors", "natural or artificial", "do not assume it"):
+        assert words in system
+
+
 def test_photo_caption_uses_the_taken_date_else_the_upload():
     assert health.photo_caption(1, {"taken_at": "2026-10-31T10:00:00", "uploaded_at": "2026-11-03T08:00:00.000Z"}) == "Photo 1, taken Oct 31, 2026:"
     assert health.photo_caption(2, {"taken_at": None, "uploaded_at": "2026-11-03T08:00:00.000Z"}) == "Photo 2, uploaded Nov 3, 2026 (the date it was taken is not known):"
@@ -219,7 +242,7 @@ def test_v10_adds_health_checks_over_a_v9_database_and_cascades_with_the_plant(t
     assert db.apply_schema(conn) == db.LATEST_VERSION >= 10
     cols = {r["name"] for r in conn.execute("PRAGMA table_info(health_checks)")}
     assert cols == {"id", "specimen_id", "state", "photo_ids", "question", "status", "summary", "answer", "model", "prompt_version",
-                    "input_tokens", "output_tokens", "error", "created_at", "finished_at"}
+                    "input_tokens", "output_tokens", "error", "created_at", "finished_at", "setting", "light"}  # the last two are v11
     # What was there is untouched.
     assert tuple(conn.execute("SELECT id, location FROM specimens").fetchone()) == (3, "Shelf 2")
     assert conn.execute("SELECT specimen_id FROM photos WHERE id = 7").fetchone()[0] == 3
@@ -235,6 +258,27 @@ def test_v10_adds_health_checks_over_a_v9_database_and_cascades_with_the_plant(t
     assert conn.execute("SELECT COUNT(*) FROM health_checks").fetchone()[0] == 0
     # A second apply is a no-op: the CREATE would fail if it ran again.
     assert db.apply_schema(conn) == db.LATEST_VERSION
+
+
+def test_v11_adds_the_setting_and_the_light_over_a_v10_database_and_keeps_its_checks(tmp_path, monkeypatch):
+    steps = db.MIGRATIONS
+    monkeypatch.setattr(db, "MIGRATIONS", [s for s in steps if s[0] <= 10])
+    conn = db.connect(tmp_path / "c.db")
+    assert db.current_version(conn) == 10
+    conn.execute("INSERT INTO species (id, scientific_name) VALUES (1, 'Ficus elastica')")
+    conn.execute("INSERT INTO specimens (id, species_id) VALUES (3, 1)")
+    conn.execute("INSERT INTO health_checks (specimen_id, photo_ids, question) VALUES (3, '[7]', 'Why is it pale?')")
+    conn.commit()
+    monkeypatch.setattr(db, "MIGRATIONS", steps)
+    assert db.apply_schema(conn) == db.LATEST_VERSION >= 11
+    # A check made before v11 said neither.
+    assert tuple(conn.execute("SELECT question, setting, light FROM health_checks").fetchone()) == ("Why is it pale?", None, None)
+    conn.execute("INSERT INTO health_checks (specimen_id, photo_ids, setting, light) VALUES (3, '[7]', 'outdoors', 'natural')")
+    conn.execute("INSERT INTO health_checks (specimen_id, photo_ids, light) VALUES (3, '[7]', 'artificial')")
+    for column, value in (("setting", "garden"), ("light", "sunny")):
+        with pytest.raises(Exception, match="CHECK"):
+            conn.execute(f"INSERT INTO health_checks (specimen_id, photo_ids, {column}) VALUES (3, '[7]', ?)", (value,))
+    assert db.apply_schema(conn) == db.LATEST_VERSION  # a second apply is a no-op
 
 
 # --- the worklist and one check, with the model faked --------------------------
@@ -319,6 +363,21 @@ def test_run_once_asks_once_and_writes_the_answer_the_model_and_the_tokens(tmp_p
     ]
     # Done: off the list, and the next tick has nothing to do.
     assert health.run_once(conn, data, CFG, "6a", NOW, _explode) is False
+
+
+def test_a_check_carries_what_the_owner_said_about_the_plant_into_the_prompt(tmp_path):
+    conn, data, ids = _collection(tmp_path)
+    check = _queue(conn, ids)
+    conn.execute("UPDATE health_checks SET setting = 'indoors', light = 'artificial' WHERE id = ?", (check,))
+    conn.commit()
+    calls = []
+    assert health.run_once(conn, data, CFG, "6a", NOW, _fake(_answer(), calls)) is True
+    assert "The owner says it grows: indoors" in calls[0]["prompt"] and "The owner says its light is: artificial light" in calls[0]["prompt"]
+    # The next check says neither, and its prompt claims neither.
+    _queue(conn, ids[:1])
+    assert health.run_once(conn, data, CFG, "6a", NOW, _fake(_answer(), calls)) is True
+    assert "The owner says" not in calls[1]["prompt"]
+    assert conn.execute("SELECT COUNT(*) FROM health_checks WHERE state = 'done'").fetchone()[0] == 2
 
 
 def test_a_failed_call_is_one_loud_line_and_a_failed_row_that_is_never_retried(tmp_path, caplog):
