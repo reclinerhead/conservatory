@@ -295,8 +295,10 @@ cards, which are species tiles, not specimen cards), top to bottom:
 **Species page** (`mockups/species.html`):
 1. Breadcrumb.
 2. Title block: common name · italic binomial + authority · chips (family,
-   habit, native range, zones, bloom months, "N in your collection") · right:
-   Print pot tags (soft), Add a specimen (primary).
+   habit, native range, zones, bloom months, "N in your collection", then the
+   care sheet's light headline as a `tag` and its watering headline as a
+   `tag-water`, each with its info mark inside) · right: Print pot tags
+   (soft), Add a specimen (primary).
 3. Photo gallery.
 4. Two columns, same split as the dashboard.
    - Main: **About this species** (Wikipedia summary, source line with fetch
