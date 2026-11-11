@@ -203,7 +203,23 @@ diagnosis." The heading carries the health check info mark. A finished check
 can be deleted: a compact ghost "Delete" with the bin icon, at the right of
 "Read by …" in an opened row, or ending the thumbs line of a failed check,
 which has nothing to open. Two taps: the first makes it the soft button
-saying "Yes, delete"; it puts itself back after five seconds.
+saying "Yes, delete"; it puts itself back after five seconds. Every finding
+cell ends with one 40 px line for the to-do list, the same height in each
+state: a compact ghost button on white with a plus, "Add to to-do list";
+then "On your to-do list" (a 600 link with a small empty box) beside a
+compact ghost "Remove"; then, ticked off, a check mark and "Done Nov 14,
+2026" in `moss-deep` 600.
+
+**To-do row** (To-do page) — a 44 px round target holding a 28 px moss
+checkbox, the plant's 56 px thumb, the plant's name (700, a link), the remedy
+at body size clamped to two lines, and a meta line ("Added Nov 11, 2026").
+The remedy is a button with a chevron at its right ("What Fern saw", or
+"Close", beside it from 640 px) that opens a `ground` cell under it: what
+Fern saw in bold, the cause tag, links to the plant and its species, and a
+compact ghost "Remove" at the right. On a phone the remedy takes the row's
+full width under the checkbox, thumb and name. Hairlines between rows. A
+ticked row stays in place with the remedy struck through in `ink-2`. Done
+to-dos are side-panel rows with the same checkbox, ticked, before the thumb.
 
 **Health check card** (plant page, first in the side column, living plants
 only) — the title with its info mark, a meta line that also suggests a photo
@@ -226,10 +242,12 @@ generated per specimen and link to its page.
 
 **Top bar** (every page, white, hairline bottom border): leaf mark + "The
 Conservatory" in Fraunces 24 · a nav pill for each page that exists
-(Collection, Tags; active = `sage-2` fill; Collection is lit on the species
-and plant pages it leads to) · primary "Add a plant" with camera icon on the
+(Collection, Tags, To-do; active = `sage-2` fill; Collection is lit on the species
+and plant pages it leads to; To-do is followed by the number still to do,
+400 weight at 80 % opacity, zero included) · primary "Add a plant" with camera icon on the
 right. One row at every width, never wrapping: on a phone the wordmark is
-the leaf alone and the button says "Add". The mockups still draw the search
+the leaf alone, the button says "Add" and the pills are 13 px with 8 px
+side padding. The mockups still draw the search
 and three later pills in the bar; the search is the life list's, and a pill
 is drawn when its page exists.
 
@@ -254,9 +272,12 @@ cards, which are species tiles, not specimen cards), top to bottom:
    - 4-across species tiles (the specimen card's shape: a square photo, common
      name, italic binomial, a meta line for the chip on screen), each opening
      the species page; "Showing 9 of 42 species".
-   - Side panels in order: New species added recently · Get to know ·
+   - Side panels in order: To do · New species added recently · Get to know ·
      Collection at a glance · What you grow most · Blooming now · Flower Show
      (ribbons).
+   - To do: the heading with "All (N)" at its right, then the three newest
+     to-dos still to do as side-panel rows (the plant's thumb and name, one
+     line of the remedy), each opening the To-do page; always three rows tall.
    - New species added recently: the four species that joined last (a new pot
      of one already owned doesn't count), as side-panel rows, always four rows
      tall. No "All N species" foot link: the grid is beside it.

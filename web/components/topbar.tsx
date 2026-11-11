@@ -7,10 +7,14 @@ import { usePathname } from "next/navigation";
 // for each page that exists, the primary "Add a plant". Collection is lit on
 // the species and plant pages it leads to. One row at every width: on a
 // phone the wordmark is the leaf alone. The search is the life list's
-// (components/species-grid.tsx).
-const NAV: Array<{ label: string; href: string; also?: string[] }> = [
+// (components/species-grid.tsx). To-do (#103) carries the number still to
+// do, zero included, so the bar keeps its shape: it is the notice, on every
+// page, that something is waiting. On a phone the pills are tighter and a
+// size down so the three and the button stay on the one row at 360 px.
+const NAV: Array<{ label: string; href: string; also?: string[]; counted?: true }> = [
   { label: "Collection", href: "/", also: ["/species/", "/plants/"] },
   { label: "Tags", href: "/tags" },
+  { label: "To-do", href: "/todo", counted: true },
 ];
 
 export function LeafMark({ size = 30, className = "" }: { size?: number; className?: string }) {
@@ -34,7 +38,7 @@ export function LeafMark({ size = 30, className = "" }: { size?: number; classNa
   );
 }
 
-export function TopBar() {
+export function TopBar({ todoCount }: { todoCount: number }) {
   const pathname = usePathname();
   const isOn = (item: (typeof NAV)[number]) => pathname === item.href || (item.also ?? []).some((p) => pathname.startsWith(p));
   return (
@@ -46,8 +50,17 @@ export function TopBar() {
         </Link>
         <nav aria-label="Main" className="flex gap-0.5 sm:ml-4">
           {NAV.map((item) => (
-            <Link key={item.label} href={item.href} aria-current={isOn(item) ? "page" : undefined} className={`nav-pill ${isOn(item) ? "nav-pill-on" : ""}`}>
+            <Link key={item.label} href={item.href} aria-current={isOn(item) ? "page" : undefined} className={`nav-pill whitespace-nowrap max-sm:px-2 max-sm:text-meta ${isOn(item) ? "nav-pill-on" : ""}`}>
               {item.label}
+              {item.counted ? (
+                <>
+                  {" "}
+                  <span className="font-normal tabular-nums opacity-80">
+                    {todoCount}
+                    <span className="sr-only"> still to do</span>
+                  </span>
+                </>
+              ) : null}
             </Link>
           ))}
         </nav>

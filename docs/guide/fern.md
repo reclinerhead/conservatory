@@ -38,6 +38,7 @@ Fern reads all of these from its process environment and never loads a `.env` fi
 | `confirmations` | what the person tapped for a job | `chosen_rank` or `typed_name`; feeds the roster match and the accuracy picture |
 | `care_sheets` | one species' care sheet (v3) | keyed on `species_id`, cascading on delete; columns under The care pass |
 | `health_checks` | one health check of a plant (v10, #87; v11, #99) | inserted `queued` by the web app, answered once by Fern; cascades with its specimen; `id` is `AUTOINCREMENT`; columns under The health check |
+| `todos` | the to-do list: one finding the owner kept from a health check (v12, #103) | Fern creates the table and nothing more; the web app writes every row ([web.md](web.md)). Holds its own copy of the finding (`seen`, `remedy`, `likelihood`), so it outlives the check: `health_check_id` is `ON DELETE SET NULL`, `specimen_id` cascades. A unique index on (`health_check_id`, `finding_index`) makes one finding one to-do. `completed_at` is NULL while pending |
 
 Tests: `test_fern_db.py` at the repo root covers the baseline apply, idempotence, migration ordering, v4 over a v3 database, v5 over a v4 database (every id, photo link and naming record kept, both indexes recreated, `tagged_at` added, foreign keys back on; the test fails if the rebuild runs with foreign keys on), that a removed plant's id is never reused after v5, that a rebuild breaking a link rolls back, and the status constraint.
 

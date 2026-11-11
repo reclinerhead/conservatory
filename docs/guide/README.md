@@ -12,7 +12,7 @@ Spoke to come: `flower-show.md` (the hub, Phase 4).
 
 ## The shape, in one paragraph
 
-One SQLite file per household, in WAL mode. Fern (`fern/`) creates and migrates it, drains the identification queue, calls Pl@ntNet, and, when idle, answers a queued health check of a plant's photos, enriches species from GBIF and Wikipedia and writes their care sheets, the model calls going through the Vercel AI Gateway; the web app (`web/`) opens the same file with `node:sqlite`, serves every page, and writes the rows that a person's actions create (uploads, jobs, confirmations, specimens, a health check to be answered). Photos sit on disk under `CONSERVATORY_DATA/photos/`. Both processes read their configuration from the environment (`.env.example` at the root). Nothing calls Pl@ntNet or a model but Fern, so the daily quota and the model bill each have one owner.
+One SQLite file per household, in WAL mode. Fern (`fern/`) creates and migrates it, drains the identification queue, calls Pl@ntNet, and, when idle, answers a queued health check of a plant's photos, enriches species from GBIF and Wikipedia and writes their care sheets, the model calls going through the Vercel AI Gateway; the web app (`web/`) opens the same file with `node:sqlite`, serves every page, and writes the rows that a person's actions create (uploads, jobs, confirmations, specimens, a health check to be answered, the to-do list). Photos sit on disk under `CONSERVATORY_DATA/photos/`. Both processes read their configuration from the environment (`.env.example` at the root). Nothing calls Pl@ntNet or a model but Fern, so the daily quota and the model bill each have one owner.
 
 ## Conventions
 

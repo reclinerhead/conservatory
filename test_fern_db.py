@@ -187,7 +187,7 @@ def test_v7_drops_the_nickname_keeping_every_plant(tmp_path, monkeypatch):
 
 def test_a_fresh_database_has_no_nickname(tmp_path):
     conn = db.connect(tmp_path / "c.db")
-    assert db.current_version(conn) == db.LATEST_VERSION == 11
+    assert db.current_version(conn) == db.LATEST_VERSION == 12
     assert "nickname" not in {r["name"] for r in conn.execute("PRAGMA table_info(specimens)")}
 
 
@@ -290,3 +290,66 @@ def test_removing_a_species_chosen_photo_puts_it_back_on_the_default(tmp_path, m
     conn.commit()
     assert conn.execute("SELECT hero_photo_id FROM species WHERE id = 1").fetchone()[0] is None
     assert conn.execute("PRAGMA foreign_key_check").fetchall() == []
+
+
+def _plant_with_a_check(conn):
+    """One species, one plant (id 1) and one finished health check (id 1) on it."""
+    conn.execute("INSERT INTO species (id, scientific_name) VALUES (1, 'Kalanchoe daigremontiana')")
+    conn.execute("INSERT INTO specimens (id, species_id) VALUES (1, 1)")
+    conn.execute("INSERT INTO health_checks (id, specimen_id, state, photo_ids) VALUES (1, 1, 'done', '[1]')")
+    conn.commit()
+
+
+_TODO = "INSERT INTO todos (specimen_id, health_check_id, finding_index, seen, remedy, likelihood) VALUES (1, ?, ?, 'Pebbles', 'Lift them out', 'possible')"
+
+
+def test_v12_adds_todos_over_a_v11_database_once(tmp_path, monkeypatch):
+    steps = db.MIGRATIONS
+    monkeypatch.setattr(db, "MIGRATIONS", steps[:10])
+    conn = db.connect(tmp_path / "c.db")
+    assert db.current_version(conn) == 11
+    _plant_with_a_check(conn)
+    monkeypatch.setattr(db, "MIGRATIONS", steps[:11])
+    assert db.apply_schema(conn) == 12
+    # The plant and its check are as they were, and the list starts empty.
+    assert conn.execute("SELECT COUNT(*) FROM health_checks").fetchone()[0] == 1
+    assert conn.execute("SELECT COUNT(*) FROM todos").fetchone()[0] == 0
+    conn.execute(_TODO, (1, 0))
+    row = conn.execute("SELECT created_at, completed_at FROM todos").fetchone()
+    assert row["created_at"] and row["completed_at"] is None
+    # A second apply is a no-op: the CREATE would fail if it ran again.
+    assert db.apply_schema(conn) == 12
+
+
+def test_a_finding_makes_at_most_one_todo(tmp_path):
+    conn = db.connect(tmp_path / "c.db")
+    _plant_with_a_check(conn)
+    conn.execute(_TODO, (1, 0))
+    conn.execute(_TODO, (1, 1))  # another finding of the same check
+    try:
+        conn.execute(_TODO, (1, 0))
+    except sqlite3.IntegrityError:
+        pass
+    else:
+        raise AssertionError("the same finding was added twice")
+    # To-dos with no check behind them are not held to it.
+    conn.execute(_TODO, (None, None))
+    conn.execute(_TODO, (None, None))
+    try:
+        conn.execute("INSERT INTO todos (specimen_id, seen, remedy, likelihood) VALUES (1, 'a', 'b', 'certain')")
+    except sqlite3.IntegrityError:
+        pass
+    else:
+        raise AssertionError("a likelihood outside likely and possible was stored")
+
+
+def test_a_deleted_check_leaves_its_todos_and_a_deleted_plant_takes_them(tmp_path):
+    conn = db.connect(tmp_path / "c.db")
+    conn.execute("PRAGMA foreign_keys = ON")
+    _plant_with_a_check(conn)
+    conn.execute(_TODO, (1, 0))
+    conn.commit()
+    conn.execute("DELETE FROM health_checks WHERE id = 1")
+    assert [tuple(r) for r in conn.execute("SELECT specimen_id, health_check_id, finding_index, seen FROM todos")] == [(1, None, 0, "Pebbles")]
+    conn.execute("DELETE FROM specimens WHERE id = 1")
+    assert conn.execute("SELECT COUNT(*) FROM todos").fetchone()[0] == 0
