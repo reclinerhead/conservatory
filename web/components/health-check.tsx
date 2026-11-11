@@ -441,7 +441,7 @@ function CheckRow({ plantId, check, lead = false, stalled = false }: { plantId: 
         />
       </button>
       {/* The reply is what the owner came for: under the summary, without opening anything. */}
-      {check.question && (lead || open) ? <Asked question={check.question} reply={check.reply} waiting={false} /> : null}
+      {check.question && (lead || open) ? <Asked question={check.question} reply={check.reply} waiting={false} finished /> : null}
       {open ? (
         <div id={id} className="flex flex-col gap-4">
           <div>
@@ -509,10 +509,10 @@ function CheckRow({ plantId, check, lead = false, stalled = false }: { plantId: 
  * The owner's question and the reply as a conversation (#93): their words in
  * a moss bubble at the right, the reply in a pale one at the left, each under
  * a small label, so the two never read alike. While Fern is looking the
- * reply's bubble holds a text message's typing dots; when the check failed it
- * says there is no reply.
+ * reply's bubble holds a text message's typing dots; when the check failed,
+ * or finished without one, it says so.
  */
-function Asked({ question, reply, waiting }: { question: string; reply: string | null; waiting: boolean }) {
+function Asked({ question, reply, waiting, finished = false }: { question: string; reply: string | null; waiting: boolean; finished?: boolean }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex max-w-[85%] flex-col items-end gap-1 self-end">
@@ -529,6 +529,9 @@ function Asked({ question, reply, waiting }: { question: string; reply: string |
                 <span className="fern-dot [animation-delay:160ms]" />
                 <span className="fern-dot [animation-delay:320ms]" />
               </span>
+            ) : finished ? (
+              // A finished check can lack a reply: Fern keeps an answer whose reply the model left out (#97).
+              "Fern didn’t answer this directly. What it saw is in the findings."
             ) : (
               "No reply: the check didn’t finish."
             ))}
