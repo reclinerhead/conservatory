@@ -21,6 +21,18 @@ export function readSort(v: string | null | undefined): Sort {
   return SORTS.some((s) => s.key === v) ? (v as Sort) : "name";
 }
 
+/** The cookie the chosen sort is kept in: written by the browser, read by the server before it draws the grid. */
+export const SORT_COOKIE = "conservatory.sort";
+
+/** The sort in a cookie string ("a=1; conservatory.sort=latest"), or null when it carries none. */
+export function sortFromCookie(cookies: string): Sort | null {
+  for (const part of cookies.split(";")) {
+    const [k, v] = part.trim().split("=");
+    if (k === SORT_COOKIE) return readSort(v);
+  }
+  return null;
+}
+
 type Row = Pick<SpeciesListRow, "specimens" | "places" | "gone">;
 
 /** How many of a species' plants a chip stands for: living ones at "All" or at a place, gifted or died ones at "No longer here". */
