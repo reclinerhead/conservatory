@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { Suspense } from "react";
 import { BlankTile, GridSearch, SortSelect, SpeciesGrid } from "@/components/species-grid";
@@ -10,7 +11,7 @@ import { withReadDb } from "@/lib/jobs";
 import { thumbPathFor } from "@/lib/photos";
 import { count, ledgerEntries, waitingDetail, waitingLabel } from "@/lib/ledger";
 import { readSpecies, speciesList } from "@/lib/species";
-import { ALL, tileLine } from "@/lib/species-grid";
+import { ALL, readSort, SORT_COOKIE, tileLine } from "@/lib/species-grid";
 import { readTodos } from "@/lib/specimens";
 import { latestPending, pendingTodos } from "@/lib/todos";
 import { aboutState, latinRuns, speciesTitle } from "@/lib/species-page";
@@ -30,7 +31,9 @@ const FAMILY_ROWS = 5;
 // so Tailwind finds every class.
 const BAR_WIDTHS = ["w-0", "w-1/12", "w-2/12", "w-3/12", "w-4/12", "w-5/12", "w-6/12", "w-7/12", "w-8/12", "w-9/12", "w-10/12", "w-11/12", "w-full"];
 
-export default function Home() {
+export default async function Home() {
+  // The grid's order is kept in a cookie, so the first paint is already in it.
+  const sort = readSort((await cookies()).get(SORT_COOKIE)?.value);
   const counts = collectionCounts();
   const ledger = ledgerEntries(counts);
   const waiting = counts.waiting;
@@ -99,7 +102,7 @@ export default function Home() {
               <Suspense>
                 <GridSearch />
               </Suspense>
-              <SortSelect />
+              <SortSelect initialSort={sort} />
             </div>
           </div>
 
@@ -124,7 +127,7 @@ export default function Home() {
               ))}
             </ul>
           ) : (
-            <SpeciesGrid rows={rows} />
+            <SpeciesGrid rows={rows} initialSort={sort} />
           )}
         </section>
 

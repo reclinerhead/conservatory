@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { GONE, NO_LOCATION } from "./collection";
-import { ALL, countAt, gridRows, placeChips, readSort, selectedPlace, showingSpecies, SORTS, tileLine } from "./species-grid";
+import { ALL, countAt, gridRows, placeChips, readSort, selectedPlace, showingSpecies, SORT_COOKIE, sortFromCookie, SORTS, tileLine } from "./species-grid";
 import type { SpeciesListRow } from "./species-page";
 
 function row(id: number, over: Partial<SpeciesListRow> = {}): SpeciesListRow {
@@ -144,6 +144,15 @@ describe("the sort options", () => {
     expect(readSort("most")).toBe("name");
     expect(readSort(null)).toBe("name");
     expect(readSort(undefined)).toBe("name");
+  });
+
+  it("finds the sort in a cookie string, among others or alone, and null when absent", () => {
+    expect(sortFromCookie(`${SORT_COOKIE}=latest`)).toBe("latest");
+    expect(sortFromCookie(`theme=dark; ${SORT_COOKIE}=latest; x=1`)).toBe("latest");
+    expect(sortFromCookie(`${SORT_COOKIE}=name`)).toBe("name");
+    expect(sortFromCookie(`${SORT_COOKIE}=most`)).toBe("name");
+    expect(sortFromCookie("theme=dark")).toBeNull();
+    expect(sortFromCookie("")).toBeNull();
   });
 });
 
