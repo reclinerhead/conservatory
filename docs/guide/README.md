@@ -6,7 +6,7 @@ The living description of how the Conservatory is built and why. The root [READM
 | --- | --- | --- |
 | [`fern.md`](fern.md) | Fern, the Python worker: the database and its schema, the identification queue, the Pl@ntNet client, the enrichment pass, the care pass and its model call, the health check | Touching anything under `fern/`, the schema, or a job's life cycle |
 | [`web.md`](web.md) | The Next.js app: routes, how it reads and writes the database, the visual language, the glossary | Touching anything under `web/` |
-| [`ops.md`](ops.md) | What runs on orchid, how it deploys, how to check it, back it up and roll it back | Touching anything under `Servers/`, or the box |
+| [`ops.md`](ops.md) | What runs on orchid and on a field station, how each deploys, the station release channel and the front door, how to check it, back it up and roll it back | Touching anything under `Servers/` or `frontdoor/`, or a box |
 
 Spoke to come: `flower-show.md` (the hub, Phase 4).
 
@@ -17,6 +17,6 @@ One SQLite file per household, in WAL mode. Fern (`fern/`) creates and migrates 
 ## Conventions
 
 - **Tests.** Pure logic gets tests; I/O does not. Python tests are `test_*.py` at the repo root and must be named in `.github/workflows/tests.yml` by hand (there is no discovery fallback). Web tests are `*.test.ts` beside the source and run with `pnpm test` in `web/`.
-- **Environment.** The web app reads `process.env["NAME"]` with bracket access so Next cannot inline the value at build time; the boxes set these at runtime.
+- **Environment.** The web app reads `process.env["NAME"]` with bracket access so Next cannot inline the value at build time; the boxes set these at runtime. The one exception is `NEXT_PUBLIC_BASE_PATH`, which must be inlined (`web.md`).
 - **Schema changes** are migration steps appended to `fern/db.py`, never edits to shipped statements. See `fern.md`.
 - **Issues are the contract.** Templates in `.github/ISSUE_TEMPLATE/`, copied from the Aviary.
