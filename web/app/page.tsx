@@ -1,3 +1,4 @@
+import { BASE_PATH } from "@/lib/base-path";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -65,7 +66,7 @@ export default async function Home() {
             const tint = ["bg-tile-2", "bg-[#BFD6B6]", "bg-[#A9C9A0]"][i];
             return path ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img key={i} src={`/media/${thumbPathFor(path)}`} alt="" className={`thumb border-2 border-sage max-sm:size-9 ${i > 0 ? "max-sm:hidden" : ""} ${i < 2 ? "sm:-mr-2.5" : ""}`} />
+              <img key={i} src={`${BASE_PATH}/media/${thumbPathFor(path)}`} alt="" className={`thumb border-2 border-sage max-sm:size-9 ${i > 0 ? "max-sm:hidden" : ""} ${i < 2 ? "sm:-mr-2.5" : ""}`} />
             ) : (
               <div key={i} aria-hidden className={`thumb border-2 border-sage max-sm:size-9 ${tint} ${i > 0 ? "max-sm:hidden" : ""} ${i < 2 ? "sm:-mr-2.5" : ""}`}>
                 <LeafMark size={26} className={`max-sm:size-5 ${i === 2 ? "text-moss-deep" : "text-moss"}`} />

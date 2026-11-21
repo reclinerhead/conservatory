@@ -1,5 +1,7 @@
 // Where a photo lives and how it is named. Pure; the routes are thin over this.
 
+import { BASE_PATH } from "./base-path";
+
 export const ORGANS = ["auto", "leaf", "flower", "fruit", "bark"] as const;
 export type Organ = (typeof ORGANS)[number];
 
@@ -73,7 +75,7 @@ export function mediaRelPath(parts: string[]): string | null {
 export function referenceUrls(imagePath: string | null, version: string | null): { url: string; thumbUrl: string } | null {
   if (!imagePath) return null;
   const v = version ? `?v=${encodeURIComponent(version)}` : "";
-  return { url: `/media/${imagePath}${v}`, thumbUrl: `/media/${thumbPathFor(imagePath)}${v}` };
+  return { url: `${BASE_PATH}/media/${imagePath}${v}`, thumbUrl: `${BASE_PATH}/media/${thumbPathFor(imagePath)}${v}` };
 }
 
 export function contentTypeFor(rel: string): string {
@@ -88,7 +90,7 @@ export function contentTypeFor(rel: string): string {
  * file: an owner's photo first, else the reference image, else neither.
  */
 export function tileUrls(hero: string | null, imagePath: string | null, version: string | null): { thumbUrl: string | null; imageUrl: string | null } {
-  if (hero) return { thumbUrl: `/media/${thumbPathFor(hero)}`, imageUrl: `/media/${hero}` };
+  if (hero) return { thumbUrl: `${BASE_PATH}/media/${thumbPathFor(hero)}`, imageUrl: `${BASE_PATH}/media/${hero}` };
   const ref = referenceUrls(imagePath, version);
   return { thumbUrl: ref?.thumbUrl ?? null, imageUrl: ref?.url ?? null };
 }

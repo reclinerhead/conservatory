@@ -1,14 +1,22 @@
-# The Conservatory's deploy watcher on orchid (issue #9): Servers/autodeploy.sh
-# in the checkout it deploys. Root on purpose (restarts without a sudo
-# password); every git, pip and pnpm step is demoted to todd inside the
-# script. Beside the Aviary's aviary-autodeploy, never shared with it.
+# The Conservatory's deploy watcher (issue #9): Servers/autodeploy.sh in the
+# checkout it deploys. Root on purpose (restarts without a sudo password);
+# every git, pip and pnpm step is demoted to todd inside the script. Beside
+# the Aviary's and the Quarry's watchers, never shared with them.
+#
+# It reads the same environment file as the other two units so the deploy
+# branch (CONSERVATORY_DEPLOY_BRANCH, #113) arrives the way everything else
+# does: orchid's file has no such line and the script's default is main; a
+# station's says conservatory-station-stable. The file is root-readable and so
+# is this unit; the demoted steps start from a reset environment, so nothing
+# in the file reaches git, pip or pnpm.
 
 [Unit]
-Description=The Conservatory -- deploy watcher (merges to main deploy themselves)
+Description=The Conservatory -- deploy watcher (merges deploy themselves)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
+EnvironmentFile=/etc/conservatory/conservatory.env
 ExecStart=/home/todd/conservatory/Servers/autodeploy.sh
 Restart=on-failure
 RestartSec=10

@@ -3,6 +3,7 @@
 // after Fern has looked it up, and how the list is sorted and searched. The
 // server reads the rows (lib/species.ts); the pages render what this decides.
 
+import { BASE_PATH } from "./base-path";
 import { dayLabel, displayName, speciesLabel, type Tile } from "./collection";
 import { percent } from "./pills";
 import { thumbPathFor } from "./photos";
@@ -95,8 +96,8 @@ export function speciesGallery(photos: OwnerPhoto[], ref: Reference | null, chos
       kind: "owner",
       key: `photo-${p.photoId}`,
       photoId: p.photoId,
-      url: `/media/${p.path}`,
-      thumbUrl: `/media/${thumbPathFor(p.path)}`,
+      url: `${BASE_PATH}/media/${p.path}`,
+      thumbUrl: `${BASE_PATH}/media/${thumbPathFor(p.path)}`,
       href: `/plants/${p.specimenId}`,
       caption: `Your photo · ${p.specimenName} · ${dayLabel(when(p)) ?? "date unknown"}`,
       short: p.specimenName,

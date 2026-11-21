@@ -1,5 +1,6 @@
 "use client";
 
+import { BASE_PATH } from "@/lib/base-path";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { exifTakenAt } from "@/lib/exif";
@@ -30,7 +31,7 @@ export function PhotoAdder({ plantId, countLine }: { plantId: number; countLine:
         const form = new FormData();
         form.append("file", new File([blob], file.name, { type: mime }));
         if (takenAt) form.append("takenAt", takenAt);
-        const r = await fetch(`/api/plants/${plantId}/photos`, { method: "POST", body: form });
+        const r = await fetch(`${BASE_PATH}/api/plants/${plantId}/photos`, { method: "POST", body: form });
         if (r.status >= 400 && r.status < 500 && r.status !== 408 && r.status !== 429) throw new NoRetry(`rejected (${r.status})`);
         if (!r.ok) throw new Error(`server ${r.status}`);
       },

@@ -1,3 +1,4 @@
+import { BASE_PATH } from "@/lib/base-path";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CareFigures, CareRewrite } from "@/components/care";
@@ -165,7 +166,7 @@ export default async function SpeciesPage({ params }: { params: Promise<{ id: st
       <PhotoLightbox
         slides={slides}
         title={`Photos of ${speciesTitle(s)}`}
-        choice={ownerShown > 1 ? { endpoint: `/api/species/${s.id}`, noun: "species photo" } : undefined}
+        choice={ownerShown > 1 ? { endpoint: `${BASE_PATH}/api/species/${s.id}`, noun: "species photo" } : undefined}
       >
         <section aria-label="Photos" className="gallery">
           {hero ? (

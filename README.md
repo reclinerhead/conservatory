@@ -8,7 +8,7 @@ It is being built for three gardeners in one family. One raises around 150 succu
 
 It also teaches. All three have grown plants for years without ever being told what a genus is or why a nursery tag says 'Black Prince' instead of a species. Every horticultural term the app shows carries a small info mark that explains it in plain language, with an example from the person's own collection when there is one. Nobody should have to leave the app to understand the app.
 
-> **Status:** Phases 0, 1 and 2 are built, and Phase 3 has started: plants are added from photos, named, kept, given a species page with a care sheet, tagged with a printed QR code, and checked for health from their photos, with a to-do list for what a check finds. Next are the care log and the reminders ([#39](https://github.com/reclinerhead/conservatory/issues/39)). It runs at the house, on orchid, for phones on the home Wi-Fi. This README is the design brief; the state of what is built lives in the [technical guide](docs/guide/README.md), and the look of every screen is defined in [`design/DESIGN.md`](design/DESIGN.md).
+> **Status:** Phases 0, 1 and 2 are built, and Phase 3 has started: plants are added from photos, named, kept, given a species page with a care sheet, tagged with a printed QR code, and checked for health from their photos, with a to-do list for what a check finds. Next are the care log and the reminders ([#39](https://github.com/reclinerhead/conservatory/issues/39)). It runs at the house, on orchid, for phones on the home Wi-Fi, and is ready to run on the field stations at the other households. This README is the design brief; the state of what is built lives in the [technical guide](docs/guide/README.md), and the look of every screen is defined in [`design/DESIGN.md`](design/DESIGN.md).
 
 ## What it looks like
 
@@ -81,7 +81,7 @@ The two gardeners outdoors have ordinary home Wi-Fi that does not reach the far 
 
 **The queue is the resilience.** Jobs live in SQLite on the station and survive a restart. A worker drains them one at a time, which keeps the classifier calls well under the daily and concurrent caps and makes a dropped connection or a flaky DNS lookup a retry rather than a loss. Photos are resized in the browser to about 1280 px on the long side before upload, each sent as its own request with retry, so a drop on the third photo keeps the first two, and a plant's job is made only once all of its photos are in. iPhone photos arrive as HEIC, which most desktop browsers cannot draw, so the page decodes them itself before the resize.
 
-Access from outside the house is not part of the first version. The station is reachable on its own LAN through the same public front door the Aviary uses, and that covers every flow above. The one thing a gardener might want from elsewhere, a look at their own collection, is what the flower show hub shows anyway.
+Access from outside the house is not part of the first version. The station is reachable on its own LAN through a public front door of its own, `conservatory.toddtech.llc/<station>`, which redirects to wherever the box sits on the home network, and that covers every flow above. The one thing a gardener might want from elsewhere, a look at their own collection, is what the flower show hub shows anyway.
 
 ## Enrichment
 
@@ -99,7 +99,7 @@ The web app only reads what Fern wrote. A page never waits on Wikipedia, GBIF or
 
 On the same small boxes that run the Aviary, one per household, alongside it. The Aviary leaves those machines nearly idle. Each station has its own database and dashboard and never depends on the house.
 
-Today that is one box, **orchid**, at the house, serving `https://conservatory.lan` to phones on the home Wi-Fi. Three systemd units run there: the web app, Fern, and a deploy watcher, so merging a pull request is the deploy. Caddy is the front door. The data lives outside the checkout, where a deploy cannot reach it. The field stations at the other households, and Tailscale between them for the hub to pull digests, come with Phase 4.
+Today that is one box, **orchid**, at the house, serving `https://conservatory.lan` to phones on the home Wi-Fi. Three systemd units run there: the web app, Fern, and a deploy watcher, so merging a pull request is the deploy. Caddy is the front door. The data lives outside the checkout, where a deploy cannot reach it. A field station at another household runs the same three units beside the Aviary, under `/conservatory` on the box's one address, a day behind main on a release channel, with its own gateway key and its own front-door link; its pot tags carry that link. The hub that pulls digests from the stations comes with Phase 4.
 
 The code is a separate repository from the Aviary on purpose. Patterns are copied rather than shared until a second caller justifies a shared package. How to run, deploy, back up and roll back is in the guide's [ops spoke](docs/guide/ops.md).
 
@@ -114,7 +114,7 @@ The code is a separate repository from the Aviary on purpose. Patterns are copie
 | Health checks | Claude Sonnet reading a plant's photos, through the same gateway, only when the owner asks |
 | Photos | Resized in the browser; HEIC decoded in the page with heic-to; full-size viewing with yet-another-react-lightbox |
 | Tags | QR codes drawn on the server with `qrcode`, printed on letter-size label sheets from the browser |
-| Station and ops | systemd, Caddy, git-driven autodeploy |
+| Station and ops | systemd, Caddy, git-driven autodeploy, a nightly release channel for the stations, a front door on Vercel reading Upstash Redis |
 | Tests | pytest and Vitest on every pull request |
 
 ## Plan

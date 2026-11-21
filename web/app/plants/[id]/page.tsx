@@ -1,3 +1,4 @@
+import { BASE_PATH } from "@/lib/base-path";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { HealthCheckCard, HealthPanel } from "@/components/health-check";
@@ -120,7 +121,7 @@ export default async function PlantPage({ params }: { params: Promise<{ id: stri
           opens the lightbox, where another can be made the main photo, and while
           there is more than one, carries Remove. Removing the hero makes the next
           newest the hero; its key keeps the new hero's Remove fresh. */}
-      <PhotoLightbox slides={slides} title={`Photos of ${name}`} choice={several ? { endpoint: `/api/plants/${plant.id}`, noun: "main photo" } : undefined}>
+      <PhotoLightbox slides={slides} title={`Photos of ${name}`} choice={several ? { endpoint: `${BASE_PATH}/api/plants/${plant.id}`, noun: "main photo" } : undefined}>
         <section aria-label="Photos" className="gallery">
           {hero ? (
             <Photo key={hero.id} photo={hero} removeFrom={removeFrom} several={several} hero />
