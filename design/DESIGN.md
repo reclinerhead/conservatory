@@ -250,7 +250,13 @@ and plant pages it leads to; To-do is followed by the number still to do,
 400 weight at 80 % opacity, zero included) · primary "Add a plant" with camera icon on the
 right. One row at every width, never wrapping: on a phone the wordmark is
 the leaf alone, the button says "Add" and the pills are 13 px with 8 px
-side padding. The mockups still draw the search
+side padding. On a station, where the Conservatory shares its origin with a
+launcher at `/`, the bar starts with **Home**: a soft pill, 44 px, a house
+line icon and the word "Home", the way back to the launcher. The word shows
+from `lg` up and is kept for screen readers below it, and the wordmark is
+the leaf alone below `lg` there. On a phone Home takes the leaf's place and
+the pills and Add have 6 px and 12 px side padding, so the row is still one
+row at 360 px. Anywhere else there is no Home pill and nothing changes. The mockups still draw the search
 and three later pills in the bar; the search is the life list's, and a pill
 is drawn when its page exists.
 
