@@ -1,5 +1,6 @@
 "use client";
 
+import { BASE_PATH } from "@/lib/base-path";
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import { Term } from "@/components/term";
@@ -33,7 +34,7 @@ export function PlantEditor({ id, facts, locations, photoCount }: { id: number; 
     setBusy(true);
     setNote(null);
     try {
-      const r = await fetch(`/api/plants/${id}`, {
+      const r = await fetch(`${BASE_PATH}/api/plants/${id}`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ location: draft.location, acquiredOn: draft.acquiredOn, status: draft.status }),
@@ -60,7 +61,7 @@ export function PlantEditor({ id, facts, locations, photoCount }: { id: number; 
     setBusy(true);
     setNote(null);
     try {
-      const r = await fetch(`/api/plants/${id}`, { method: "DELETE" });
+      const r = await fetch(`${BASE_PATH}/api/plants/${id}`, { method: "DELETE" });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error ?? `HTTP ${r.status}`);
       router.push("/");

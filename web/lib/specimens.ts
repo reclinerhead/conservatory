@@ -1,5 +1,6 @@
 // Reading specimens for the collection grid and the specimen page. Server only.
 
+import { BASE_PATH } from "./base-path";
 import type { DatabaseSync } from "node:sqlite";
 import type { SpecimenStatus, Tile } from "./collection";
 import { healthView, type HealthRow, type HealthView } from "./health";
@@ -65,8 +66,8 @@ export function collectionTiles(db: DatabaseSync, speciesId?: number): Tile[] {
     acquiredOn: r.acquired_on,
     status: r.status,
     createdAt: r.created_at,
-    thumbUrl: r.hero ? `/media/${thumbPathFor(r.hero)}` : null,
-    imageUrl: r.hero ? `/media/${r.hero}` : null,
+    thumbUrl: r.hero ? `${BASE_PATH}/media/${thumbPathFor(r.hero)}` : null,
+    imageUrl: r.hero ? `${BASE_PATH}/media/${r.hero}` : null,
   }));
 }
 
@@ -159,8 +160,8 @@ export function readSpecimen(db: DatabaseSync, id: number): SpecimenView | null 
     },
     photos: photos.map((p, i) => ({
       id: p.id,
-      url: `/media/${p.path}`,
-      thumbUrl: `/media/${thumbPathFor(p.path)}`,
+      url: `${BASE_PATH}/media/${p.path}`,
+      thumbUrl: `${BASE_PATH}/media/${thumbPathFor(p.path)}`,
       takenAt: p.taken_at,
       uploadedAt: p.uploaded_at,
       main: i === 0,
@@ -210,7 +211,7 @@ export function readHealthChecks(db: DatabaseSync, specimenId: number): PlantChe
     const view = healthView(r);
     const thumbs = view.photoIds.flatMap((id, i) => {
       const path = paths.get(id);
-      return path ? [{ n: i + 1, id, thumbUrl: `/media/${thumbPathFor(path)}` }] : [];
+      return path ? [{ n: i + 1, id, thumbUrl: `${BASE_PATH}/media/${thumbPathFor(path)}` }] : [];
     });
     const todos = view.kind === "done" ? findingTodos(view.findings.length, listed.filter((t) => t.checkId === r.id)) : [];
     return { ...view, thumbs, todos };
@@ -275,7 +276,7 @@ export function readTodos(db: DatabaseSync): TodoView[] {
       scientificName: r.scientific_name,
       cultivar: r.cultivar,
       commonName: r.common_name,
-      thumbUrl: r.hero ? `/media/${thumbPathFor(r.hero)}` : null,
+      thumbUrl: r.hero ? `${BASE_PATH}/media/${thumbPathFor(r.hero)}` : null,
     },
   }));
 }

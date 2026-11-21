@@ -1,5 +1,6 @@
 "use client";
 
+import { BASE_PATH } from "@/lib/base-path";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -52,7 +53,7 @@ export function Namer({ initialJob, waiting, position, nextJobId: initialNext, l
     let stopped = false;
     const tick = async () => {
       try {
-        const r = await fetch(`/api/jobs/${job.id}`, { cache: "no-store" });
+        const r = await fetch(`${BASE_PATH}/api/jobs/${job.id}`, { cache: "no-store" });
         if (!r.ok || stopped) return;
         const fresh = (await r.json()) as JobView;
         if (!stopped) setJob(fresh);
@@ -72,7 +73,7 @@ export function Namer({ initialJob, waiting, position, nextJobId: initialNext, l
     let stopped = false;
     const run = async () => {
       try {
-        const r = await fetch(`/api/species?q=${encodeURIComponent(typed)}`, { cache: "no-store" });
+        const r = await fetch(`${BASE_PATH}/api/species?q=${encodeURIComponent(typed)}`, { cache: "no-store" });
         if (!r.ok || stopped) return;
         setHits((await r.json()) as SpeciesHit[]);
       } catch {
@@ -91,7 +92,7 @@ export function Namer({ initialJob, waiting, position, nextJobId: initialNext, l
     setBusy(true);
     setError(null);
     try {
-      const r = await fetch(`/api/jobs/${job.id}/confirm`, {
+      const r = await fetch(`${BASE_PATH}/api/jobs/${job.id}/confirm`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ ...body, cultivar: cultivar.trim() || undefined }),
@@ -111,7 +112,7 @@ export function Namer({ initialJob, waiting, position, nextJobId: initialNext, l
     setBusy(true);
     setError(null);
     try {
-      const r = await fetch(`/api/jobs/${job.id}/confirm`, { method: "DELETE" });
+      const r = await fetch(`${BASE_PATH}/api/jobs/${job.id}/confirm`, { method: "DELETE" });
       if (!r.ok) throw new Error(((await r.json()) as { error?: string }).error ?? `server ${r.status}`);
       setNamed(null);
       router.refresh();
@@ -130,7 +131,7 @@ export function Namer({ initialJob, waiting, position, nextJobId: initialNext, l
     setBusy(true);
     setError(null);
     try {
-      const r = await fetch(`/api/jobs/${job.id}/dismiss`, { method: "POST" });
+      const r = await fetch(`${BASE_PATH}/api/jobs/${job.id}/dismiss`, { method: "POST" });
       const data = (await r.json()) as { nextJobId: number | null; error?: string };
       if (!r.ok) throw new Error(data.error ?? `server ${r.status}`);
       router.push(data.nextJobId ? `/name/${data.nextJobId}` : "/name");
@@ -149,9 +150,9 @@ export function Namer({ initialJob, waiting, position, nextJobId: initialNext, l
       const form = new FormData();
       form.append("file", new File([blob], file.name, { type: mime }));
       form.append("organ", "auto");
-      const r = await fetch(`/api/jobs/${job.id}/photos`, { method: "POST", body: form });
+      const r = await fetch(`${BASE_PATH}/api/jobs/${job.id}/photos`, { method: "POST", body: form });
       if (!r.ok) throw new Error(((await r.json()) as { error?: string }).error ?? `server ${r.status}`);
-      const fresh = await fetch(`/api/jobs/${job.id}`, { cache: "no-store" });
+      const fresh = await fetch(`${BASE_PATH}/api/jobs/${job.id}`, { cache: "no-store" });
       if (fresh.ok) setJob((await fresh.json()) as JobView);
     } catch (err) {
       setError(err instanceof Error ? err.message : "could not add the photo");

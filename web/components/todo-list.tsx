@@ -1,5 +1,6 @@
 "use client";
 
+import { BASE_PATH } from "@/lib/base-path";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
@@ -42,8 +43,8 @@ export function TodoList({ pending, done }: { pending: TodoView[]; done: TodoVie
     setFailed((f) => without(f, t.id));
     try {
       const r = change.removed
-        ? await fetch(`/api/todos/${t.id}`, { method: "DELETE" })
-        : await fetch(`/api/todos/${t.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ done: Boolean(change.completedAt) }) });
+        ? await fetch(`${BASE_PATH}/api/todos/${t.id}`, { method: "DELETE" })
+        : await fetch(`${BASE_PATH}/api/todos/${t.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ done: Boolean(change.completedAt) }) });
       if (!r.ok && !(change.removed && r.status === 404)) throw new Error(((await r.json().catch(() => ({}))) as { error?: string }).error ?? `server ${r.status}`);
       router.refresh();
     } catch (err) {

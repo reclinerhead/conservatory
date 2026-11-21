@@ -1,5 +1,6 @@
 "use client";
 
+import { BASE_PATH } from "@/lib/base-path";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import type { CareFigure } from "@/lib/care";
@@ -96,7 +97,7 @@ export function CareRewrite({ speciesId, writing, canRewrite }: { speciesId: num
     setBusy(true);
     setError(null);
     try {
-      const r = await fetch(`/api/species/${speciesId}/care`, { method: "POST" });
+      const r = await fetch(`${BASE_PATH}/api/species/${speciesId}/care`, { method: "POST" });
       if (!r.ok) throw new Error(((await r.json().catch(() => ({}))) as { error?: string }).error ?? `HTTP ${r.status}`);
       router.refresh();
     } catch (e) {

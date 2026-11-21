@@ -1,5 +1,6 @@
 "use client";
 
+import { BASE_PATH } from "@/lib/base-path";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
@@ -56,7 +57,7 @@ export function HealthCheckCard({
     setBusy(true);
     setError(null);
     try {
-      const r = await fetch(`/api/plants/${plantId}/health`, {
+      const r = await fetch(`${BASE_PATH}/api/plants/${plantId}/health`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ photoIds: photos.filter((p) => chosen.includes(p.id)).map((p) => p.id), question: question.trim() || undefined, setting: setting ?? undefined, light: light ?? undefined }),
@@ -368,7 +369,7 @@ function DeleteCheck({ plantId, checkId, day }: { plantId: number; checkId: numb
     }
     setState("busy");
     try {
-      const r = await fetch(`/api/plants/${plantId}/health/${checkId}`, { method: "DELETE" });
+      const r = await fetch(`${BASE_PATH}/api/plants/${plantId}/health/${checkId}`, { method: "DELETE" });
       if (!r.ok) {
         if (r.status === 404) router.refresh(); // this page is out of date: another tab got there first
         throw new Error(((await r.json().catch(() => ({}))) as { error?: string }).error ?? `server ${r.status}`);
@@ -445,7 +446,7 @@ function FindingTodoLine({ checkId, index, todo, canAdd }: { checkId: number; in
         <button
           type="button"
           disabled={busy}
-          onClick={() => void call("/api/todos", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ checkId, finding: index }) })}
+          onClick={() => void call(`${BASE_PATH}/api/todos`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ checkId, finding: index }) })}
           className="btn btn-ghost btn-compact bg-surface text-meta"
         >
           <svg aria-hidden width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" className="flex-none">
@@ -461,7 +462,7 @@ function FindingTodoLine({ checkId, index, todo, canAdd }: { checkId: number; in
             </svg>
             On your to-do list
           </Link>
-          <button type="button" disabled={busy} onClick={() => void call(`/api/todos/${todo.id}`, { method: "DELETE" })} className="btn btn-ghost btn-compact bg-surface text-meta">
+          <button type="button" disabled={busy} onClick={() => void call(`${BASE_PATH}/api/todos/${todo.id}`, { method: "DELETE" })} className="btn btn-ghost btn-compact bg-surface text-meta">
             {busy ? "Removing…" : "Remove"}
           </button>
         </>

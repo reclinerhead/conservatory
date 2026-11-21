@@ -1,5 +1,6 @@
 "use client";
 
+import { BASE_PATH } from "@/lib/base-path";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { QrIcon, TagCodeSvg } from "@/components/tag-code";
@@ -131,7 +132,7 @@ export function TagPrinter({ rows, hasBase }: { rows: PrintRow[]; hasBase: boole
   async function markTagged(ids: number[], from: number) {
     setMark({ kind: "saving", ids, start: from });
     try {
-      const res = await fetch("/api/tags", {
+      const res = await fetch(`${BASE_PATH}/api/tags`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ ids }),

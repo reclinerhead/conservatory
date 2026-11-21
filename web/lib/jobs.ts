@@ -1,5 +1,6 @@
 // Reading jobs for the confirm screen and the jobs API. Server only.
 
+import { BASE_PATH } from "./base-path";
 import type { DatabaseSync } from "node:sqlite";
 import { openReadOnly } from "./db";
 import { SETTLED_JOB_SQL } from "./job-state";
@@ -71,8 +72,8 @@ export function readJob(db: DatabaseSync, jobId: number): JobView | null {
     quotaRemaining: job.quota_remaining,
     photos: photos.map((p) => ({
       id: p.id,
-      url: `/media/${p.path}`,
-      thumbUrl: `/media/${thumbPathFor(p.path)}`,
+      url: `${BASE_PATH}/media/${p.path}`,
+      thumbUrl: `${BASE_PATH}/media/${thumbPathFor(p.path)}`,
       organ: p.organ,
       takenAt: p.taken_at,
     })),

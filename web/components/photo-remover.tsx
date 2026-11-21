@@ -1,5 +1,6 @@
 "use client";
 
+import { BASE_PATH } from "@/lib/base-path";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -50,7 +51,7 @@ export function PhotoRemover({ plantId, photoId, caption, small = false }: { pla
     }
     setState("busy");
     try {
-      const r = await fetch(`/api/plants/${plantId}/photos/${photoId}`, { method: "DELETE" });
+      const r = await fetch(`${BASE_PATH}/api/plants/${plantId}/photos/${photoId}`, { method: "DELETE" });
       if (!r.ok) {
         if (r.status === 404 || r.status === 409) router.refresh(); // this page is out of date: another tab got there first
         throw new Error(((await r.json().catch(() => ({}))) as { error?: string }).error ?? `server ${r.status}`);
