@@ -2,13 +2,15 @@
 # =============================================================================
 # The Conservatory -- Servers/autodeploy.sh (issue #9)
 #
-# The deploy watcher: a long-lived loop that checks origin/main every
-# CONSERVATORY_DEPLOY_INTERVAL_S and brings this box current when it moves.
+# The deploy watcher: a long-lived loop that checks the configured deploy
+# branch (CONSERVATORY_DEPLOY_BRANCH, default main; a field station rides
+# conservatory-station-stable, #113) every CONSERVATORY_DEPLOY_INTERVAL_S and
+# brings this box current when it moves.
 # Merging a PR IS the deploy; nobody SSHes anywhere. It is the Aviary's
 # autodeploy.sh pattern, one copy per repo (the Aviary's #627 D10), cut
 # down to what this app has: one Python worker and one Next app.
 #
-# What a tick does when origin/main moved past HEAD:
+# What a tick does when the branch moved past HEAD:
 #   pull --ff-only (never force; a dirty or diverged checkout is skipped
 #   loudly, never clobbered), then
 #   - fern/ changed            -> pip install if requirements.txt changed,
@@ -35,15 +37,28 @@
 # ever becomes root-owned. --reset-env gives the demoted step the owner's
 # HOME, so `bash -l` finds the profile where nvm's node and pnpm live.
 #
-# Config (env on the unit):
+# Config (env on the unit; the unit reads /etc/conservatory/conservatory.env,
+# so the knobs arrive the way everything else does):
 #   CONSERVATORY_REPO               checkout path, default /home/todd/conservatory
 #   CONSERVATORY_DEPLOY_USER        checkout owner, default todd
 #   CONSERVATORY_DEPLOY_INTERVAL_S  poll cadence, default 60
+#   CONSERVATORY_DEPLOY_BRANCH      the branch this box deploys from, default
+#                                   main (orchid never sets it). A station sets
+#                                   conservatory-station-stable, the release
+#                                   channel (#113): fast-forward-only, never
+#                                   committed to, moved to main's tip once
+#                                   nightly by the promote-stations Action, so
+#                                   a house two hours away builds in the small
+#                                   hours and absorbs at most a day of changes.
+#                                   The checkout must sit ON the configured
+#                                   branch; anywhere else reads as pinned (the
+#                                   branch guard below).
 #
 # Hand runs: `autodeploy.sh --once` is a single tick, no loop. The sanctioned
 # way to pin the box on unmerged work is to check out a branch: the branch
-# guard pauses deploys while the checkout is off main and resumes them the
-# moment it is back.
+# guard pauses deploys while the checkout is off the configured branch and
+# resumes them the moment it is back. A station checkout sitting on main is a
+# half-finished channel flip and pauses the same way.
 #
 # Deliberately NOT `set -e`: the loop must survive a failed fetch, build or
 # restart; every step checks and logs its own failure, and the next tick
@@ -56,7 +71,7 @@ REPO="${CONSERVATORY_REPO:-/home/todd/conservatory}"
 SELF="$REPO/Servers/autodeploy.sh"
 OWNER="${CONSERVATORY_DEPLOY_USER:-todd}"
 INTERVAL="${CONSERVATORY_DEPLOY_INTERVAL_S:-60}"
-BRANCH=main
+BRANCH="${CONSERVATORY_DEPLOY_BRANCH:-main}"
 
 fetch_down=0
 off_branch=0
