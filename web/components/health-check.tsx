@@ -25,7 +25,7 @@ import type { FindingTodo } from "@/lib/todos";
 
 const PLACEHOLDER = "White fuzzy insects are nibbling the leaves, like in the photo. What are they and how do I get rid of them?";
 
-export type PickerPhoto = { id: number; thumbUrl: string; label: string };
+export type PickerPhoto = { id: number; thumbUrl: string; label: string; caption: string }; // caption: its date, short ("Nov 20", "May 20, 2025")
 
 export function HealthCheckCard({
   plantId,
@@ -35,7 +35,7 @@ export function HealthCheckCard({
   inFlight,
 }: {
   plantId: number;
-  photos: PickerPhoto[]; // newest first
+  photos: PickerPhoto[]; // oldest first
   initial: number[]; // the three newest
   enabled: boolean; // this box has a model key
   inFlight: boolean; // a check of this plant is queued or running
@@ -101,14 +101,16 @@ export function HealthCheckCard({
 
       <fieldset className="mt-3">
         <legend className="sr-only">Photos to send</legend>
-        {/* The tags page's row, without its text: a 44 px checkbox target and the 56 px thumb, wrapping. */}
-        <ul className="flex flex-wrap gap-x-2 gap-y-1">
+        {/* The tags page's row, without its text: a 44 px checkbox target and the 56 px thumb, wrapping, oldest first.
+            Under each thumb its date (#127), inside the label so a tap on it ticks the box. A tile is one fixed
+            width, wide enough for a date with its year, and the date's line is always there, so the grid is even. */}
+        <ul className="flex flex-wrap gap-x-1 gap-y-1">
           {photos.map((p) => {
             const on = chosen.includes(p.id);
             const off = !on && full;
             return (
               <li key={p.id}>
-                <label className={`flex min-h-[60px] items-center rounded-thumb pr-1 ${off ? "cursor-default" : "cursor-pointer hover:bg-ground"}`}>
+                <label className={`grid w-[102px] grid-cols-[36px_56px] items-center gap-y-0.5 rounded-thumb pb-1 pt-0.5 ${off ? "cursor-default" : "cursor-pointer hover:bg-ground"}`}>
                   <span className="flex h-11 w-9 flex-none items-center justify-center">
                     <input
                       type="checkbox"
@@ -129,6 +131,10 @@ export function HealthCheckCard({
                     height={56}
                     className={`h-14 w-14 flex-none rounded-thumb border border-line bg-sage object-cover ${off ? "opacity-45" : ""}`}
                   />
+                  {/* Centred on the thumb, and let wider than it: a date with its year is. */}
+                  <span aria-hidden className={`col-start-2 flex h-4 justify-center whitespace-nowrap text-tag leading-4 text-ink-2 tabular-nums ${off ? "opacity-45" : ""}`}>
+                    {p.caption}
+                  </span>
                 </label>
               </li>
             );

@@ -4,7 +4,7 @@
 // server reads the rows (lib/species.ts); the pages render what this decides.
 
 import { BASE_PATH } from "./base-path";
-import { dayLabel, displayName, speciesLabel, type SpecimenStatus, type Tile } from "./collection";
+import { dayLabel, displayName, shortDay, speciesLabel, type SpecimenStatus, type Tile } from "./collection";
 import { percent } from "./pills";
 import { thumbPathFor } from "./photos";
 
@@ -137,9 +137,8 @@ export function filmStrip(gallery: GalleryItem[]): GalleryItem[] {
  */
 export function stripCaption(g: Pick<GalleryItem, "kind" | "specimenId" | "at">, today: string): string {
   if (g.kind === "reference") return "Wikipedia";
-  const day = dayLabel(g.at);
-  if (!day) return `#${g.specimenId}`;
-  return `#${g.specimenId} · ${g.at!.slice(0, 4) === today.slice(0, 4) ? day.slice(0, day.indexOf(",")) : day}`;
+  const day = shortDay(g.at, today);
+  return day ? `#${g.specimenId} · ${day}` : `#${g.specimenId}`;
 }
 
 /** A plant's date in its In your collection row, to the day: "since May 20, 2025" when it was acquired, else "added Nov 22, 2026". */

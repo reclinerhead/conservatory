@@ -10,7 +10,7 @@ import { TagCodeBox } from "@/components/tag-code";
 import { Term } from "@/components/term";
 import { LeafMark } from "@/components/topbar";
 import { cardNames, dayLabel, displayName, metaLine, STATUS_LABEL } from "@/lib/collection";
-import { defaultSelection, newestFirst } from "@/lib/health";
+import { defaultSelection, oldestFirst, pickerCaption } from "@/lib/health";
 import { withReadDb } from "@/lib/jobs";
 import { relativeCount, relativesLine, relativesOf } from "@/lib/relatives";
 import { careModelConfigured, speciesList } from "@/lib/species";
@@ -69,6 +69,7 @@ export default async function PlantPage({ params }: { params: Promise<{ id: stri
     photoId: p.id,
     main: p.main,
   }));
+  const today = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD, this box's day
   const record = plant.named
     ? `Named ${plant.named.how === "pill" ? "from Fern's suggestion" : plant.named.how === "typed" ? "by typing the name" : "as another photo of a plant you had just named"} on ${dayLabel(plant.named.at)}.`
     : `Added on ${dayLabel(plant.createdAt)}.`;
@@ -167,7 +168,12 @@ export default async function PlantPage({ params }: { params: Promise<{ id: stri
           {plant.status === "alive" ? (
             <HealthCheckCard
               plantId={plant.id}
-              photos={newestFirst(plant.photos).map((p) => ({ id: p.id, thumbUrl: p.thumbUrl, label: `Photo ${photoCaption(p).charAt(0).toLowerCase()}${photoCaption(p).slice(1)}` }))}
+              photos={oldestFirst(plant.photos).map((p) => ({
+                id: p.id,
+                thumbUrl: p.thumbUrl,
+                label: `Photo ${photoCaption(p).charAt(0).toLowerCase()}${photoCaption(p).slice(1)}`,
+                caption: pickerCaption(p, today),
+              }))}
               initial={defaultSelection(plant.photos)}
               enabled={careModelConfigured()}
               inFlight={checks[0]?.kind === "waiting"}

@@ -8,6 +8,7 @@ import {
   locationChips,
   matchesQuery,
   metaLine,
+  shortDay,
   monthYear,
   NO_LOCATION,
   speciesLabel,
@@ -71,6 +72,10 @@ describe("names and dates", () => {
     expect(monthYear("2026-13-01")).toBeNull();
     expect(dayLabel("2026-10-05T00:10:00")).toBe("Oct 5, 2026");
     expect(dayLabel("nope")).toBeNull();
+    expect(shortDay("2026-11-20T10:00:00", "2026-11-22")).toBe("Nov 20");
+    expect(shortDay("2025-05-20", "2026-11-22")).toBe("May 20, 2025");
+    expect(shortDay("nope", "2026-11-22")).toBeNull();
+    expect(shortDay(null, "2026-11-22")).toBeNull();
   });
 
   it("builds the meta line from location and the acquired date, falling back to when it was added", () => {
