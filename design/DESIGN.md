@@ -92,6 +92,15 @@ where the browser lets a `<select>` style its list, the open list is a white
 card of 44 px pill rows: sage under the pointer, the chosen one moss and bold
 with a check.
 
+**Location list** (plant page, About this specimen) — a text field in the
+`field` recipe with a chevron in 44 px at its right, and under it, at the
+field's width, the select's open list drawn by the app: a white card (`line`
+border, 18 px radius, 6 px padding, the hover shadow) of 44 px pill rows,
+sage under the pointer or the keyboard, the plant's current location bold
+with a moss check. Up to eight rows before it scrolls. Typed text that
+matches no location gets one meta line in `ink-2`, New location "Sunroom".
+It lies over the page; nothing moves when it opens.
+
 **Tags (status)** — 12 px / 700, 4 × 10 px padding, pill. Default = sage.
 `bloom`, `warn`, `water` variants only for those meanings. A tag may carry a
 tiny 11 px icon (the cutting/division "sprout" glyph).
