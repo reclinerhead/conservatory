@@ -647,21 +647,24 @@ function CheckRow({ plantId, check, canAdd, lead = false, stalled = false }: { p
             )}
             {check.notApplicable.length > 0 ? <NotApplicableLine plantId={plantId} checkId={check.id} count={check.notApplicable.length} /> : null}
           </div>
-          {check.confidence ? (
-            // Set back on purpose (#121): outlined where the findings are filled, a size down and in the lightest ink, so the findings lead.
-            <div className="rounded-tile border border-line px-4 py-3 text-meta text-ink-3">
-              <h4 className="mb-0.5 text-meta font-semibold">How sure this reading is</h4>
-              <p>
-                <span className="font-semibold capitalize">{check.confidence.level}.</span> {check.confidence.why}
-              </p>
-            </div>
-          ) : null}
-          <div>
-            <h4 className="mb-1 text-meta font-semibold text-ink-2">Photos to take next</h4>
+          {/* One panel for how sure the reading is and the photos that would make it surer (#125). Set back on purpose
+              (#121): outlined where the findings are filled, a size down and in the lightest ink, so the findings lead.
+              Its two headings are the same size, bold and a step darker, so they read as headings. Always drawn: a
+              check with no confidence stored holds the photos part alone. */}
+          <div className="rounded-tile border border-line px-4 py-3 text-meta text-ink-3">
+            {check.confidence ? (
+              <>
+                <h4 className="mb-0.5 text-meta font-bold text-ink-2">How sure this reading is</h4>
+                <p className="mb-3">
+                  <span className="font-semibold capitalize">{check.confidence.level}.</span> {check.confidence.why}
+                </p>
+              </>
+            ) : null}
+            <h4 className="mb-0.5 text-meta font-bold text-ink-2">Photos to take next</h4>
             {check.nextPhotos.length === 0 ? (
-              <p className="text-body">None needed.</p>
+              <p>None needed.</p>
             ) : (
-              <ul className="list-disc pl-5 text-body marker:text-line-strong">
+              <ul className="list-disc pl-5 marker:text-line-strong">
                 {check.nextPhotos.map((p, i) => (
                   <li key={i}>{p}</li>
                 ))}
