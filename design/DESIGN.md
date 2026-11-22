@@ -20,7 +20,8 @@ Organic, light, unhurried. A homeowner's garden notebook, not a SaaS dashboard.
 - One action colour (moss green). Pink exists only to mean "bloom". Amber only
   means "time-sensitive" (frost, bring it in) or "waiting on you" (the To do
   card while anything is pending). Blue only means "water". Never
-  use these for decoration.
+  use these for decoration. The care sheet's heading bands have five tints of
+  their own (§2), one per topic, and they appear nowhere else.
 - No gradients, no emoji, no icon-only mystery buttons, no left-border cards.
   Icons are 1.8–2 px stroke line icons, inline SVG.
 - Copy is plain and specific: "3 plants waiting for a name", "Water Fiddle",
@@ -44,6 +45,11 @@ Organic, light, unhurried. A homeowner's garden notebook, not a SaaS dashboard.
 | `bloom` / `bloom-ink` | `#F6E3EC` / `#8A3862` | bloom badges, "Blooming now" |
 | `warn` / `warn-ink` | `#F7EBD2` / `#6E4A08` | frost, bring-indoors, repot-now |
 | `water` / `water-ink` | `#DDEBF1` / `#1F4F63` | watering |
+| `sun` / `sun-ink` | `#F6ECB0` / `#5A4700` | care sheet: the Light band |
+| `soil` / `soil-ink` | `#EBDAC7` / `#5E3D20` | care sheet: the Soil band |
+| `frost` / `frost-ink` | `#E2E3F3` / `#3A3F6E` | care sheet: the Hardiness band |
+| `feed` / `feed-ink` | `#D3E8C4` / `#2C5232` | care sheet: the Fertilizing band |
+| `rest` / `rest-ink` | `#E6E4DC` / `#4A483E` | care sheet: the Dormancy band |
 
 Rules: text on `ground` or `surface` is `ink` or `ink-2`, never a tint colour
 on its own. Status tints are always a background + ink pair. Plants without a
@@ -120,6 +126,16 @@ hairline dividers between rows, none above the first.
 
 **Stat tile** — sage fill, 14 px radius, 28 px Fraunces number over a meta
 label. Two across in a side panel.
+
+**Care cell** (species page, Care sheet) — `ground` fill, 14 px radius, and
+across its top a heading band in the topic's tint with the top corners
+rounded: a 32 px white disc holding a 20 px line icon in the tint's ink, then
+the label (12/700, uppercase, the tint's ink) and its info mark. Light is
+`sun` with a sun, Water `water` with a droplet, Soil `soil` with a pot,
+Hardiness `frost` with a snowflake, Fertilizing `feed` with a sprout,
+Dormancy `rest` with a moon. Under the band: the headline (600), the text
+(meta, `ink-2`) and the figures button at the foot. The band is drawn before
+a sheet exists, over skeleton bars.
 
 **Info mark** — 18 px ring in `line-strong`, "i" in moss, sits after the term
 with 4 px gap. Clicking opens a sage note block (14 px radius) that explains the
