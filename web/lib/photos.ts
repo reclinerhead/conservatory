@@ -35,6 +35,11 @@ export function thumbPathFor(rel: string): string {
   return `${stem}.thumb.jpg`;
 }
 
+/** The copy Fern writes for the station launcher's tile (#119): <stem>.cover.jpg, 960 px on its short side. Mirrors fern/worker.py cover_path. */
+export function coverPathFor(rel: string): string {
+  return `${thumbPathFor(rel).slice(0, -".thumb.jpg".length)}.cover.jpg`;
+}
+
 /**
  * The originals that can stand in for a photo's thumbnail Fern has not
  * written yet (a photo added to a plant waits for the idle sweep), in the

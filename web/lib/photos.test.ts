@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contentTypeFor, extForMime, isOrgan, mediaRelPath, originalsForThumb, referenceUrls, relPathFor, thumbPathFor, tileUrls } from "./photos";
+import { contentTypeFor, coverPathFor, extForMime, isOrgan, mediaRelPath, originalsForThumb, referenceUrls, relPathFor, thumbPathFor, tileUrls } from "./photos";
 
 describe("relPathFor", () => {
   it("files by upload year and month in UTC", () => {
@@ -12,6 +12,14 @@ describe("thumbPathFor", () => {
   it("mirrors Fern's thumb_path", () => {
     expect(thumbPathFor("photos/2026/10/abc.jpg")).toBe("photos/2026/10/abc.thumb.jpg");
     expect(thumbPathFor("photos/2026/10/abc.heic")).toBe("photos/2026/10/abc.thumb.jpg");
+  });
+});
+
+describe("coverPathFor", () => {
+  it("mirrors Fern's cover_path, and the media route serves it", () => {
+    expect(coverPathFor("photos/2026/10/abc.jpg")).toBe("photos/2026/10/abc.cover.jpg");
+    expect(coverPathFor("photos/2026/10/abc.heic")).toBe("photos/2026/10/abc.cover.jpg");
+    expect(mediaRelPath(coverPathFor("photos/2026/10/abc.jpg").split("/"))).toBe("photos/2026/10/abc.cover.jpg");
   });
 });
 

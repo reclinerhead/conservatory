@@ -3,13 +3,15 @@
 `run_once` does one job and is the unit the loop repeats. It takes the clock
 and the identify function as arguments so the tests can drive it without the
 network. The thumbnail is written for every processed job, rejected ones
-included, because the confirm screen shows the photo either way.
+included, because the confirm screen shows the photo either way, and the
+launcher's copy with it (#119, `cover_path`).
 
 When the queue is idle the loop hands the tick to a queued health check
 (`health.run_once`, #87), then the thumbnail sweep (`sweep_once`, #26), then
 the enrichment pass (`enrich.run_once`, #20) and, when that has nothing to
 do, the care pass (`care.run_once`, #23), so one unit and one journal cover
-all of them.
+all of them. A tick with none of that to do gives one photo already on disk
+its launcher copy (`cover_once`), until every photo has been looked at once.
 """
 
 from __future__ import annotations
@@ -34,6 +36,12 @@ def thumb_path(rel: str) -> str:
     return str(p.with_name(p.stem + ".thumb.jpg")).replace("\\", "/")
 
 
+def cover_path(rel: str) -> str:
+    """photos/2026/10/abc.jpg -> photos/2026/10/abc.cover.jpg: the launcher's copy (#119)."""
+    p = Path(rel)
+    return str(p.with_name(p.stem + ".cover.jpg")).replace("\\", "/")
+
+
 def run_once(
     conn: sqlite3.Connection,
     data_dir: Path,
@@ -54,6 +62,7 @@ def run_once(
         try:
             images.append((Path(ph["path"]).name, plantnet.prepare_image(src), ph["organ"]))
             plantnet.write_thumbnail(src, data_dir / thumb_path(ph["path"]))
+            plantnet.write_cover(src, data_dir / cover_path(ph["path"]))
         except (OSError, ValueError) as exc:
             log.warning("job %d: photo %s unreadable: %s", job["id"], ph["path"], exc)
 
@@ -90,12 +99,35 @@ def sweep_once(conn: sqlite3.Connection, data_dir: Path, now: datetime | None = 
         return False
     try:
         plantnet.write_thumbnail(data_dir / row["path"], data_dir / thumb_path(row["path"]))
+        plantnet.write_cover(data_dir / row["path"], data_dir / cover_path(row["path"]))
         log.info("photo %d (specimen %s): thumbnail written", row["id"], row["specimen_id"])
     except Exception as exc:  # noqa: BLE001  (one line per unreadable photo, whatever it was)
         log.warning("photo %d (specimen %s): %s unreadable, no thumbnail: %s", row["id"], row["specimen_id"], row["path"], exc)
     with conn:
         conn.execute("UPDATE photos SET thumb_at = ? WHERE id = ?", (queue.iso(now), row["id"]))
     return True
+
+
+def cover_once(conn: sqlite3.Connection, data_dir: Path, after_id: int) -> int | None:
+    """Give the next photo after `after_id` its launcher copy (#119) if it has none.
+    Returns that photo's id, the next call's `after_id`, or None once there are no more.
+
+    This is for the photos that were on disk before Fern wrote covers; a new
+    photo gets its own from run_once or the sweep. One photo a call, and the
+    place is kept by the caller, not the database: a restart walks the table
+    again, and a photo that has its copy costs one look at the directory. An
+    unreadable file is one line and is passed over."""
+    row = conn.execute("SELECT id, path FROM photos WHERE id > ? ORDER BY id LIMIT 1", (after_id,)).fetchone()
+    if row is None:
+        return None
+    dst = data_dir / cover_path(row["path"])
+    if not dst.exists():
+        try:
+            plantnet.write_cover(data_dir / row["path"], dst)
+            log.info("photo %d: launcher cover written", row["id"])
+        except Exception as exc:  # noqa: BLE001  (one line per unreadable photo, whatever it was)
+            log.warning("photo %d: %s unreadable, no launcher cover: %s", row["id"], row["path"], exc)
+    return row["id"]
 
 
 def idle_tick(
@@ -130,6 +162,7 @@ def run_forever(
     health_cfg: llm.Config | None = None,
 ) -> None:
     paused_until: datetime | None = None
+    covered: int | None = 0  # the last photo cover_once looked at; None once it has walked them all
     while should_run():
         now = datetime.now(timezone.utc)
         if paused_until and now < paused_until:
@@ -141,6 +174,9 @@ def run_forever(
             # The queue is idle: one small piece of other work per tick, so an
             # upload never waits behind Wikipedia or more than one model call.
             busy = idle_tick(conn, data_dir, now, care_cfg, zone, health_cfg)
+            if not busy and covered is not None:
+                covered = cover_once(conn, data_dir, covered)
+                busy = covered is not None
             time.sleep(1 if busy else 2)
         elif outcome.status == "quota":
             paused_until = outcome.resume_at
