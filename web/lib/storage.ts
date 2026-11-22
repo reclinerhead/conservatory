@@ -6,7 +6,7 @@
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { dataDir } from "./db";
-import { extForMime, relPathFor, thumbPathFor } from "./photos";
+import { coverPathFor, extForMime, relPathFor, thumbPathFor } from "./photos";
 
 export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
@@ -30,9 +30,9 @@ export async function storeUpload(file: Blob, now = new Date()): Promise<string>
   return rel;
 }
 
-/** Remove a photo and its thumbnail from disk; missing files are fine. Also the discard for a file whose row never went in. */
+/** Remove a photo, its thumbnail and its launcher cover from disk; missing files are fine. Also the discard for a file whose row never went in. */
 export async function removeStored(rel: string): Promise<void> {
-  for (const p of [rel, thumbPathFor(rel)]) {
+  for (const p of [rel, thumbPathFor(rel), coverPathFor(rel)]) {
     try {
       await unlink(path.join(dataDir(), p));
     } catch {

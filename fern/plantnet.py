@@ -36,6 +36,14 @@ ORGANS = ("leaf", "flower", "fruit", "bark", "auto")
 MAX_IMAGES = 5
 LONG_SIDE = 1280
 THUMB_SIDE = 320
+# The copy the station launcher's tile shows (#119, reclinerhead/aviary#708):
+# at most 960 px on the short side, which is what the tile (about 410 CSS px,
+# drawn at 2x on a tablet) can use. A browser-shrunk photo is already that
+# size, so for most the copy is the same pixels in fewer bytes (about 60% on
+# the house's photos); for an upload the browser could not shrink, or a HEIC,
+# it is the difference between a launcher photo and none in time.
+COVER_SIDE = 960
+COVER_QUALITY = 82
 NB_RESULTS = 5
 
 
@@ -210,6 +218,28 @@ def prepare_image(path: Path) -> bytes:
         buf = io.BytesIO()
         im.save(buf, "JPEG", quality=90)
         return buf.getvalue()
+
+
+def cover_size(w: int, h: int) -> tuple[int, int]:
+    """The launcher copy's size: the short side capped at COVER_SIDE, the shape kept, never enlarged."""
+    short = min(w, h)
+    if short <= COVER_SIDE:
+        return w, h
+    return max(1, round(w * COVER_SIDE / short)), max(1, round(h * COVER_SIDE / short))
+
+
+def write_cover(src: Path, dst: Path) -> None:
+    """Write the launcher's copy of a photo (#119): progressive, so a slow link draws
+    it whole and sharpens. Through a temp file, so the web app never serves half of one."""
+    with Image.open(src) as im:
+        im = ImageOps.exif_transpose(im).convert("RGB")
+        size = cover_size(*im.size)
+        if size != im.size:
+            im = im.resize(size, Image.LANCZOS)
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        tmp = dst.with_name(dst.name + ".part")
+        im.save(tmp, "JPEG", quality=COVER_QUALITY, progressive=True, optimize=True)
+        tmp.replace(dst)
 
 
 def write_thumbnail(src: Path, dst: Path) -> None:

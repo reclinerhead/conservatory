@@ -118,6 +118,7 @@ def test_run_once_sends_the_photos_and_records_the_answer(tmp_path):
     with Image.open(__import__("io").BytesIO(blob)) as im:
         assert max(im.size) <= plantnet.LONG_SIDE
     assert (data / worker.thumb_path(rel)).exists()
+    assert (data / worker.cover_path(rel)).exists()  # the launcher's copy (#119) rides with it
     assert conn.execute("SELECT status, quota_remaining FROM jobs WHERE id = ?", (jid,)).fetchone()[1] == 7
     assert worker.run_once(conn, data, "k", NOW, identify=fake_identify) is None
 
@@ -160,6 +161,8 @@ def test_sweep_writes_the_thumbnail_of_a_photo_added_to_a_plant(tmp_path):
         assert max(im.size) == plantnet.THUMB_SIDE
     assert conn.execute("SELECT thumb_at FROM photos WHERE id = ?", (pid,)).fetchone()[0] == queue.iso(NOW)
     assert worker.sweep_once(conn, data, NOW) is False  # stamped, so never picked again
+    with Image.open(data / worker.cover_path(rel)) as im:  # the launcher's copy (#119) with it
+        assert im.size == (1280, 960) and im.info.get("progressive")
 
 
 def test_sweep_leaves_job_photos_and_stamped_photos_alone(tmp_path):
@@ -218,3 +221,42 @@ def test_idle_tick_sweeps_first_then_hands_the_tick_to_enrichment(tmp_path, monk
     assert (data / worker.thumb_path(rel)).exists()
     assert worker.idle_tick(conn, data, NOW) is True
     assert calls == ["enrich"]  # nothing left to sweep: enrichment's turn, and it had work
+
+
+# --- the launcher's copy (#119) -----------------------------------------------
+
+
+def test_the_launcher_copy_caps_the_short_side_and_never_enlarges():
+    assert plantnet.cover_size(1536, 2048) == (960, 1280)
+    assert plantnet.cover_size(2048, 1536) == (1280, 960)
+    assert plantnet.cover_size(960, 1280) == (960, 1280)
+    assert plantnet.cover_size(800, 600) == (800, 600)
+    assert worker.cover_path("photos/2026/10/abc.heic") == "photos/2026/10/abc.cover.jpg"
+
+
+def test_cover_once_walks_the_photos_on_disk_one_a_call(tmp_path, caplog):
+    import logging
+
+    from PIL import Image
+
+    conn = _db(tmp_path)
+    data = tmp_path / "data"
+    plant = _plant(conn)
+    _photo_file(data, "photos/2026/10/big.jpg", size=(3000, 2000))
+    _photo_file(data, "photos/2026/10/has.jpg")
+    _photo_file(data, "photos/2026/10/has.cover.jpg", size=(10, 10))  # already there: left alone
+    (data / "photos/2026/10/bad.jpg").write_bytes(b"not a picture")
+    ids = [_added_photo(conn, f"photos/2026/10/{n}.jpg", plant, thumb_at="t") for n in ("big", "has", "bad")]
+
+    with caplog.at_level(logging.INFO, logger="fern"):
+        assert worker.cover_once(conn, data, 0) == ids[0]
+        assert worker.cover_once(conn, data, ids[0]) == ids[1]
+        assert worker.cover_once(conn, data, ids[1]) == ids[2]
+        assert worker.cover_once(conn, data, ids[2]) is None
+    with Image.open(data / "photos/2026/10/big.cover.jpg") as im:
+        assert im.size == (1440, 960)
+    with Image.open(data / "photos/2026/10/has.cover.jpg") as im:
+        assert im.size == (10, 10)
+    assert not (data / "photos/2026/10/bad.cover.jpg").exists()
+    lines = [(r.levelname, r.getMessage().split(":")[0]) for r in caplog.records]
+    assert lines == [("INFO", f"photo {ids[0]}"), ("WARNING", f"photo {ids[2]}")]
