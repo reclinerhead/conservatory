@@ -211,10 +211,12 @@ on a phone, three from 640 px), then 40 px thumbs of the photos sent. The row
 is one button with a chevron at the right ("Findings and remedies", or
 "Close", beside it from 640 px) and opens and closes on tap, never hover:
 findings as `ground` cells (what was seen in bold, a "Likely cause" or
-"Possible cause" tag with the photo, the remedy), how sure the reading is,
-the photos to take next, and who read it. How sure the reading is is set
-back so the findings lead: a cell of its own with a `line` border and no
-fill, its heading and text at 13 px in `ink-3`, the level in 600. The latest check arrives open;
+"Possible cause" tag with the photo, the remedy), then one panel holding how
+sure the reading is and, under it, the photos to take next, and who read it.
+That panel is set back so the findings lead: a `line` border and no fill,
+its text and the photo list at 13 px in `ink-3`, the level in 600. Its two
+headings are the same 13 px in 700 and `ink-2`, a step darker than the text,
+so they read as headings and nothing more. The latest check arrives open;
 earlier ones arrive closed. A question the owner asked sits under the summary
 as a conversation, without opening anything: their words in a moss bubble at
 the right (white text, 18 px corners, the one nearest the speaker 6 px), the
