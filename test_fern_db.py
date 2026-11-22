@@ -187,7 +187,7 @@ def test_v7_drops_the_nickname_keeping_every_plant(tmp_path, monkeypatch):
 
 def test_a_fresh_database_has_no_nickname(tmp_path):
     conn = db.connect(tmp_path / "c.db")
-    assert db.current_version(conn) == db.LATEST_VERSION == 12
+    assert db.current_version(conn) == db.LATEST_VERSION == 13
     assert "nickname" not in {r["name"] for r in conn.execute("PRAGMA table_info(specimens)")}
 
 
@@ -319,6 +319,22 @@ def test_v12_adds_todos_over_a_v11_database_once(tmp_path, monkeypatch):
     assert row["created_at"] and row["completed_at"] is None
     # A second apply is a no-op: the CREATE would fail if it ran again.
     assert db.apply_schema(conn) == 12
+
+
+def test_v13_adds_not_applicable_to_a_check_already_there(tmp_path, monkeypatch):
+    steps = db.MIGRATIONS
+    monkeypatch.setattr(db, "MIGRATIONS", steps[:11])
+    conn = db.connect(tmp_path / "c.db")
+    assert db.current_version(conn) == 12
+    _plant_with_a_check(conn)
+    monkeypatch.setattr(db, "MIGRATIONS", steps[:12])
+    assert db.apply_schema(conn) == 13
+    # The check is as it was, with nothing marked.
+    assert conn.execute("SELECT not_applicable FROM health_checks").fetchone()[0] is None
+    conn.execute("UPDATE health_checks SET not_applicable = '[0,2]'")
+    # A second apply is a no-op: the ALTER would fail if it ran again.
+    assert db.apply_schema(conn) == 13
+    assert conn.execute("SELECT not_applicable FROM health_checks").fetchone()[0] == "[0,2]"
 
 
 def test_a_finding_makes_at_most_one_todo(tmp_path):

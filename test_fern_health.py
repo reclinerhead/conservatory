@@ -306,7 +306,7 @@ def test_v10_adds_health_checks_over_a_v9_database_and_cascades_with_the_plant(t
     assert db.apply_schema(conn) == db.LATEST_VERSION >= 10
     cols = {r["name"] for r in conn.execute("PRAGMA table_info(health_checks)")}
     assert cols == {"id", "specimen_id", "state", "photo_ids", "question", "status", "summary", "answer", "model", "prompt_version",
-                    "input_tokens", "output_tokens", "error", "created_at", "finished_at", "setting", "light"}  # the last two are v11
+                    "input_tokens", "output_tokens", "error", "created_at", "finished_at", "setting", "light", "not_applicable"}  # setting and light are v11, not_applicable v13
     # What was there is untouched.
     assert tuple(conn.execute("SELECT id, location FROM specimens").fetchone()) == (3, "Shelf 2")
     assert conn.execute("SELECT specimen_id FROM photos WHERE id = 7").fetchone()[0] == 3
