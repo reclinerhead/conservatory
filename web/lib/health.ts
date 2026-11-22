@@ -5,6 +5,7 @@
 // (fern/health.py); the route and the components only read and queue. No
 // server imports: the plant page's client components use this.
 
+import { shortDay } from "./collection";
 import { localDay } from "./dashboard";
 
 export const MAX_PHOTOS = 3;
@@ -25,10 +26,24 @@ export const STATUS_LABEL: Record<HealthStatus, string> = {
 
 type Dated = { id: number; takenAt: string | null; uploadedAt: string };
 
-/** A plant's photos newest first: by when each was taken (upload time when the photo carried no date), then id. The picker's order. */
+/** A plant's photos newest first: by when each was taken (upload time when the photo carried no date), then id. */
 export function newestFirst<T extends Dated>(photos: T[]): T[] {
   const when = (p: Dated) => p.takenAt ?? p.uploadedAt;
   return [...photos].sort((a, b) => (when(a) < when(b) ? 1 : when(a) > when(b) ? -1 : b.id - a.id));
+}
+
+/**
+ * The picker's order (#127): oldest first by the same date its captions show
+ * (taken, else uploaded), then id, so the row reads as a timeline and an old
+ * photo uploaded later sits where it was taken.
+ */
+export function oldestFirst<T extends Dated>(photos: T[]): T[] {
+  return newestFirst(photos).reverse();
+}
+
+/** Under a photo in the picker: when it was taken, or uploaded when it carried no date. "Nov 20" this year, "May 20, 2025" any other. */
+export function pickerCaption(p: Pick<Dated, "takenAt" | "uploadedAt">, today: string): string {
+  return shortDay(p.takenAt ?? p.uploadedAt, today) ?? "";
 }
 
 /** The photos chosen to begin with: the three newest, or all of them when the plant has fewer. */

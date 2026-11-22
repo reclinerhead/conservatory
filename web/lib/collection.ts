@@ -73,6 +73,17 @@ export function dayLabel(iso: string | null | undefined): string | null {
   return month ? `${month} ${Number(m[3])}, ${m[1]}` : null;
 }
 
+/**
+ * A day in a tight caption: "Nov 20" in the current year, "May 20, 2025" in
+ * any other, so an old date is unmistakable; null when it is not a date.
+ * `today` is an ISO date, passed in so this reads no clock.
+ */
+export function shortDay(iso: string | null | undefined, today: string): string | null {
+  const day = dayLabel(iso);
+  if (!day) return null;
+  return iso!.slice(0, 4) === today.slice(0, 4) ? day.slice(0, day.indexOf(",")) : day;
+}
+
 /** The card's meta line: "Front bed · since May 2019", or "added Oct 2026" when no acquired date is known. */
 export function metaLine(t: Pick<Tile, "location" | "acquiredOn" | "createdAt">): string {
   const since = monthYear(t.acquiredOn);

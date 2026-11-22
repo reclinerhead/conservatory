@@ -10,6 +10,8 @@ import {
   failureWords,
   healthView,
   newestFirst,
+  oldestFirst,
+  pickerCaption,
   sameAsLast,
   togglePhoto,
   withApplicable,
@@ -34,6 +36,43 @@ describe("the default selection", () => {
   it("dates a photo by its upload when it carried no date, and breaks ties by the newer id", () => {
     const photos = [photo(1, null, "2026-11-05T08:00:00.000Z"), photo(2, "2026-11-03T10:00:00"), photo(3, null, "2026-11-05T08:00:00.000Z")];
     expect(newestFirst(photos).map((p) => p.id)).toEqual([3, 1, 2]);
+  });
+});
+
+describe("the picker's order", () => {
+  it("is oldest first by when each photo was taken", () => {
+    const photos = [photo(5, "2026-11-09T10:00:00"), photo(1, "2026-08-01T10:00:00"), photo(3, "2026-10-20T10:00:00")];
+    expect(oldestFirst(photos).map((p) => p.id)).toEqual([1, 3, 5]);
+  });
+
+  it("dates a photo by its upload when it carried no date, and breaks ties by the older id", () => {
+    const photos = [photo(3, null, "2026-11-05T08:00:00.000Z"), photo(2, "2026-11-07T10:00:00"), photo(1, null, "2026-11-05T08:00:00.000Z"), photo(4, "2026-11-03T10:00:00")];
+    expect(oldestFirst(photos).map((p) => p.id)).toEqual([4, 1, 3, 2]);
+  });
+
+  it("puts an old photo uploaded recently where it was taken, not where it was uploaded", () => {
+    const photos = [photo(1, "2026-10-01T10:00:00", "2026-10-01T11:00:00.000Z"), photo(2, "2019-05-20T10:00:00", "2026-11-20T08:00:00.000Z"), photo(3, null, "2026-11-10T08:00:00.000Z")];
+    expect(oldestFirst(photos).map((p) => p.id)).toEqual([2, 1, 3]);
+  });
+
+  it("leaves the default selection the three newest, now the end of the row", () => {
+    const photos = [photo(1, "2026-08-01T10:00:00"), photo(5, "2026-11-09T10:00:00"), photo(4, "2026-11-02T10:00:00"), photo(3, "2026-10-20T10:00:00"), photo(2, "2026-09-01T10:00:00")];
+    expect(defaultSelection(oldestFirst(photos))).toEqual([5, 4, 3]);
+    expect(oldestFirst(photos).map((p) => p.id).slice(-3)).toEqual([3, 4, 5]);
+  });
+});
+
+describe("the picker's caption", () => {
+  const today = "2026-11-22";
+  it("is the month and day in the current year, with the year in any other", () => {
+    expect(pickerCaption(photo(1, "2026-11-20T10:00:00"), today)).toBe("Nov 20");
+    expect(pickerCaption(photo(1, "2025-05-20T10:00:00"), today)).toBe("May 20, 2025");
+    expect(pickerCaption(photo(1, "2026-11-20T10:00:00"), "2027-01-02")).toBe("Nov 20, 2026");
+  });
+
+  it("is the upload date when the photo carried none", () => {
+    expect(pickerCaption(photo(1, null, "2026-11-01T08:00:00.000Z"), today)).toBe("Nov 1");
+    expect(pickerCaption(photo(1, null, "2024-03-09T08:00:00.000Z"), today)).toBe("Mar 9, 2024");
   });
 });
 
