@@ -41,6 +41,19 @@
   --color-water: #DDEBF1;       /* watering */
   --color-water-ink: #1F4F63;
 
+  /* Care-sheet heading bands (background / ink). Each means its care topic and
+   * nothing else; Water's band is the water pair above. */
+  --color-sun: #F6ECB0;         /* light */
+  --color-sun-ink: #5A4700;
+  --color-soil: #EBDAC7;        /* soil */
+  --color-soil-ink: #5E3D20;
+  --color-frost: #E2E3F3;       /* hardiness: cold, kept off blue so it is not water */
+  --color-frost-ink: #3A3F6E;
+  --color-feed: #D3E8C4;        /* fertilizing */
+  --color-feed-ink: #2C5232;
+  --color-rest: #E6E4DC;        /* dormancy */
+  --color-rest-ink: #4A483E;
+
   /* Placeholder tile tints (plants without a photo yet) */
   --color-tile-1: #D7E5CF;
   --color-tile-2: #CFE0C7;

@@ -7,7 +7,7 @@ import { OpenPhoto, PhotoLightbox, type PhotoSlide } from "@/components/lightbox
 import { QrIcon, TagCodeBox } from "@/components/tag-code";
 import { Term } from "@/components/term";
 import { LeafMark } from "@/components/topbar";
-import { CARE_CELLS, careScopeLine, careWrittenLine } from "@/lib/care";
+import { CARE_CELLS, careScopeLine, careWrittenLine, type CareKey } from "@/lib/care";
 import { dayLabel, displayName, groupTiles, speciesLabel, TILE_TINTS } from "@/lib/collection";
 import type { GlossaryKey } from "@/lib/glossary";
 import { withReadDb } from "@/lib/jobs";
@@ -277,12 +277,43 @@ export default async function SpeciesPage({ params }: { params: Promise<{ id: st
 }
 
 /**
- * The care sheet: the mockup's six cells, each with its term's mark, the
+ * The care sheet: the mockup's six cells, each under a heading band in its
+ * topic's tint (CARE_LOOK) with its icon and its term's mark, then the
  * headline, two or three sentences, and the figures behind a tap. Written by
  * Fern (fern/care.py) and only read here. The six cells are always drawn, so
  * the block keeps its shape before the sheet exists; the foot says why it is
  * not there yet, or who wrote it and when, beside Rewrite.
  */
+// Each care cell's heading band: its tint pair (design/tokens.css) and its
+// line icon, one path on a 24 px grid. The classes are written out whole so
+// Tailwind sees them.
+const CARE_LOOK: Record<CareKey, { band: string; icon: string }> = {
+  light: {
+    band: "bg-sun text-sun-ink",
+    icon: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8",
+  },
+  water: {
+    band: "bg-water text-water-ink",
+    icon: "M12 3.2c3.2 3.6 6 6.9 6 10.6a6 6 0 0 1-12 0c0-3.7 2.8-7 6-10.6z",
+  },
+  soil: {
+    band: "bg-soil text-soil-ink",
+    icon: "M5 6h14v4H5zM6.5 10l1.2 9a1.2 1.2 0 0 0 1.2 1h6.2a1.2 1.2 0 0 0 1.2-1l1.2-9",
+  },
+  hardiness: {
+    band: "bg-frost text-frost-ink",
+    icon: "M12 2.5v19M3.8 7.25l16.4 9.5M3.8 16.75l16.4-9.5M9.5 4.5L12 7l2.5-2.5M9.5 19.5L12 17l2.5 2.5",
+  },
+  fertilizing: {
+    band: "bg-feed text-feed-ink",
+    icon: "M12 21v-9M12 13.5c0-3.5-2.5-6-7-6 0 3.5 2.5 6 7 6zM12 10.5c0-3 2-5.5 6.5-5.5 0 3-2 5.5-6.5 5.5zM7.5 21h9",
+  },
+  dormancy: {
+    band: "bg-rest text-rest-ink",
+    icon: "M20 14.2A8.2 8.2 0 1 1 9.8 4a6.6 6.6 0 0 0 10.2 10.2z",
+  },
+};
+
 function CareBlock({ s }: { s: SpeciesView }) {
   const c = s.care;
   const sheet = c.kind === "sheet" ? c : null;
@@ -311,29 +342,39 @@ function CareBlock({ s }: { s: SpeciesView }) {
       <ul className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
         {CARE_CELLS.map((d) => {
           const cell = sheet?.cells[d.key];
+          const look = CARE_LOOK[d.key];
           const example = d.key === "hardiness" && sheet?.zone ? `Your household is in zone ${sheet.zone}; this sheet says ${cell?.headline}.` : undefined;
           return (
-            <li key={d.key} className="flex flex-col gap-1 rounded-tile bg-ground px-4 py-3.5 sm:min-h-[16rem]">
-              <p className="text-[12px] font-bold uppercase tracking-[.04em] text-ink-2">
+            <li key={d.key} className="flex flex-col rounded-tile bg-ground sm:min-h-[17.5rem]">
+              {/* The band's corners are rounded here rather than clipped by
+                  the cell, so the notes that float out of it are never cut. */}
+              <p className={`flex items-center gap-2.5 rounded-t-tile px-3 py-2 text-[12px] font-bold uppercase tracking-[.04em] ${look.band}`}>
+                <span aria-hidden className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-surface">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                    <path d={look.icon} />
+                  </svg>
+                </span>
                 <Term k={d.term} example={example}>
                   {d.label}
                 </Term>
               </p>
-              {cell ? (
-                <>
-                  <p className="font-semibold leading-snug">{cell.headline}</p>
-                  <p className="text-meta text-ink-2">{cell.text}</p>
-                  {cell.figures.length > 0 ? <CareFigures figures={cell.figures} /> : null}
-                </>
-              ) : (
-                <>
-                  <span aria-hidden className="mt-1 block h-4 w-2/3 rounded-pill bg-sage" />
-                  <span aria-hidden className="mt-2 block h-3 w-full rounded-pill bg-sage" />
-                  <span aria-hidden className="block h-3 w-full rounded-pill bg-sage" />
-                  <span aria-hidden className="block h-3 w-4/5 rounded-pill bg-sage" />
-                  <span aria-hidden className="mt-auto block h-3 w-2/5 rounded-pill bg-sage" />
-                </>
-              )}
+              <div className="flex flex-1 flex-col gap-1 px-4 pb-3.5 pt-3">
+                {cell ? (
+                  <>
+                    <p className="font-semibold leading-snug">{cell.headline}</p>
+                    <p className="text-meta text-ink-2">{cell.text}</p>
+                    {cell.figures.length > 0 ? <CareFigures figures={cell.figures} /> : null}
+                  </>
+                ) : (
+                  <>
+                    <span aria-hidden className="mt-1 block h-4 w-2/3 rounded-pill bg-sage" />
+                    <span aria-hidden className="mt-2 block h-3 w-full rounded-pill bg-sage" />
+                    <span aria-hidden className="block h-3 w-full rounded-pill bg-sage" />
+                    <span aria-hidden className="block h-3 w-4/5 rounded-pill bg-sage" />
+                    <span aria-hidden className="mt-auto block h-3 w-2/5 rounded-pill bg-sage" />
+                  </>
+                )}
+              </div>
             </li>
           );
         })}
