@@ -108,12 +108,22 @@ of a landscape alike. The mockups predate this and draw fixed-height landscape
 boxes: follow them for everything but photo proportions. Only the lightbox
 shows a photo whole.
 
-**Specimen card** (species page, In your collection) — photo or tinted tile in a square, then the
-common name (17/700; the species when there is none), the italic species under
-a common name (`ink-2`), "Location · since Month YYYY" (meta), then a row of
-tags. The whole card is one `<a>`.
+**Collection row** (species page, In your collection) — the side-panel row,
+one per plant: the plant's main photo as a square thumb (or a tinted tile),
+"Plant #281" (700), a meta line ("Front bed · since May 20, 2025 · 9 photos"),
+and a status tag at the right for a plant no longer here. Compact with three
+or more plants: a 56 px thumb (12 px radius), the number at 17. Larger with
+one or two, so the panel is not mostly empty: a 112 px thumb (16 px radius)
+from 1024 px, the number at 19. The whole row is one `<a>`, `ground` under
+the pointer.
 
-**Species tile** (life list) — the specimen card's shape: photo or tinted tile
+**Film strip** (species page, Every photo) — the `strip` recipe: square
+tiles of 144 px (120 on a phone, 16 px radius) in one row that scrolls
+sideways and never wraps, a centred meta caption under each ("#281 · Nov
+20", "Wikipedia"). A missing photo keeps its place as a dashed tile that
+says why. This is a row of photos, not of chips: chips still never scroll.
+
+**Species tile** (life list) — photo or tinted tile
 in a square, the common name (17/700) with the italic binomial under it, or the
 binomial alone in Fraunces italic with the line under it reserved, then a meta
 line ("3 plants · 2 places"). One `<a>` to the species page.
@@ -160,20 +170,21 @@ cuttings, divisions and offsets; the child's meta line says which.
 **Breadcrumb** — Collection › Family › *Genus* › Common name, 14 px,
 `ink-2` links, current page in `ink` 600.
 
-**Photo gallery** — one shape on a plant's page and the species page (the
-`gallery` recipe): the hero in a square on the left, and to its right a grid
+**Photo gallery** — on a plant's page (the `gallery` recipe): the hero in a
+square on the left, and to its right a grid
 of equal square tiles, as many columns as fit at 8rem or wider, top-aligned
 with the hero and free to run taller than it. The hero takes half the row from
 640 px and five twelfths from 1024 px (about 530 px at full width); on a phone
 it is the full width and the tiles sit under it, two across. On a plant's page
 the tiles are its other photos, newest first, then "Add a photo" as a sage
-tile of the same size. On the species page they are each other plant by its
-main photo, then the reference image (the mockup's second photo, reference
-thumb and "Add a photo" are not drawn).
-A missing tile keeps its place as a dashed tile that says why. The hero
-carries a dark pill caption naming its source and date ("Your photo · Front bed
-coneflower · Jul 12, 2026"); a tile carries a dark bar with the name
-("Wikipedia" on the reference). Owner photos always outrank the reference
+tile of the same size. The species page keeps the hero and its column split,
+and puts In your collection in the right column at exactly the hero's height
+(more rows than fit scroll inside the card), with the film strip of every
+photo full width under both; the mockup's second photo, reference thumb and
+"Add a photo" are not drawn. The hero
+carries a dark pill caption naming its source and date ("Your photo · Plant
+#281 · Jul 12, 2026"); a plant page's tile carries a dark bar with its date.
+Owner photos always outrank the reference
 image. A plant is shown by its main photo, the one chosen for it, else its
 newest; on its own page that is the hero, its caption ending "· Main photo".
 A species is shown by its species photo, the one chosen for it, else the
@@ -184,7 +195,7 @@ backdrop nearly solid, white line-icon buttons (zoom, close, previous, next),
 "2 of 5" top left. Under the photo, the caption pill at the left and its
 actions at the right as white pills, 44 px. On a plant's page, "Use as main
 photo" ("Main photo" in its place on the main one, so nothing moves). On the
-species page, where the photo leads ("Open Ficus elastica", "The image and
+species page, where the photo leads ("Open plant #281", "The image and
 its licence on Wikimedia Commons") and, before it on a plant's photo, "Use as
 species photo" ("Species photo" on the one that leads). Escape, Close or the backdrop closes it,
 and the page is where it was.
@@ -300,7 +311,7 @@ cards, which are species tiles, not specimen cards), top to bottom:
      found by typing it in the search. On a phone these chips, the select
      and the search are 36 px tall with 13 px text, the one exception to the
      40 px compact minimum, so the first photo is on the first screen.
-   - 4-across species tiles (the specimen card's shape: a square photo, common
+   - 4-across species tiles (a square photo, common
      name, italic binomial, a meta line for the chip on screen), each opening
      the species page; "Showing 9 of 42 species".
    - Side panels in order: To do · New species added recently · Get to know ·
@@ -332,12 +343,11 @@ cards, which are species tiles, not specimen cards), top to bottom:
    care sheet's light headline as a `tag` and its watering headline as a
    `tag-water`, each with its info mark inside) · right: Print pot tags
    (soft), Add a specimen (primary).
-3. Photo gallery.
+3. The species photo with **In your collection** beside it (collection rows;
+   under it on a phone), then **Every photo**, the film strip, full width.
 4. Two columns, same split as the dashboard.
    - Main: **About this species** (Wikipedia summary, source line with fetch
-     date, article link, Refresh) · **In your collection** (specimen cards +
-     Lineage tree; the household's own plants come before the reference
-     material) · **Care sheet** (6 cells: Light, Water, Soil, Hardiness,
+     date, article link, Refresh) · **Care sheet** (6 cells: Light, Water, Soil, Hardiness,
      Fertilizing, Dormancy; zone-aware; one info mark shown open) ·
      **Relatives you already have** (Same genus, then Same family; honest
      empty-ish state when there's only one).
