@@ -265,6 +265,34 @@
     align-content: start;
   }
 
+  /* The species page's film strip (#123): every photo of the species as
+   * equal square tiles in one row that scrolls sideways and never wraps, a
+   * caption line under each. Its height is fixed (a tile, the caption, and
+   * room for a scrollbar), so the strip is the same height with one photo or
+   * forty, scrolling or not. The 3 px of padding keeps a tile's focus ring
+   * from being clipped by the scroller. */
+  .strip {
+    --strip-tile: 7.5rem;
+    display: flex;
+    gap: var(--spacing-grid);
+    height: calc(var(--strip-tile) + 3.25rem);
+    margin: -3px;
+    padding: 3px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line-strong) transparent;
+  }
+  .strip > li {
+    flex: none;
+    width: var(--strip-tile);
+  }
+  @media (min-width: 640px) {
+    .strip {
+      --strip-tile: 9rem;
+    }
+  }
+
   /* Latin names are always italic. */
   .sp {
     font-style: italic;

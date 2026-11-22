@@ -4,7 +4,7 @@
 // server reads the rows (lib/species.ts); the pages render what this decides.
 
 import { BASE_PATH } from "./base-path";
-import { dayLabel, displayName, speciesLabel, type Tile } from "./collection";
+import { dayLabel, displayName, speciesLabel, type SpecimenStatus, type Tile } from "./collection";
 import { percent } from "./pills";
 import { thumbPathFor } from "./photos";
 
@@ -40,7 +40,6 @@ export function speciesCrumbs(s: {
 export type OwnerPhoto = {
   photoId: number;
   specimenId: number;
-  specimenName: string;
   path: string; // relative to CONSERVATORY_DATA
   takenAt: string | null;
   uploadedAt: string;
@@ -53,11 +52,12 @@ export type GalleryItem = {
   kind: "owner" | "reference";
   key: string;
   photoId?: number; // an owner photo's id, which can be made the species photo
+  specimenId?: number; // an owner photo's plant
+  at?: string; // when an owner photo was taken (its upload when the EXIF had no date); ISO
   url: string; // the full image
   thumbUrl: string;
   href: string; // where a tap goes: the specimen's page, or the image's page on Commons
-  caption: string; // the pill on a large figure
-  short: string; // the bar on a small one
+  caption: string; // the pill on the hero, and under the slide in the lightbox
   alt: string;
 };
 
@@ -66,42 +66,47 @@ const when = (p: OwnerPhoto) => p.takenAt ?? p.uploadedAt;
 /** Newest first by when the photo was taken (its upload when the EXIF had no date), then the newer id. */
 const newestFirst = (a: OwnerPhoto, b: OwnerPhoto) => (when(a) !== when(b) ? (when(a) < when(b) ? 1 : -1) : b.photoId - a.photoId);
 
+/** "Plant #281": what one plant of a species is called on the species page, where every plant shares the species' name. */
+export function plantLabel(specimenId: number): string {
+  return `Plant #${specimenId}`;
+}
+
 /**
- * The gallery, in order: the species photo first, then the rest of the
- * plants, then the reference image. Each specimen of this species is shown by
- * its main photo (#46: the one chosen on its page, else its newest), newest
- * first by that photo's date; the same rule as the plant's page (photoOrder
- * in lib/specimens.ts), so a plant looks the same everywhere.
+ * Every photo of the species, in the lightbox's order: the species photo
+ * first, then every other photo of every plant, newest first across plants,
+ * then the reference image. The film strip is the same photos with the
+ * species photo back in its date position (filmStrip).
  *
  * The species photo (#77) is the one chosen on this page, `chosenId`, while
- * it is still a photo of one of the species' plants; else the first of the
- * plants' main photos. It is never repeated after itself. When its plant has
- * since been given another main photo, the species keeps the photo chosen
- * for it and the plant follows by its own.
+ * it is still a photo of one of the species' plants; else the newest of the
+ * plants' main photos (#46: the one chosen on a plant's page, else its
+ * newest), the same rule as speciesList's thumbnail. It is never repeated
+ * after itself.
  *
  * Owner photos always outrank the reference, so the reference leads only
  * when the household has no photo of this species yet.
  */
 export function speciesGallery(photos: OwnerPhoto[], ref: Reference | null, chosenId: number | null = null): GalleryItem[] {
+  const all = [...photos].sort(newestFirst);
   const main = new Map<number, OwnerPhoto>();
-  for (const p of [...photos].sort(newestFirst)) {
+  for (const p of all) {
     const held = main.get(p.specimenId);
     if (!held || (p.chosen && !held.chosen)) main.set(p.specimenId, p);
   }
-  const plants = [...main.values()].sort(newestFirst);
-  const lead = chosenId === null ? undefined : photos.find((p) => p.photoId === chosenId);
+  const lead = (chosenId === null ? undefined : all.find((p) => p.photoId === chosenId)) ?? [...main.values()].sort(newestFirst)[0];
   const items: GalleryItem[] = [];
-  for (const p of lead ? [lead, ...plants.filter((m) => m.photoId !== lead.photoId)] : plants) {
+  for (const p of lead ? [lead, ...all.filter((m) => m.photoId !== lead.photoId)] : all) {
     items.push({
       kind: "owner",
       key: `photo-${p.photoId}`,
       photoId: p.photoId,
+      specimenId: p.specimenId,
+      at: when(p),
       url: `${BASE_PATH}/media/${p.path}`,
       thumbUrl: `${BASE_PATH}/media/${thumbPathFor(p.path)}`,
       href: `/plants/${p.specimenId}`,
-      caption: `Your photo · ${p.specimenName} · ${dayLabel(when(p)) ?? "date unknown"}`,
-      short: p.specimenName,
-      alt: `Your photo of ${p.specimenName}`,
+      caption: `Your photo · ${plantLabel(p.specimenId)} · ${dayLabel(when(p)) ?? "date unknown"}`,
+      alt: `Your photo of plant #${p.specimenId}`,
     });
   }
   if (ref) {
@@ -112,11 +117,57 @@ export function speciesGallery(photos: OwnerPhoto[], ref: Reference | null, chos
       thumbUrl: ref.thumbUrl,
       href: ref.sourceUrl ?? ref.url,
       caption: ref.credit ? `Reference · ${ref.credit}` : "Reference · Wikipedia",
-      short: "Wikipedia",
       alt: "Reference image from Wikipedia",
     });
   }
   return items;
+}
+
+/** The film strip's order: the gallery with the species photo back in its date position, so the strip is the whole timeline, newest first, the reference last. */
+export function filmStrip(gallery: GalleryItem[]): GalleryItem[] {
+  const owner = gallery.filter((g) => g.kind === "owner");
+  const byDate = (a: GalleryItem, b: GalleryItem) => (a.at !== b.at ? ((a.at ?? "") < (b.at ?? "") ? 1 : -1) : (b.photoId ?? 0) - (a.photoId ?? 0));
+  return [...owner.sort(byDate), ...gallery.filter((g) => g.kind !== "owner")];
+}
+
+/**
+ * Under a photo in the film strip: "#281 · Nov 20", with the year when it is
+ * not this one ("#281 · May 20, 2025"), and "Wikipedia" under the reference.
+ * `today` is an ISO date, passed in so this reads no clock.
+ */
+export function stripCaption(g: Pick<GalleryItem, "kind" | "specimenId" | "at">, today: string): string {
+  if (g.kind === "reference") return "Wikipedia";
+  const day = dayLabel(g.at);
+  if (!day) return `#${g.specimenId}`;
+  return `#${g.specimenId} · ${g.at!.slice(0, 4) === today.slice(0, 4) ? day.slice(0, day.indexOf(",")) : day}`;
+}
+
+/** A plant's date in its In your collection row, to the day: "since May 20, 2025" when it was acquired, else "added Nov 22, 2026". */
+export function rowDateLine(t: Pick<Tile, "acquiredOn" | "createdAt">): string {
+  const since = dayLabel(t.acquiredOn);
+  return since ? `since ${since}` : `added ${dayLabel(t.createdAt) ?? "recently"}`;
+}
+
+/** "No photos yet", "1 photo", "9 photos". */
+export function photoCountLine(n: number): string {
+  if (n === 0) return "No photos yet";
+  return n === 1 ? "1 photo" : `${n} photos`;
+}
+
+/** The row's meta line, in its parts: where the plant is, its date, how many photos it has. The page joins them with " · " and breaks the line only between them. */
+export function rowMeta(t: Pick<Tile, "location" | "acquiredOn" | "createdAt">, photos: number): string[] {
+  return [t.location ?? "No location yet", rowDateLine(t), photoCountLine(photos)];
+}
+
+const STATUS_ORDER: Record<SpecimenStatus, number> = { alive: 0, gifted: 1, died: 2 };
+
+/** In your collection's rows: the living plants, then those gifted away, then those that died; within each, the newest added first. */
+export function collectionRows<T extends Pick<Tile, "id" | "status" | "createdAt">>(tiles: T[]): T[] {
+  return [...tiles].sort((a, b) => {
+    if (a.status !== b.status) return STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
+    if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? 1 : -1;
+    return b.id - a.id;
+  });
 }
 
 export type AboutState =

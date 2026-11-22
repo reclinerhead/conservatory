@@ -5,7 +5,7 @@
 
 import type { DatabaseSync } from "node:sqlite";
 import { careState, type CareRow, type CareState } from "./care";
-import { speciesLabel, type Tile } from "./collection";
+import type { Tile } from "./collection";
 import { referenceUrls, tileUrls } from "./photos";
 import { relativesOf, type Relatives } from "./relatives";
 import { compareSpecies, type Naming, type OwnerPhoto, type SpeciesListRow } from "./species-page";
@@ -97,7 +97,7 @@ export function readSpecies(db: DatabaseSync, id: number): SpeciesView | null {
   if (!r) return null;
 
   const tiles = collectionTiles(db, id);
-  // Each with whether it is the photo its plant is known by (#46); the gallery picks one per plant.
+  // Every photo of every plant, each with whether it is the photo its plant is known by (#46).
   const photos = (
     db
       .prepare(
@@ -110,7 +110,6 @@ export function readSpecies(db: DatabaseSync, id: number): SpeciesView | null {
   ).map((p) => ({
     photoId: p.id,
     specimenId: p.specimen_id,
-    specimenName: speciesLabel(r.scientific_name, r.cultivar), // every plant of a species goes by the species' name
     path: p.path,
     takenAt: p.taken_at,
     uploadedAt: p.uploaded_at,
