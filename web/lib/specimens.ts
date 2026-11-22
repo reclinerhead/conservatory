@@ -192,9 +192,11 @@ export type PlantCheck = HealthView & { thumbs: Array<{ n: number; id: number; t
 /** A plant's health checks, newest first, each in the shape its row takes on the page. */
 export function readHealthChecks(db: DatabaseSync, specimenId: number): PlantCheck[] {
   if (!hasHealthChecks(db)) return [];
+  // v13's column (#121); a database Fern has not migrated that far reads as nothing marked.
+  const marked = db.prepare("SELECT 1 FROM pragma_table_info('health_checks') WHERE name = 'not_applicable'").get() ? ", not_applicable" : "";
   const rows = db
     .prepare(
-      `SELECT id, state, photo_ids, question, status, summary, answer, model, error, created_at, finished_at
+      `SELECT id, state, photo_ids, question, status, summary, answer, model, error, created_at, finished_at${marked}
          FROM health_checks WHERE specimen_id = ? ORDER BY id DESC`,
     )
     .all(specimenId) as HealthRow[];

@@ -1,7 +1,7 @@
 // A plant's health checks (#87), pure: which photos are chosen to begin
 // with, the one-to-three limit, what a request must carry, whether a request
-// repeats the last check, the household's daily cap, and the shape a stored
-// check takes on the page. Fern asks the model and writes the row
+// repeats the last check, the household's daily cap, the findings marked not
+// applicable (#121), and the shape a stored check takes on the page. Fern asks the model and writes the row
 // (fern/health.py); the route and the components only read and queue. No
 // server imports: the plant page's client components use this.
 
@@ -141,6 +141,8 @@ export type HealthRow = {
   error: string | null;
   created_at: string;
   finished_at: string | null;
+  /** v13 (#121): the places of the findings marked not applicable, as JSON; absent where the query did not ask for it. */
+  not_applicable?: string | null;
 };
 
 export type Finding = { seen: string; photo: number | null; likelihood: "likely" | "possible"; remedy: string };
@@ -157,6 +159,8 @@ export type HealthView = Base &
         summary: string;
         reply: string | null;
         findings: Finding[];
+        /** The places in `findings` the owner marked not applicable (#121), ascending. The page leaves them out; the places of the rest do not change. */
+        notApplicable: number[];
         confidence: { level: "high" | "medium" | "low"; why: string } | null;
         nextPhotos: string[];
         model: string | null;
@@ -172,6 +176,47 @@ function parseIds(raw: string): number[] {
   } catch {
     return [];
   }
+}
+
+/** A stored list of findings' places (from 0): ascending, without repeats; none when it cannot be read. */
+function parsePlaces(raw: string | null | undefined): number[] {
+  try {
+    const v: unknown = JSON.parse(raw ?? "[]");
+    return Array.isArray(v) ? [...new Set(v.filter((n): n is number => Number.isInteger(n) && n >= 0))].sort((a, b) => a - b) : [];
+  } catch {
+    return [];
+  }
+}
+
+export type ApplicableRequest = { ok: true; finding: number | null; applicable: boolean } | { ok: false; error: string };
+
+/**
+ * What PATCH /api/plants/[id]/health/[checkId] must carry (#121):
+ * `applicable`, true or false, and `finding`, the finding's place in the
+ * check from 0. Marking one not applicable always names it; putting back may
+ * leave `finding` out, which puts back every one.
+ */
+export function applicableRequest(body: unknown): ApplicableRequest {
+  const b = (body && typeof body === "object" ? body : {}) as { finding?: unknown; applicable?: unknown };
+  if (typeof b.applicable !== "boolean") return { ok: false, error: "applicable must be true or false" };
+  if (b.finding === undefined || b.finding === null) {
+    return b.applicable ? { ok: true, finding: null, applicable: true } : { ok: false, error: "finding must be the finding's place in the check, from 0" };
+  }
+  if (!Number.isInteger(b.finding) || (b.finding as number) < 0) return { ok: false, error: "finding must be the finding's place in the check, from 0" };
+  return { ok: true, finding: b.finding as number, applicable: b.applicable };
+}
+
+/**
+ * The `not_applicable` column's next value: the stored places with `finding`
+ * added (not applicable) or taken out (applicable again; every one when
+ * `finding` is null). NULL when none are left, so an untouched check and one
+ * with everything put back read alike.
+ */
+export function withApplicable(stored: string | null | undefined, finding: number | null, applicable: boolean): string | null {
+  if (finding === null) return applicable ? null : (stored ?? null);
+  const places = parsePlaces(stored).filter((n) => n !== finding);
+  if (!applicable) places.push(finding);
+  return places.length ? JSON.stringify(places.sort((a, b) => a - b)) : null;
 }
 
 const text = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
@@ -225,6 +270,7 @@ export function healthView(row: HealthRow): HealthView {
     summary,
     reply: base.question ? text(answer.reply) : null,
     findings,
+    notApplicable: parsePlaces(row.not_applicable).filter((n) => n < findings.length),
     confidence: level ? { level, why: text(c.why) ?? "" } : null,
     nextPhotos: (Array.isArray(answer.next_photos) ? answer.next_photos : []).flatMap((p: unknown) => text(p) ?? []),
     model: text(row.model),

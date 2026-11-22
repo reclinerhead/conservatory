@@ -110,7 +110,9 @@ CREATE TABLE IF NOT EXISTS confirmations (
 -- done | failed), photo_ids (JSON), question, status, summary, answer (JSON),
 -- model, prompt_version, input_tokens, output_tokens, error, created_at,
 -- finished_at. v11 (#99) adds setting (indoors | outdoors) and light (natural |
--- artificial), both NULL when the owner did not say. Like care_sheets (v3), it
+-- artificial), both NULL when the owner did not say. v13 (#121)
+-- adds not_applicable: a JSON array of the places, from 0, of the findings the
+-- owner marked not applicable, NULL when none; the web app writes it. Like care_sheets (v3), it
 -- is a migration step and is folded into this baseline only once it has
 -- shipped everywhere.
 

@@ -201,7 +201,9 @@ is one button with a chevron at the right ("Findings and remedies", or
 "Close", beside it from 640 px) and opens and closes on tap, never hover:
 findings as `ground` cells (what was seen in bold, a "Likely cause" or
 "Possible cause" tag with the photo, the remedy), how sure the reading is,
-the photos to take next, and who read it. The latest check arrives open;
+the photos to take next, and who read it. How sure the reading is is set
+back so the findings lead: a cell of its own with a `line` border and no
+fill, its heading and text at 13 px in `ink-3`, the level in 600. The latest check arrives open;
 earlier ones arrive closed. A question the owner asked sits under the summary
 as a conversation, without opening anything: their words in a moss bubble at
 the right (white text, 18 px corners, the one nearest the speaker 6 px), the
@@ -227,7 +229,11 @@ cell ends with one 40 px line for the to-do list, the same height in each
 state: a compact ghost button on white with a plus, "Add to to-do list";
 then "On your to-do list" (a 600 link with a small empty box) beside a
 compact ghost "Remove"; then, ticked off, a check mark and "Done Nov 14,
-2026" in `moss-deep` 600.
+2026" in `moss-deep` 600. A finding that is not on the list has a second
+compact ghost button beside "Add to to-do list": "Not applicable", which
+takes the cell out of the check. While any are out, one meta line under the
+findings says "1 finding marked not applicable." beside a compact ghost
+"Show again".
 
 **To-do row** (To-do page) — a 44 px round target holding a 28 px moss
 checkbox, the plant's 56 px thumb, the plant's name (700, a link), the remedy

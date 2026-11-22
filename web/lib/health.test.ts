@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  applicableRequest,
   canSend,
   capReached,
   checkRequest,
@@ -11,6 +12,7 @@ import {
   newestFirst,
   sameAsLast,
   togglePhoto,
+  withApplicable,
   type HealthRow,
 } from "./health";
 
@@ -193,10 +195,28 @@ describe("a check's row", () => {
       summary: answer.summary,
       reply: answer.reply,
       findings: answer.findings,
+      notApplicable: [],
       confidence: answer.confidence,
       nextPhotos: answer.next_photos,
       model: "anthropic/claude-sonnet-5.5",
     });
+  });
+
+  it("carries the findings marked not applicable: ascending, no repeats, none past the end, none when unreadable", () => {
+    const three = JSON.stringify({ ...answer, findings: [answer.findings[0], answer.findings[0], answer.findings[0]] });
+    const places = (not_applicable: string | null | undefined) => {
+      const v = healthView(row({ answer: three, not_applicable }));
+      return v.kind === "done" ? v.notApplicable : "not done";
+    };
+    expect(places("[2,0,2]")).toEqual([0, 2]);
+    expect(places("[1,3,-1,1.5,\"0\"]")).toEqual([1]);
+    expect(places(null)).toEqual([]);
+    expect(places(undefined)).toEqual([]);
+    expect(places("nope")).toEqual([]);
+    expect(places('{"0":true}')).toEqual([]);
+    // Hiding one leaves the others where they were: the to-do list reads a finding by its place.
+    const v = healthView(row({ answer: three, not_applicable: "[0]" }));
+    expect(v.kind === "done" && v.findings).toHaveLength(3);
   });
 
   it("has no reply when no question was asked", () => {
@@ -225,5 +245,43 @@ describe("a check's row", () => {
     expect(failureWords("Off: Fern has no AI_GATEWAY_API_KEY, so health checks are off")).toMatch(/off on this box/);
     expect(failureWords("OSError: disk")).toBe("Something went wrong before Fern could finish: disk.");
     expect(failureWords(null)).toBe("Something went wrong before Fern could finish.");
+  });
+});
+
+describe("marking a finding not applicable", () => {
+  it("the route takes a finding's place and applicable as true or false", () => {
+    expect(applicableRequest({ finding: 0, applicable: false })).toEqual({ ok: true, finding: 0, applicable: false });
+    expect(applicableRequest({ finding: 2, applicable: true })).toEqual({ ok: true, finding: 2, applicable: true });
+  });
+
+  it("putting back may leave the finding out, which means every one; marking never may", () => {
+    expect(applicableRequest({ applicable: true })).toEqual({ ok: true, finding: null, applicable: true });
+    expect(applicableRequest({ finding: null, applicable: true })).toEqual({ ok: true, finding: null, applicable: true });
+    expect(applicableRequest({ applicable: false }).ok).toBe(false);
+  });
+
+  it("refuses anything else", () => {
+    for (const body of [null, "x", {}, { finding: 0 }, { finding: 0, applicable: "false" }, { finding: -1, applicable: false }, { finding: 1.5, applicable: false }, { finding: "0", applicable: true }]) {
+      expect(applicableRequest(body).ok).toBe(false);
+    }
+  });
+
+  it("the stored places gain the finding once, in order", () => {
+    expect(withApplicable(null, 1, false)).toBe("[1]");
+    expect(withApplicable("[1]", 0, false)).toBe("[0,1]");
+    expect(withApplicable("[0,1]", 1, false)).toBe("[0,1]");
+    expect(withApplicable("nope", 2, false)).toBe("[2]");
+  });
+
+  it("putting one back takes it out, and the last one out leaves nothing stored", () => {
+    expect(withApplicable("[0,1]", 0, true)).toBe("[1]");
+    expect(withApplicable("[1]", 1, true)).toBe(null);
+    expect(withApplicable("[1]", 3, true)).toBe("[1]");
+    expect(withApplicable(null, 0, true)).toBe(null);
+  });
+
+  it("putting every one back leaves nothing stored", () => {
+    expect(withApplicable("[0,1,2]", null, true)).toBe(null);
+    expect(withApplicable(null, null, true)).toBe(null);
   });
 });

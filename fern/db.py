@@ -231,6 +231,17 @@ MIGRATIONS: list[tuple[int, str] | tuple[int, str, str]] = [
         CREATE INDEX todos_specimen ON todos (specimen_id);
         """,
     ),
+    # v13 (#121): the findings of a check the owner marked not applicable, as a
+    # JSON array of their places in the answer, from 0; NULL when none. They
+    # are hidden on the page, not removed: the answer is kept whole, so every
+    # other finding keeps its place and its to-do. Fern only adds the column;
+    # the web app writes it.
+    (
+        13,
+        """
+        ALTER TABLE health_checks ADD COLUMN not_applicable TEXT;
+        """,
+    ),
 ]
 
 LATEST_VERSION = MIGRATIONS[-1][0] if MIGRATIONS else BASELINE_VERSION

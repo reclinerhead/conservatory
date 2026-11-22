@@ -20,7 +20,8 @@ import type { FindingTodo } from "@/lib/todos";
 // only queues a row (POST /api/plants/[id]/health); Fern asks the model, and
 // the panel refreshes the page every few seconds until the answer is there.
 // A finished check, done or failed, can be deleted from its row (#91). Each
-// finding can be put on the to-do list from its own cell (#103).
+// finding can be put on the to-do list from its own cell (#103), or marked
+// not applicable, which takes it out of that check's results (#121).
 
 const PLACEHOLDER = "White fuzzy insects are nibbling the leaves, like in the photo. What are they and how do I get rid of them?";
 
@@ -415,17 +416,19 @@ function DeleteCheck({ plantId, checkId, day }: { plantId: number; checkId: numb
  * nothing. Not on the list: "Add to to-do list" (POST /api/todos). On it:
  * "On your to-do list", which opens the To-do page, and "Remove" (DELETE
  * /api/todos/[id]). Done: a check mark and the day. Each press refreshes the
- * page, which redraws the line and the top bar's count. A plant that is no
- * longer here keeps what its findings say but offers no "Add".
+ * page, which redraws the line and the top bar's count. A finding not on the
+ * list also offers "Not applicable" (#121), which takes it out of the check's
+ * results. A plant that is no longer here keeps what its findings say but
+ * offers neither.
  */
-function FindingTodoLine({ checkId, index, todo, canAdd }: { checkId: number; index: number; todo: FindingTodo; canAdd: boolean }) {
+function FindingTodoLine({ plantId, checkId, index, todo, canAdd }: { plantId: number; checkId: number; index: number; todo: FindingTodo; canAdd: boolean }) {
   const router = useRouter();
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<"add" | "remove" | "mark" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function call(url: string, init: RequestInit) {
+  async function call(what: "add" | "remove" | "mark", url: string, init: RequestInit) {
     if (busy) return;
-    setBusy(true);
+    setBusy(what);
     setError(null);
     try {
       const r = await fetch(url, init);
@@ -435,25 +438,37 @@ function FindingTodoLine({ checkId, index, todo, canAdd }: { checkId: number; in
     } catch (err) {
       setError(err instanceof Error ? err.message : "it did not go through");
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   }
+  const json = { "content-type": "application/json" };
 
   if (todo.kind === "none" && !canAdd) return null;
   return (
-    <p className="mt-2 flex h-10 items-center gap-x-3 text-meta">
+    <p className="mt-2 flex h-10 items-center gap-x-2 text-meta sm:gap-x-3">
       {todo.kind === "none" ? (
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void call(`${BASE_PATH}/api/todos`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ checkId, finding: index }) })}
-          className="btn btn-ghost btn-compact bg-surface text-meta"
-        >
-          <svg aria-hidden width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" className="flex-none">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          {busy ? "Adding…" : "Add to to-do list"}
-        </button>
+        <>
+          <button
+            type="button"
+            disabled={busy !== null}
+            onClick={() => void call("add", `${BASE_PATH}/api/todos`, { method: "POST", headers: json, body: JSON.stringify({ checkId, finding: index }) })}
+            className="btn btn-ghost btn-compact whitespace-nowrap bg-surface text-meta max-sm:px-2.5"
+          >
+            <svg aria-hidden width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" className="flex-none">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            {busy === "add" ? "Adding…" : "Add to to-do list"}
+          </button>
+          {/* Takes this finding out of the check's results (#121); the line under the findings puts it back. Both labels stay on one line at 360 px, where the pair has 288 px: hence the tighter sides there. */}
+          <button
+            type="button"
+            disabled={busy !== null}
+            onClick={() => void call("mark", `${BASE_PATH}/api/plants/${plantId}/health/${checkId}`, { method: "PATCH", headers: json, body: JSON.stringify({ finding: index, applicable: false }) })}
+            className="btn btn-ghost btn-compact whitespace-nowrap bg-surface text-meta max-sm:px-2.5"
+          >
+            {busy === "mark" ? "Hiding…" : "Not applicable"}
+          </button>
+        </>
       ) : todo.kind === "pending" ? (
         <>
           <Link href="/todo" className="inline-flex items-center gap-1.5 font-semibold">
@@ -462,8 +477,8 @@ function FindingTodoLine({ checkId, index, todo, canAdd }: { checkId: number; in
             </svg>
             On your to-do list
           </Link>
-          <button type="button" disabled={busy} onClick={() => void call(`${BASE_PATH}/api/todos/${todo.id}`, { method: "DELETE" })} className="btn btn-ghost btn-compact bg-surface text-meta">
-            {busy ? "Removing…" : "Remove"}
+          <button type="button" disabled={busy !== null} onClick={() => void call("remove", `${BASE_PATH}/api/todos/${todo.id}`, { method: "DELETE" })} className="btn btn-ghost btn-compact bg-surface text-meta">
+            {busy === "remove" ? "Removing…" : "Remove"}
           </button>
         </>
       ) : (
@@ -474,6 +489,45 @@ function FindingTodoLine({ checkId, index, todo, canAdd }: { checkId: number; in
           Done {dayLabel(todo.completedAt)}
         </span>
       )}
+      <span role="status" aria-live="polite" className="min-w-0 truncate text-warn-ink">
+        {error ? `That didn’t go through: ${error}` : ""}
+      </span>
+    </p>
+  );
+}
+
+/**
+ * Under a check's findings while any are marked not applicable (#121): how
+ * many, and "Show again", which puts them all back (PATCH
+ * /api/plants/[id]/health/[checkId] with no finding named), so a wrong tap
+ * on "Not applicable" is never the end of a finding.
+ */
+function NotApplicableLine({ plantId, checkId, count }: { plantId: number; checkId: number; count: number }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function showAgain() {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await fetch(`${BASE_PATH}/api/plants/${plantId}/health/${checkId}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ applicable: true }) });
+      if (!r.ok && r.status !== 404) throw new Error(((await r.json().catch(() => ({}))) as { error?: string }).error ?? `server ${r.status}`);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "it did not go through");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <p className="mt-2 flex min-h-10 flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-2">
+      {count === 1 ? "1 finding marked not applicable." : `${count} findings marked not applicable.`}
+      <button type="button" disabled={busy} onClick={() => void showAgain()} className="btn btn-ghost btn-compact text-meta">
+        {busy ? "Putting back…" : "Show again"}
+      </button>
       <span role="status" aria-live="polite" className="min-w-0 truncate text-warn-ink">
         {error ? `That didn’t go through: ${error}` : ""}
       </span>
@@ -568,6 +622,8 @@ function CheckRow({ plantId, check, canAdd, lead = false, stalled = false }: { p
             ) : (
               <ol className="flex flex-col gap-2.5">
                 {check.findings.map((f, i) => {
+                  // Left out, not renumbered: i is the finding's place in the stored answer, which its to-do is kept by.
+                  if (check.notApplicable.includes(i)) return null;
                   const thumb = check.thumbs.find((t) => t.n === f.photo);
                   return (
                     <li key={i} className="rounded-tile bg-ground p-4">
@@ -583,18 +639,20 @@ function CheckRow({ plantId, check, canAdd, lead = false, stalled = false }: { p
                         ) : null}
                       </p>
                       <p className="mt-2 text-body">{f.remedy}</p>
-                      <FindingTodoLine checkId={check.id} index={i} todo={check.todos[i] ?? { kind: "none" }} canAdd={canAdd} />
+                      <FindingTodoLine plantId={plantId} checkId={check.id} index={i} todo={check.todos[i] ?? { kind: "none" }} canAdd={canAdd} />
                     </li>
                   );
                 })}
               </ol>
             )}
+            {check.notApplicable.length > 0 ? <NotApplicableLine plantId={plantId} checkId={check.id} count={check.notApplicable.length} /> : null}
           </div>
           {check.confidence ? (
-            <div>
-              <h4 className="mb-1 text-meta font-semibold text-ink-2">How sure this reading is</h4>
-              <p className="text-body">
-                <span className="font-bold capitalize">{check.confidence.level}.</span> {check.confidence.why}
+            // Set back on purpose (#121): outlined where the findings are filled, a size down and in the lightest ink, so the findings lead.
+            <div className="rounded-tile border border-line px-4 py-3 text-meta text-ink-3">
+              <h4 className="mb-0.5 text-meta font-semibold">How sure this reading is</h4>
+              <p>
+                <span className="font-semibold capitalize">{check.confidence.level}.</span> {check.confidence.why}
               </p>
             </div>
           ) : null}
